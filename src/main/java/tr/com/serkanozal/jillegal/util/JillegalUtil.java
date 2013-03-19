@@ -14,11 +14,18 @@ import java.lang.reflect.Method;
 
 import sun.management.VMManagement;
 
-@SuppressWarnings("restriction")
 public class JillegalUtil {
 	
     private JillegalUtil() {
         
+    }
+    
+    public static String toHexAddress(long address) {
+        return "0x" + Long.toHexString(address).toUpperCase();
+    }
+    
+    public static String toBinaryStringAddress(long address) {
+        return "0x" + Long.toBinaryString(address).toUpperCase();
     }
     
     public static String getPidFromRuntimeMBean() throws Exception {

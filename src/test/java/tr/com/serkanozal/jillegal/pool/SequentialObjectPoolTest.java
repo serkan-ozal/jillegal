@@ -11,9 +11,15 @@ import junit.framework.Assert;
 
 import org.junit.Test;
 
+import tr.com.serkanozal.jillegal.domain.builder.pool.SequentialObjectPoolCreateParameterBuilder;
+import tr.com.serkanozal.jillegal.pool.factory.DefaultOffHeapPoolFactory;
+import tr.com.serkanozal.jillegal.pool.factory.OffHeapPoolFactory;
+
 @SuppressWarnings("deprecation")
 public class SequentialObjectPoolTest {
 
+	private OffHeapPoolFactory offHeapPoolFactory = new DefaultOffHeapPoolFactory();
+	
 	public static class SampleClass {
 		
 		private int i1 = 5;
@@ -41,9 +47,15 @@ public class SequentialObjectPoolTest {
 	@Test
 	public void objectRetrievedFromSequentialObjectPool() {
 		final int OBJECT_COUNT = 10000;
-		
+		final
 		SequentialObjectPool<SampleClass> sequentialObjectPool = 
-    			new SequentialObjectPool<SampleClass>(SampleClass.class, OBJECT_COUNT);
+			(SequentialObjectPool<SampleClass>)
+				offHeapPoolFactory.createOffHeapPool(
+						new SequentialObjectPoolCreateParameterBuilder<SampleClass>().
+								type(SampleClass.class).
+								objectCount(OBJECT_COUNT).
+							build()
+				);
    
     	for (int i = 0; i < OBJECT_COUNT; i++) {
     		SampleClass obj = sequentialObjectPool.newObject();

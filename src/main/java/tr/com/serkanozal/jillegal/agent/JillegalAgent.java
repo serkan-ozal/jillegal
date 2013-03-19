@@ -20,7 +20,6 @@ import tr.com.serkanozal.jillegal.util.JillegalUtil;
 
 import com.sun.tools.attach.VirtualMachine;
 
-@SuppressWarnings("restriction")
 public class JillegalAgent {   
 	
 	private final static Logger logger = Logger.getLogger(JillegalAgent.class);

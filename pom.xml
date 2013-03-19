@@ -3,7 +3,7 @@
   	<modelVersion>4.0.0</modelVersion>
   	<groupId>tr.com.serkanozal</groupId>
   	<artifactId>jillegal</artifactId>
-  	<version>0.0.1-SNAPSHOT</version>
+  	<version>1.0.0-SNAPSHOT</version>
     <name>Jillegal</name>
     <url>https://github.com/serkan-ozal/jillegal</url>
     
@@ -64,13 +64,12 @@
     </build>
     
    	<dependencies>
-   		<!--  
+   	    
 		<dependency>
             <groupId>com.sun</groupId>
             <artifactId>tools</artifactId>
             <version>${tools.version}</version>
         </dependency>
-        -->
         
 		<dependency>
             <groupId>cglib</groupId>

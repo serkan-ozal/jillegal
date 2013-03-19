@@ -7,13 +7,11 @@
 
 package tr.com.serkanozal.jillegal.pool;
 
-import sun.misc.Unsafe;
-import tr.com.serkanozal.jillegal.service.JillegalMemoryService;
+import tr.com.serkanozal.jillegal.domain.model.pool.SequentialObjectPoolCreateParameter;
+import tr.com.serkanozal.jillegal.service.OffHeapMemoryService;
 
-@SuppressWarnings("restriction")
-public class SequentialObjectPool<T> {
+public class SequentialObjectPool<T> extends BaseOffHeapPool<T> {
 
-	private Class<T> clazz;
 	private long objectCount;
 	private long objectSize;
 	private long currentMemoryIndex;
@@ -21,54 +19,59 @@ public class SequentialObjectPool<T> {
 	private T sampleObject;
 	private long sampleObjectAddress;
 	private long addressLimit;
-	private Unsafe unsafe;
 	
-	@SuppressWarnings("unchecked")
-	public SequentialObjectPool(Class<T> clazz, long objectCount) {
-		this.clazz = clazz;
-		this.objectCount = objectCount;
-		this.objectSize = JillegalMemoryService.sizeOfWithReflection(clazz);
-		this.allocatedAddress = JillegalMemoryService.allocateMemory(objectSize * objectCount);
-		this.currentMemoryIndex	= allocatedAddress - objectSize;
-		this.addressLimit = allocatedAddress + (objectCount * objectSize) - objectSize;
-		this.unsafe	= JillegalMemoryService.getUnsafe();
-	
-		try {
-			this.sampleObject = (T) JillegalMemoryService.getUnsafe().allocateInstance(clazz);
-			this.sampleObjectAddress = JillegalMemoryService.addressOf(sampleObject);
-			for (long l = 0; l < objectCount; l++) {
-				unsafe.copyMemory(sampleObjectAddress, allocatedAddress + (l * objectSize), objectSize);
-			}
-		} 
-		catch (InstantiationException e) {
-			e.printStackTrace();
-		}
+	public SequentialObjectPool(SequentialObjectPoolCreateParameter<T> parameter) {
+		this(parameter.getElementType(), parameter.getObjectCount(), parameter.getOffHeapMemoryService());
 	}
 	
-	public Class<T> getClazz() {
-		return clazz;
+	@SuppressWarnings("unchecked")
+	public SequentialObjectPool(Class<T> clazz, long objectCount, OffHeapMemoryService offHeapMemoryService) {
+		super(clazz, offHeapMemoryService);
+		this.objectCount = objectCount;
+		this.objectSize = offHeapMemoryService.sizeOf(clazz);
+		this.allocatedAddress = offHeapMemoryService.allocateMemory(objectSize * objectCount);
+		this.addressLimit = allocatedAddress + (objectCount * objectSize) - objectSize;
+		this.sampleObject = (T) offHeapMemoryService.allocateInstance(clazz);
+		this.sampleObjectAddress = offHeapMemoryService.addressOf(sampleObject);
+		
+		init();
+	}
+	
+	protected synchronized void init() {
+		this.currentMemoryIndex	= allocatedAddress - objectSize;
+		for (long l = 0; l < objectCount; l++) {
+			offHeapMemoryService.copyMemory(sampleObjectAddress, allocatedAddress + (l * objectSize), objectSize);
+		}
 	}
 	
 	public long getObjectCount() {
 		return objectCount;
 	}
 	
-	public T newObject() {
+	@Override
+	public synchronized T newObject() {
 		if (currentMemoryIndex >= addressLimit) {
 			return null;
 		}
-		return JillegalMemoryService.getObject((currentMemoryIndex += objectSize));
+		return offHeapMemoryService.getObject((currentMemoryIndex += objectSize));
 	}
 	
-	public T getObject(long objectIndex) {
+	@Override
+	public synchronized T getObject(long objectIndex) {
 		if (objectIndex < 0 || objectIndex > objectCount) {
 			return null;
 		}	
-		return JillegalMemoryService.getObject((allocatedAddress + (objectIndex * objectSize)));
+		return offHeapMemoryService.getObject((allocatedAddress + (objectIndex * objectSize)));
 	}
 	
+	@Override
 	public void reset() {
-		currentMemoryIndex = allocatedAddress;
+		init();
+	}
+	
+	@Override
+	public void free() {
+		offHeapMemoryService.freeMemory(allocatedAddress);
 	}
 	
 }
