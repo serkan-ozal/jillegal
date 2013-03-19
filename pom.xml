@@ -1,6 +1,119 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <groupId>tr.com.serkanozal</groupId>
-  <artifactId>jillegal</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  	
+  	<modelVersion>4.0.0</modelVersion>
+  	<groupId>tr.com.serkanozal</groupId>
+  	<artifactId>jillegal</artifactId>
+  	<version>0.0.1-SNAPSHOT</version>
+    <name>Jillegal</name>
+    <url>https://github.com/serkan-ozal/jillegal</url>
+    
+  	<properties>
+        
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        
+        <source.compiler.version>1.6</source.compiler.version>
+        <target.compiler.version>1.6</target.compiler.version>
+        
+        <maven.compiler.plugin.version>2.3.2</maven.compiler.plugin.version>
+        <maven.resources.plugin.version>2.4</maven.resources.plugin.version>
+        <maven.surefire.plugin.version>2.9</maven.surefire.plugin.version>
+        
+        <tools.version>1.6</tools.version>
+        <junit.version>4.11</junit.version>
+        <mockito.version>1.9.0</mockito.version>
+        <commons.lang.version>2.6</commons.lang.version>
+        <javassist.version>3.12.1.GA</javassist.version>
+        <cglib.version>2.2</cglib.version>
+        <log4j.version>1.2.16</log4j.version>
+
+    </properties>
+  
+  	<build>
+        <finalName>jillegal</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.compiler.plugin.version}</version>
+                <configuration>
+                    <source>${source.compiler.version}</source>
+                    <target>${target.compiler.version}</target>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+            <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>${maven.resources.plugin.version}</version>
+				<configuration>
+					<encoding>${project.build.sourceEncoding}</encoding>
+				</configuration>
+			</plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>${maven.surefire.plugin.version}</version>
+            </plugin>
+        </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+    </build>
+    
+   	<dependencies>
+   		<!--  
+		<dependency>
+            <groupId>com.sun</groupId>
+            <artifactId>tools</artifactId>
+            <version>${tools.version}</version>
+        </dependency>
+        -->
+        
+		<dependency>
+            <groupId>cglib</groupId>
+            <artifactId>cglib</artifactId>
+            <version>${cglib.version}</version>
+        </dependency>
+        <dependency>
+			<groupId>javassist</groupId>
+			<artifactId>javassist</artifactId>
+			<version>${javassist.version}</version>
+		</dependency>
+        
+        <!-- test -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>${commons.lang.version}</version>
+        </dependency>
+       
+        <!-- logging -->
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
+       
+	</dependencies>
+    
+    <repositories>
+        <repository>
+            <id>nexus-maven-repository</id>
+            <url>https://maven-us.nuxeo.org/nexus/content/groups/public/</url>
+        </repository>
+		<repository>
+			<id>my-maven-repository</id>
+			<url>https://github.com/serkan-ozal/maven-repository/raw/master/</url>
+		</repository>
+	</repositories>
+    
 </project>

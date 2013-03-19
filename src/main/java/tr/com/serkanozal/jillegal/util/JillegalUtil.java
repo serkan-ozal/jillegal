@@ -1,3 +1,10 @@
+/**
+ * @author SERKAN OZAL
+ *         
+ *         E-Mail: <a href="mailto:serkanozal86@hotmail.com">serkanozal86@hotmail.com</a>
+ *         GitHub: <a>https://github.com/serkan-ozal</a>
+ */
+
 package tr.com.serkanozal.jillegal.util;
 
 import java.lang.management.ManagementFactory;
@@ -7,24 +14,24 @@ import java.lang.reflect.Method;
 
 import sun.management.VMManagement;
 
-public class JillegalUtil
-{
-    private JillegalUtil( )
-    {
+@SuppressWarnings("restriction")
+public class JillegalUtil {
+	
+    private JillegalUtil() {
         
     }
     
-    public static String getPidFromRuntimeMBean( ) throws Exception 
-    {
-        RuntimeMXBean mxbean = ManagementFactory.getRuntimeMXBean( );
-        Field jvmField = mxbean.getClass().getDeclaredField( "jvm" );
+    public static String getPidFromRuntimeMBean() throws Exception {
+        RuntimeMXBean mxbean = ManagementFactory.getRuntimeMXBean();
+        Field jvmField = mxbean.getClass().getDeclaredField("jvm");
 
-        jvmField.setAccessible( true );
-        VMManagement management = ( VMManagement ) jvmField.get( mxbean );
-        Method method = management.getClass( ).getDeclaredMethod( "getProcessId" );
+        jvmField.setAccessible(true);
+        VMManagement management = (VMManagement) jvmField.get(mxbean);
+        Method method = management.getClass().getDeclaredMethod("getProcessId");
         method.setAccessible( true );
-        Integer processId = ( Integer ) method.invoke( management );
+        Integer processId = (Integer) method.invoke(management);
 
-        return processId.toString( );
+        return processId.toString();
     }
+    
 }

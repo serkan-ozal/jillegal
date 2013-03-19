@@ -1,0 +1,12 @@
+http://www.slideshare.net/DawidWeiss/sizeofobject-how-much-memory-objects-take-on-jvms-and-when-this-may-matter
+http://jtechbits.blogspot.com/2012/03/getting-address-of-object.html
+http://www.javacodegeeks.com/2012/10/compact-off-heap-structurestuples-in.html
+http://stackoverflow.com/questions/8820164/is-there-a-way-to-get-a-reference-address
+http://highlyscalable.wordpress.com/2012/02/02/direct-memory-access-in-java/
+http://java-performance.info/memory-introspection-using-sun-misc-unsafe-and-reflection/
+https://github.com/shipilev/java-object-layout
+http://mechanical-sympathy.blogspot.com/2012/10/compact-off-heap-structurestuples-in.html
+http://vanillajava.blogspot.com/2011/07/java-all-about-64-bit-programming.html
+https://blogs.oracle.com/jrockit/entry/understanding_compressed_refer
+http://www.docstoc.com/docs/36747975/Improving-64-bit-Java-performance-using-Compressed-References
+http://mentablog.soliveirajr.com/2012/11/which-one-is-faster-java-heap-or-native-memory/
