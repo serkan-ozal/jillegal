@@ -7,8 +7,11 @@
 
 package tr.com.serkanozal.jillegal.pool;
 
-public interface OffHeapPool<T> {
+import tr.com.serkanozal.jillegal.domain.model.pool.OffHeapPoolCreateParameter;
 
+public interface OffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> {
+
+	void init(P parameter);
 	T newObject();
 	void reset();
 	void free();

@@ -49,7 +49,6 @@ public class SequentialObjectPoolTest {
 		final int OBJECT_COUNT = 10000;
 		final
 		SequentialObjectPool<SampleClass> sequentialObjectPool = 
-			(SequentialObjectPool<SampleClass>)
 				offHeapPoolFactory.createOffHeapPool(
 						new SequentialObjectPoolCreateParameterBuilder<SampleClass>().
 								type(SampleClass.class).

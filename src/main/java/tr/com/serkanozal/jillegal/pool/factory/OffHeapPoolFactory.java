@@ -12,6 +12,6 @@ import tr.com.serkanozal.jillegal.pool.OffHeapPool;
 
 public interface OffHeapPoolFactory {
 
-	<T> OffHeapPool<T> createOffHeapPool(OffHeapPoolCreateParameter<T> parameter);
+	<T, O extends OffHeapPool<T, ?>> O createOffHeapPool(OffHeapPoolCreateParameter<T> parameter);
 	
 }

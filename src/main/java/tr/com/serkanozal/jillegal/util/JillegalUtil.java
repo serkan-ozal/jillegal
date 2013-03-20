@@ -14,6 +14,7 @@ import java.lang.reflect.Method;
 
 import sun.management.VMManagement;
 
+@SuppressWarnings("restriction")
 public class JillegalUtil {
 	
     private JillegalUtil() {

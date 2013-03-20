@@ -10,7 +10,7 @@ package tr.com.serkanozal.jillegal.pool;
 import tr.com.serkanozal.jillegal.domain.model.pool.SequentialObjectPoolCreateParameter;
 import tr.com.serkanozal.jillegal.service.OffHeapMemoryService;
 
-public class SequentialObjectPool<T> extends BaseOffHeapPool<T> {
+public class SequentialObjectPool<T> extends BaseOffHeapPool<T, SequentialObjectPoolCreateParameter<T>> {
 
 	private long objectCount;
 	private long objectSize;
@@ -24,17 +24,9 @@ public class SequentialObjectPool<T> extends BaseOffHeapPool<T> {
 		this(parameter.getElementType(), parameter.getObjectCount(), parameter.getOffHeapMemoryService());
 	}
 	
-	@SuppressWarnings("unchecked")
 	public SequentialObjectPool(Class<T> clazz, long objectCount, OffHeapMemoryService offHeapMemoryService) {
 		super(clazz, offHeapMemoryService);
-		this.objectCount = objectCount;
-		this.objectSize = offHeapMemoryService.sizeOf(clazz);
-		this.allocatedAddress = offHeapMemoryService.allocateMemory(objectSize * objectCount);
-		this.addressLimit = allocatedAddress + (objectCount * objectSize) - objectSize;
-		this.sampleObject = (T) offHeapMemoryService.allocateInstance(clazz);
-		this.sampleObjectAddress = offHeapMemoryService.addressOf(sampleObject);
-		
-		init();
+		init(clazz, objectCount, offHeapMemoryService);
 	}
 	
 	protected synchronized void init() {
@@ -72,6 +64,25 @@ public class SequentialObjectPool<T> extends BaseOffHeapPool<T> {
 	@Override
 	public void free() {
 		offHeapMemoryService.freeMemory(allocatedAddress);
+	}
+
+	@Override
+	public void init(SequentialObjectPoolCreateParameter<T> parameter) {
+		init(parameter.getElementType(), parameter.getObjectCount(), parameter.getOffHeapMemoryService());
+	}
+	
+	@SuppressWarnings("unchecked")
+	protected void init(Class<T> clazz, long objectCount, OffHeapMemoryService offHeapMemoryService) {
+		this.elementType = clazz;
+		this.objectCount = objectCount;
+		this.offHeapMemoryService = offHeapMemoryService;
+		this.objectSize = offHeapMemoryService.sizeOf(clazz);
+		this.allocatedAddress = offHeapMemoryService.allocateMemory(objectSize * objectCount);
+		this.addressLimit = allocatedAddress + (objectCount * objectSize) - objectSize;
+		this.sampleObject = (T) offHeapMemoryService.allocateInstance(clazz);
+		this.sampleObjectAddress = offHeapMemoryService.addressOf(sampleObject);
+		
+		init();
 	}
 	
 }

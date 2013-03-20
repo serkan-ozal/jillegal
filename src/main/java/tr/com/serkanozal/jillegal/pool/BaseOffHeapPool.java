@@ -7,9 +7,10 @@
 
 package tr.com.serkanozal.jillegal.pool;
 
+import tr.com.serkanozal.jillegal.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.service.OffHeapMemoryService;
 
-public abstract class BaseOffHeapPool<T> implements RandomAccessOffHeapPool<T> {
+public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> implements RandomAccessOffHeapPool<T, P> {
 
 	protected Class<T> elementType;
 	protected OffHeapMemoryService offHeapMemoryService;

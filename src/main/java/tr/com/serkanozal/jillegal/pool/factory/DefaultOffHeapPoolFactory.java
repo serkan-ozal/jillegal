@@ -19,13 +19,14 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 
 	private OffHeapMemoryService offHeapMemoryService = new UnsafeBasedOffHeapMemoryServiceImpl();
 	
+	@SuppressWarnings("unchecked")
 	@Override
-	public <T> OffHeapPool<T> createOffHeapPool(OffHeapPoolCreateParameter<T> parameter) {
+	public <T, O extends OffHeapPool<T, ?>> O  createOffHeapPool(OffHeapPoolCreateParameter<T> parameter) {
 		assignOffHeapMemoryServiceIfNeeded(parameter);
 		
 		switch (parameter.getPoolType()) {
 			case SEQUENTIAL_OBJECT_POOL:
-				return new SequentialObjectPool<T>((SequentialObjectPoolCreateParameter<T>)parameter);
+				return (O) new SequentialObjectPool<T>((SequentialObjectPoolCreateParameter<T>)parameter);
 				
 			default:
 				return null;

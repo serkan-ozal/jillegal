@@ -7,7 +7,9 @@
 
 package tr.com.serkanozal.jillegal.pool;
 
-public interface RandomAccessOffHeapPool<T> extends OffHeapPool<T> {
+import tr.com.serkanozal.jillegal.domain.model.pool.OffHeapPoolCreateParameter;
+
+public interface RandomAccessOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> extends OffHeapPool<T, P> {
 
 	T getObject(long index);
 	
