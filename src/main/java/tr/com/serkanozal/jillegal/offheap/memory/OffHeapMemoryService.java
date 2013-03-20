@@ -5,7 +5,7 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.service;
+package tr.com.serkanozal.jillegal.offheap.memory;
 
 public interface OffHeapMemoryService {
 

@@ -5,7 +5,7 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.domain.model.pool;
+package tr.com.serkanozal.jillegal.offheap.domain.model.pool;
 
 public interface OffHeapPoolCreateParameter<T> {
 

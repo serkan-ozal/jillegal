@@ -5,7 +5,7 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.service;
+package tr.com.serkanozal.jillegal.offheap.memory;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -17,7 +17,7 @@ import org.apache.log4j.Logger;
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.agent.JillegalAgent;
 
-@SuppressWarnings( { "unchecked", "restriction" } )
+@SuppressWarnings( { "unchecked" } )
 public class UnsafeBasedOffHeapMemoryServiceImpl implements OffHeapMemoryService {
 	
 	private final static Logger logger = Logger.getLogger(UnsafeBasedOffHeapMemoryServiceImpl.class);

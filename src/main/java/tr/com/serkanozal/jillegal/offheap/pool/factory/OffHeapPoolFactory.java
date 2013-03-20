@@ -5,10 +5,10 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.pool.factory;
+package tr.com.serkanozal.jillegal.offheap.pool.factory;
 
-import tr.com.serkanozal.jillegal.domain.model.pool.OffHeapPoolCreateParameter;
-import tr.com.serkanozal.jillegal.pool.OffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 
 public interface OffHeapPoolFactory {
 

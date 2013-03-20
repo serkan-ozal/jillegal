@@ -5,10 +5,10 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.domain.builder.pool;
+package tr.com.serkanozal.jillegal.offheap.domain.builder.pool;
 
 import tr.com.serkanozal.jillegal.domain.builder.Builder;
-import tr.com.serkanozal.jillegal.domain.model.pool.SequentialObjectPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.SequentialObjectPoolCreateParameter;
 
 public class SequentialObjectPoolCreateParameterBuilder<T> implements Builder<SequentialObjectPoolCreateParameter<T>> {
 

@@ -5,20 +5,21 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.pool;
+package tr.com.serkanozal.jillegal.offheap.pool;
 
 import junit.framework.Assert;
 
 import org.junit.Test;
 
-import tr.com.serkanozal.jillegal.domain.builder.pool.SequentialObjectPoolCreateParameterBuilder;
-import tr.com.serkanozal.jillegal.pool.factory.DefaultOffHeapPoolFactory;
-import tr.com.serkanozal.jillegal.pool.factory.OffHeapPoolFactory;
+import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.SequentialObjectPoolCreateParameterBuilder;
+import tr.com.serkanozal.jillegal.offheap.pool.SequentialObjectPool;
+import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
+import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 
 @SuppressWarnings("deprecation")
 public class SequentialObjectPoolTest {
 
-	private OffHeapPoolFactory offHeapPoolFactory = new DefaultOffHeapPoolFactory();
+	private OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
 	
 	public static class SampleClass {
 		
@@ -47,9 +48,9 @@ public class SequentialObjectPoolTest {
 	@Test
 	public void objectRetrievedFromSequentialObjectPool() {
 		final int OBJECT_COUNT = 10000;
-		final
+		
 		SequentialObjectPool<SampleClass> sequentialObjectPool = 
-				offHeapPoolFactory.createOffHeapPool(
+				offHeapService.createOffHeapPool(
 						new SequentialObjectPoolCreateParameterBuilder<SampleClass>().
 								type(SampleClass.class).
 								objectCount(OBJECT_COUNT).

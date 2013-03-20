@@ -5,10 +5,10 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.pool;
+package tr.com.serkanozal.jillegal.offheap.pool;
 
-import tr.com.serkanozal.jillegal.domain.model.pool.OffHeapPoolCreateParameter;
-import tr.com.serkanozal.jillegal.service.OffHeapMemoryService;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.memory.OffHeapMemoryService;
 
 public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> implements RandomAccessOffHeapPool<T, P> {
 

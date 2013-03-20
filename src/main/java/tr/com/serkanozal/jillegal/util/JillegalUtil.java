@@ -14,7 +14,6 @@ import java.lang.reflect.Method;
 
 import sun.management.VMManagement;
 
-@SuppressWarnings("restriction")
 public class JillegalUtil {
 	
     private JillegalUtil() {
@@ -36,7 +35,7 @@ public class JillegalUtil {
         jvmField.setAccessible(true);
         VMManagement management = (VMManagement) jvmField.get(mxbean);
         Method method = management.getClass().getDeclaredMethod("getProcessId");
-        method.setAccessible( true );
+        method.setAccessible(true);
         Integer processId = (Integer) method.invoke(management);
 
         return processId.toString();

@@ -5,15 +5,15 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.pool.factory;
+package tr.com.serkanozal.jillegal.offheap.pool.factory;
 
-import tr.com.serkanozal.jillegal.domain.model.pool.BaseOffHeapPoolCreateParameter;
-import tr.com.serkanozal.jillegal.domain.model.pool.OffHeapPoolCreateParameter;
-import tr.com.serkanozal.jillegal.domain.model.pool.SequentialObjectPoolCreateParameter;
-import tr.com.serkanozal.jillegal.pool.OffHeapPool;
-import tr.com.serkanozal.jillegal.pool.SequentialObjectPool;
-import tr.com.serkanozal.jillegal.service.OffHeapMemoryService;
-import tr.com.serkanozal.jillegal.service.UnsafeBasedOffHeapMemoryServiceImpl;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.BaseOffHeapPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.SequentialObjectPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.memory.OffHeapMemoryService;
+import tr.com.serkanozal.jillegal.offheap.memory.UnsafeBasedOffHeapMemoryServiceImpl;
+import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.SequentialObjectPool;
 
 public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 

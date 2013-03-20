@@ -3,7 +3,7 @@
   	<modelVersion>4.0.0</modelVersion>
   	<groupId>tr.com.serkanozal</groupId>
   	<artifactId>jillegal</artifactId>
-  	<version>1.0.0-SNAPSHOT</version>
+  	<version>1.0.0-BETA</version>
     <name>Jillegal</name>
     <url>https://github.com/serkan-ozal/jillegal</url>
     
@@ -17,6 +17,7 @@
         <maven.compiler.plugin.version>2.3.2</maven.compiler.plugin.version>
         <maven.resources.plugin.version>2.4</maven.resources.plugin.version>
         <maven.surefire.plugin.version>2.9</maven.surefire.plugin.version>
+        <maven.deploy.plugin.version>2.6</maven.deploy.plugin.version>
         
         <tools.version>1.6</tools.version>
         <junit.version>4.11</junit.version>
@@ -30,7 +31,7 @@
   
   	<build>
         <finalName>jillegal</finalName>
-        <plugins>
+        <plugins> 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -54,6 +55,27 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven.surefire.plugin.version}</version>
             </plugin>
+            <plugin>
+            	<artifactId>maven-assembly-plugin</artifactId>
+            	<configuration>
+                	<descriptorRefs>
+                    	<descriptorRef>jar-with-dependencies</descriptorRef>
+                	</descriptorRefs>
+            	</configuration>
+        	</plugin>
+            <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<version>${maven.deploy.plugin.version}</version>
+				<configuration>
+					<repositoryId>maven-repository</repositoryId>
+					<url>https://github.com/serkan-ozal/maven-repository/raw/master/</url>
+					<file>${project.build.directory}/${project.build.finalName}.${project.packaging}</file>
+					<groupId>${project.groupId}</groupId>
+					<artifactId>${project.artifactId}</artifactId>
+					<version>${project.version}</version>
+				</configuration>
+			</plugin>
         </plugins>
         <resources>
             <resource>
@@ -103,6 +125,19 @@
         </dependency>
        
 	</dependencies>
+	
+   	<distributionManagement>
+		<repository>
+			<id>maven-repository</id>
+			<name>Internal maven-repository</name>
+			<url>https://github.com/serkan-ozal/maven-repository/</url>
+		</repository>
+		<site>
+			<id>site</id>
+			<name>Site</name>
+			<url>https://github.com/serkan-ozal/maven-repository/</url>
+		</site>
+	</distributionManagement>
     
     <repositories>
         <repository>

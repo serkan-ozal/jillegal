@@ -5,9 +5,9 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.domain.model.pool;
+package tr.com.serkanozal.jillegal.offheap.domain.model.pool;
 
-import tr.com.serkanozal.jillegal.service.OffHeapMemoryService;
+import tr.com.serkanozal.jillegal.offheap.memory.OffHeapMemoryService;
 
 public class SequentialObjectPoolCreateParameter<T> extends BaseOffHeapPoolCreateParameter<T> {
 
