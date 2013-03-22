@@ -7,12 +7,16 @@
 
 package tr.com.serkanozal.jillegal.util;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Properties;
 
 import sun.management.VMManagement;
+import tr.com.serkanozal.jillegal.Jillegal;
 
 public class JillegalUtil {
 	
@@ -39,6 +43,21 @@ public class JillegalUtil {
         Integer processId = (Integer) method.invoke(management);
 
         return processId.toString();
+    }
+    
+    public static String getMavenVersion() {
+    	try {
+    		String path = "/META-INF/maven/" + Jillegal.GROUP_ID + "/" + Jillegal.ARTIFACT_ID + "/pom.properties";
+    		System.out.println(path);
+        	InputStream stream = JillegalUtil.class.getClassLoader().getResourceAsStream(path);
+        	Properties props = new Properties();
+			props.load(stream);
+			return (String)props.get("version");
+		} 
+    	catch (IOException e) {
+			e.printStackTrace();
+			return null;
+		}
     }
     
 }

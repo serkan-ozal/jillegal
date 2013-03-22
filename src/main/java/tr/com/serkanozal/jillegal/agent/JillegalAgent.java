@@ -11,11 +11,14 @@ import java.io.File;
 import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.Instrumentation;
 import java.lang.instrument.UnmodifiableClassException;
+import java.util.List;
 import java.util.StringTokenizer;
 import java.util.jar.JarFile;
 
 import org.apache.log4j.Logger;
 
+import tr.com.serkanozal.jillegal.Jillegal;
+import tr.com.serkanozal.jillegal.instrument.GeneratedClass;
 import tr.com.serkanozal.jillegal.util.JillegalUtil;
 
 import com.sun.tools.attach.VirtualMachine;
@@ -25,7 +28,7 @@ public class JillegalAgent {
 	private final static Logger logger = Logger.getLogger(JillegalAgent.class);
 	
     final static public String CLASS_PATH = System.getProperty("java.class.path");
-	final static public String INSTR_JAR_NAME = "jillegal.jar";
+	final static public String INSTR_JAR_NAME = "jillegal" + "-" + Jillegal.VERSION + ".jar";
 	final static public String OS_NAME = System.getProperty("os.name");
 	
 	private static Instrumentation inst;
@@ -37,12 +40,12 @@ public class JillegalAgent {
 
 	public static void agentmain(String arguments, Instrumentation i) {   
 	    initAtMain(arguments, i);
-	    logger.debug("agentmain = " + inst + " - " + "arguments = " + arguments);
+	    System.out.println("agentmain = " + inst + " - " + "arguments = " + arguments);
 	}
 	
     public static void premain(String arguments, Instrumentation i) {
         initAtMain(arguments, i);
-        logger.debug("remain = " + inst + " - " + "arguments = " + arguments);
+        System.out.println("remain = " + inst + " - " + "arguments = " + arguments);
     }
     
     private static void initAtMain(String arguments, Instrumentation i) {
@@ -89,21 +92,21 @@ public class JillegalAgent {
         loadAgent(null);
     }
     
-	public static void loadAgent( String arguments ) throws Exception {
+	public static void loadAgent(String arguments) throws Exception {
     	if (agentLoaded) {
     		return;
     	}
     	VirtualMachine vm = VirtualMachine.attach(JillegalUtil.getPidFromRuntimeMBean());
     	String agentPath = null;
-    	logger.debug("Class Path = " + CLASS_PATH);
-    	logger.debug("OS_NAME = " + OS_NAME );
+    	System.out.println("Class Path = " + CLASS_PATH);
+    	System.out.println("OS_NAME = " + OS_NAME );
     	
     	String classPathToUse = CLASS_PATH;
       
     	if (System.getProperty("surefire.test.class.path") != null) {
     		classPathToUse = System.getProperty("surefire.test.class.path");
     	}
-    	logger.debug("Using ClassPath = " + classPathToUse);
+    	System.out.println("Using ClassPath = " + classPathToUse);
 
     	for (String entry : classPathToUse.split(File.pathSeparator)) {
     		if (entry.endsWith(INSTR_JAR_NAME)) {
@@ -112,6 +115,7 @@ public class JillegalAgent {
     		}
     	}
     	
+    	System.out.println("Agent path = " + agentPath);
     	if (agentPath == null) {
     		throw new RuntimeException("Profiler agent is not in classpath ...");
     	}
@@ -137,6 +141,24 @@ public class JillegalAgent {
         catch (ClassNotFoundException e) {
         	logger.error("Error at redefineClass", e);
         }
+    }
+    
+    public static <T> void redefineClass(GeneratedClass<T> gc) {
+        redefineClass( gc.getSourceClass( ), gc.getClassData( ) );
+    }
+    
+    @SuppressWarnings( "rawtypes" )
+    public static void redefineClasses(GeneratedClass ... gcList) {
+        for (GeneratedClass gc : gcList) {
+            redefineClass(gc.getSourceClass(), gc.getClassData());
+        }    
+    }
+    
+    @SuppressWarnings( "rawtypes" )
+    public static void redefineAllClasses(List<GeneratedClass<?>> gcList) {
+        for (GeneratedClass gc : gcList) {
+            redefineClass(gc.getSourceClass(), gc.getClassData());
+        }    
     }
     
     public static long sizeOf(Object obj) {
