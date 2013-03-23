@@ -15,12 +15,17 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Properties;
 
+import org.apache.log4j.Logger;
+
 import sun.management.VMManagement;
 import tr.com.serkanozal.jillegal.Jillegal;
 
+@SuppressWarnings("restriction")
 public class JillegalUtil {
 	
-    private JillegalUtil() {
+	private static final Logger logger = Logger.getLogger(JillegalUtil.class);
+	
+	private JillegalUtil() {
         
     }
     
@@ -32,7 +37,7 @@ public class JillegalUtil {
         return "0x" + Long.toBinaryString(address).toUpperCase();
     }
     
-    public static String getPidFromRuntimeMBean() throws Exception {
+	public static String getPidFromRuntimeMBean() throws Exception {
         RuntimeMXBean mxbean = ManagementFactory.getRuntimeMXBean();
         Field jvmField = mxbean.getClass().getDeclaredField("jvm");
 
@@ -45,17 +50,16 @@ public class JillegalUtil {
         return processId.toString();
     }
     
-    public static String getMavenVersion() {
+    public static String getVersion() {
     	try {
     		String path = "/META-INF/maven/" + Jillegal.GROUP_ID + "/" + Jillegal.ARTIFACT_ID + "/pom.properties";
-    		System.out.println(path);
         	InputStream stream = JillegalUtil.class.getClassLoader().getResourceAsStream(path);
         	Properties props = new Properties();
 			props.load(stream);
 			return (String)props.get("version");
 		} 
     	catch (IOException e) {
-			e.printStackTrace();
+    		logger.error("Error at JillegalUtil.getVersion()", e);
 			return null;
 		}
     }

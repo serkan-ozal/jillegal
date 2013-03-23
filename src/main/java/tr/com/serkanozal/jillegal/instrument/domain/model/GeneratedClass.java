@@ -5,7 +5,7 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.instrument;
+package tr.com.serkanozal.jillegal.instrument.domain.model;
 
 public class GeneratedClass<T> {
 	

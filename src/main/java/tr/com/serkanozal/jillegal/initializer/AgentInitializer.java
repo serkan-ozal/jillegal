@@ -5,7 +5,9 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.agent;
+package tr.com.serkanozal.jillegal.initializer;
+
+import tr.com.serkanozal.jillegal.agent.JillegalAgent;
 
 public class AgentInitializer {
 

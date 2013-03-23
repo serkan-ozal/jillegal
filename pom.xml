@@ -3,7 +3,7 @@
   	<modelVersion>4.0.0</modelVersion>
   	<groupId>tr.com.serkanozal</groupId>
   	<artifactId>jillegal</artifactId>
-  	<version>1.1.3-BETA</version>
+  	<version>1.2.59-BETA</version>
     <name>Jillegal</name>
     <url>https://github.com/serkan-ozal/jillegal</url>
     
@@ -19,11 +19,12 @@
         <maven.surefire.plugin.version>2.9</maven.surefire.plugin.version>
         <maven.deploy.plugin.version>2.6</maven.deploy.plugin.version>
         
+        <jillegal.agent.version>1.0.0-BETA</jillegal.agent.version>
         <tools.version>1.6.0</tools.version>
         <junit.version>4.11</junit.version>
         <mockito.version>1.9.0</mockito.version>
         <commons.lang.version>2.6</commons.lang.version>
-        <javassist.version>3.12.1.GA</javassist.version>
+        <javassist.version>3.17.1-GA</javassist.version>
         <cglib.version>2.2</cglib.version>
         <log4j.version>1.2.16</log4j.version>
 
@@ -60,6 +61,10 @@
         		<artifactId>maven-jar-plugin</artifactId>
         		<configuration>
           			<archive>
+          			    <manifest>
+                			<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                			<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+           				</manifest>
             			<manifestEntries>
               				<Agent-Class>tr.com.serkanozal.jillegal.agent.JillegalAgent</Agent-Class> 
 							<Premain-Class>tr.com.serkanozal.jillegal.agent.JillegalAgent</Premain-Class>
@@ -74,10 +79,17 @@
             <plugin>
             	<artifactId>maven-assembly-plugin</artifactId>
             	<configuration>
+            	    <finalName>jillegal-${version}</finalName>
+            	    <attach>false</attach>
+                	<appendAssemblyId>false</appendAssemblyId>
                 	<descriptorRefs>
                     	<descriptorRef>jar-with-dependencies</descriptorRef>
                 	</descriptorRefs>
                 	<archive>
+                	     <manifest>
+                			<addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                			<addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+           				</manifest>
             			<manifestEntries>
               				<Agent-Class>tr.com.serkanozal.jillegal.agent.JillegalAgent</Agent-Class> 
 							<Premain-Class>tr.com.serkanozal.jillegal.agent.JillegalAgent</Premain-Class>
@@ -113,6 +125,12 @@
     
    	<dependencies>
    	    
+   	    <dependency>
+            <groupId>tr.com.serkanozal</groupId>
+            <artifactId>jillegal-agent</artifactId>
+            <version>${jillegal.agent.version}</version>
+        </dependency>
+   	    
 		<dependency>
             <groupId>com.sun</groupId>
             <artifactId>tools</artifactId>
@@ -125,7 +143,7 @@
             <version>${cglib.version}</version>
         </dependency>
         <dependency>
-			<groupId>javassist</groupId>
+			<groupId>org.javassist</groupId>
 			<artifactId>javassist</artifactId>
 			<version>${javassist.version}</version>
 		</dependency>

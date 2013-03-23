@@ -5,17 +5,18 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.instrument.javassist;
+package tr.com.serkanozal.jillegal.instrument.impl;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-import tr.com.serkanozal.jillegal.instrument.AbstractInstrumenter;
-import tr.com.serkanozal.jillegal.instrument.GeneratedClass;
 import tr.com.serkanozal.jillegal.instrument.Instrumenter;
+import tr.com.serkanozal.jillegal.instrument.domain.model.GeneratedClass;
+import tr.com.serkanozal.jillegal.instrument.interceptor.InterceptorService;
 import tr.com.serkanozal.jillegal.instrument.interceptor.InterceptorServiceFactory;
-import tr.com.serkanozal.jillegal.instrument.interceptor.InterceptorServiceImpl;
 import tr.com.serkanozal.jillegal.instrument.interceptor.clazz.ClassInterceptor;
 import tr.com.serkanozal.jillegal.instrument.interceptor.constructor.AfterConstructorInterceptor;
 import tr.com.serkanozal.jillegal.instrument.interceptor.constructor.BeforeConstructorInterceptor;
@@ -29,18 +30,22 @@ import javassist.CtBehavior;
 import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtMethod;
+import javassist.CtNewConstructor;
 import javassist.Modifier;
 import javassist.NotFoundException;
+import javassist.bytecode.CodeAttribute;
+import javassist.bytecode.MethodInfo;
 
-public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
+public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
 	
     private ClassPool cp = ClassPool.getDefault();
     private CtClass clazz;
     private List<Class<?>> additionalClasses = new ArrayList<Class<?>>();
     
-    public JavassistInstrumenter(Class<T> cls) throws NotFoundException {
+    public DefaultInstrumenter(Class<T> cls) throws NotFoundException {
         super(cls);
         clazz = cp.get(cls.getName());
+        clazz.defrost();
         init();
     }
     
@@ -56,34 +61,69 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
         return sourceClass;
     }
     
-    private void init() {
+    protected void init() {
         injectIntercepterCodes();
     }
     
-    private void injectIntercepterCodes() {
+    protected boolean isMethodEmpty(CtMethod method) {
+    	MethodInfo methodInfo = method.getMethodInfo();
+    	CodeAttribute ca = methodInfo.getCodeAttribute();
+        return ca == null;
+    }
+    
+    protected void injectIntercepterCodes() {
         try {
-            addAdditionalClass(InterceptorServiceImpl.class);
-            
+        	addAdditionalClass(InterceptorServiceFactory.class);
+            addAdditionalClass(InterceptorService.class);
+
             CtConstructor[] ccList = clazz.getDeclaredConstructors();
-            if (ccList != null) {
+            boolean hasAnyConstructor = (ccList != null) && (ccList.length > 0);
+            if (hasAnyConstructor) {
                 for (CtConstructor cc : ccList) {
                     injectIntercepterCode(cc);
                 }    
             }
+            else {
+            	CtConstructor cc = CtNewConstructor.make("public " + clazz.getSimpleName() + "() {}", clazz);
+            	clazz.addConstructor(cc);
+            	injectIntercepterCode(cc);
+            }
   
-            CtMethod[] cmList = clazz.getDeclaredMethods();
+            CtMethod[] cmList;
+            
+            Map<String, CtMethod> usedMethods = new HashMap<String, CtMethod>();
+            
+            cmList = clazz.getDeclaredMethods();
             if (cmList != null) {
                 for (CtMethod cm : cmList) {
-                    injectIntercepterCode(cm);
+                	if (isMethodEmpty(cm) == false) {
+	                	String signature = cm.getSignature();
+	                	if (usedMethods.containsKey(signature) == false) {
+	                		injectIntercepterCode(cm);
+	                		usedMethods.put(signature, cm);
+	                	}	
+                	}	
                 }    
-            }
+            }        
+            cmList = clazz.getMethods();
+			if (cmList != null) {
+				for (CtMethod cm : cmList) {
+					if (isMethodEmpty(cm) == false) {
+						String signature = cm.getSignature();
+	                	if (usedMethods.containsKey(signature) == false) {
+	                		injectIntercepterCode(cm);
+	                		usedMethods.put(signature, cm);
+	                	}
+					}	
+				}
+			}	
         }
         catch (CannotCompileException e) {
-            e.printStackTrace();
-        }
+            logger.error("Error at JavassistInstrumenter.injectIntercepterCodes()", e);
+        } 
     }
     
-    private void injectIntercepterCode(CtConstructor cc) {
+    protected void injectIntercepterCode(CtConstructor cc) {
         String beforeIntercepterCode = "InterceptorServiceFactory.getInterceptorService().notifyBeforeConstructorInterceptors((Object)$0, $signature, $params);\n";
         String afterIntercepterCode = "InterceptorServiceFactory.getInterceptorService().notifyAfterConstructorInterceptors((Object)$0, $signature, $params);\n";
         String signature = generateSignatureExpression(cc);
@@ -95,21 +135,21 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
         afterIntercepterCode = afterIntercepterCode.replace("$params", "$args");
 
         try {
-            cc.insertAt(0, beforeIntercepterCode);
+            cc.insertBeforeBody(beforeIntercepterCode);
         }
         catch (CannotCompileException e) {
-            e.printStackTrace();
+        	logger.error("Error at JavassistInstrumenter.injectIntercepterCode()", e);
         }
-
+		
         try {
             cc.insertAfter(afterIntercepterCode);
         }
         catch (CannotCompileException e) {
-            e.printStackTrace();
+        	logger.error("Error at JavassistInstrumenter.injectIntercepterCode()", e);
         }
     }
     
-    private void injectIntercepterCode(CtMethod cm) {
+    protected void injectIntercepterCode(CtMethod cm) {
         boolean isStatic = Modifier.isStatic(cm.getModifiers());
         String  obj = isStatic ? "null" : "this";
         
@@ -127,18 +167,18 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
             cm.insertBefore(beforeIntercepterCode);
         }
         catch (CannotCompileException e) {
-            e.printStackTrace();
+        	logger.error("Error at JavassistInstrumenter.injectIntercepterCode", e);
         }
+        
         try {
             cm.insertAfter(afterIntercepterCode);
         }
         catch (CannotCompileException e) {
-            e.printStackTrace();
+        	logger.error("Error at JavassistInstrumenter.injectIntercepterCode", e);
         }
     }
     
-    @SuppressWarnings( "unused" )
-    private String generateParametersExpression(CtBehavior cb) {
+    protected String generateParametersExpression(CtBehavior cb) {
         String params = "";
         try {
             CtClass[] paramTypes = cb.getParameterTypes();
@@ -162,12 +202,13 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
             }
         }
         catch (NotFoundException e) {
+        	logger.error("Error at JavassistInstrumenter.generateParametersExpression()", e);
             params = "null";
         }
         return params;
     }
     
-    private Class<?> getNonPrimitiveType(String clsName) {
+    protected Class<?> getNonPrimitiveType(String clsName) {
         clsName = clsName.toLowerCase().trim();
         if (clsName.equals("boolean")) {
             return Boolean.class;
@@ -198,7 +239,7 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
         }    
     }
     
-    private String generateSignatureExpression(CtBehavior cb) {
+    protected String generateSignatureExpression(CtBehavior cb) {
         if (cb instanceof CtConstructor) {
             return "\"" + processConstructorSignature(cb.getLongName()) + "\"";
         }    
@@ -211,7 +252,7 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
-    public JavassistInstrumenter<T> addAdditionalClass(Class<?> additionalClass) throws CannotCompileException {
+    public DefaultInstrumenter<T> addAdditionalClass(Class<?> additionalClass) throws CannotCompileException {
         additionalClasses.add(additionalClass);
         cp.importPackage(additionalClass.getPackage().getName());
         cp.appendClassPath(new ClassClassPath(additionalClass));
@@ -219,9 +260,9 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
-    public JavassistInstrumenter<T> addConstructor(String code, Class<?> [] parameters) throws NotFoundException, CannotCompileException {
-        CtClass[] ccParams = convertTypes(parameters);
-        CtConstructor cc = new CtConstructor(ccParams, clazz);
+    public DefaultInstrumenter<T> addConstructor(String code, Class<?> ... paramTypes) throws NotFoundException, CannotCompileException {
+        CtClass[] ccParamTypes = convertTypes(paramTypes);
+        CtConstructor cc = new CtConstructor(ccParamTypes, clazz);
         cc.setBody(code);
         clazz.addConstructor(cc);
         injectIntercepterCode(cc);
@@ -229,8 +270,8 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
-    public Instrumenter<T> updateConstructor(String code, Class<?> [] parameters) throws NotFoundException, CannotCompileException {
-        CtClass[] ctParamTypes = convertTypes(parameters);
+    public Instrumenter<T> updateConstructor(String code, Class<?> ... paramTypes) throws NotFoundException, CannotCompileException {
+        CtClass[] ctParamTypes = convertTypes(paramTypes);
         CtConstructor targetConstructor = clazz.getDeclaredConstructor(ctParamTypes);
         if (targetConstructor != null) {
             targetConstructor.setBody(code);
@@ -240,8 +281,8 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
-    public Instrumenter<T> deleteConstructor(Class<?> [] parameters) throws NotFoundException {
-        CtClass[] ctParamTypes = convertTypes(parameters);
+    public Instrumenter<T> deleteConstructor(Class<?> ... paramTypes) throws NotFoundException {
+        CtClass[] ctParamTypes = convertTypes(paramTypes);
         CtConstructor targetConstructor = clazz.getDeclaredConstructor(ctParamTypes);
         if (targetConstructor != null) {
             clazz.removeConstructor(targetConstructor);
@@ -250,16 +291,16 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
-    public JavassistInstrumenter<T> insertBeforeConstructors(String code) throws CannotCompileException {
+    public DefaultInstrumenter<T> insertBeforeConstructors(String code) throws CannotCompileException {
         return insertToConstructors(code, true);
     }
     
     @Override
-    public JavassistInstrumenter<T> insertAfterConstructors(String code) throws CannotCompileException {
+    public DefaultInstrumenter<T> insertAfterConstructors(String code) throws CannotCompileException {
         return insertToConstructors(code, false);
     }
     
-    private JavassistInstrumenter<T> insertToConstructors(String code, boolean isBefore) throws CannotCompileException {
+    protected DefaultInstrumenter<T> insertToConstructors(String code, boolean isBefore) throws CannotCompileException {
         CtConstructor[] ccList = clazz.getConstructors();
         for (CtConstructor cc : ccList) {
             if (isBefore) {
@@ -285,16 +326,16 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
-    public Instrumenter<T> insertBeforeConstructor(String code, Class<?> [] paramTypes) throws CannotCompileException, NotFoundException {
+    public Instrumenter<T> insertBeforeConstructor(String code, Class<?> ... paramTypes) throws CannotCompileException, NotFoundException {
         return insertToConstructor(code, true, paramTypes);
     }
     
     @Override
-    public Instrumenter<T> insertAfterConstructor(String code, Class<?> [] paramTypes) throws CannotCompileException, NotFoundException {
+    public Instrumenter<T> insertAfterConstructor(String code, Class<?> ... paramTypes) throws CannotCompileException, NotFoundException {
         return insertToConstructor(code, false, paramTypes);
     }
     
-    private Instrumenter<T> insertToConstructor(String code, boolean isBefore, Class<?> [] paramTypes) throws CannotCompileException, NotFoundException {
+    protected Instrumenter<T> insertToConstructor(String code, boolean isBefore, Class<?> ... paramTypes) throws CannotCompileException, NotFoundException {
         CtClass[] ctParamTypes = convertTypes(paramTypes);
         CtConstructor targetConstructor = clazz.getDeclaredConstructor(ctParamTypes);
         if (targetConstructor != null) {
@@ -309,7 +350,7 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
-    public Instrumenter<T> insertBeforeConstructor(BeforeConstructorInterceptor<T> interceptor, Class<?> [] paramTypes) throws NotFoundException {
+    public Instrumenter<T> insertBeforeConstructor(BeforeConstructorInterceptor<T> interceptor, Class<?> ... paramTypes) throws NotFoundException {
         CtClass[] ctParamTypes = convertTypes(paramTypes);
         CtConstructor targetConstructor = clazz.getDeclaredConstructor(ctParamTypes);
         if (targetConstructor != null) {
@@ -320,7 +361,7 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
-    public Instrumenter<T> insertAfterConstructor(AfterConstructorInterceptor<T> interceptor, Class<?> [] paramTypes) throws NotFoundException {
+    public Instrumenter<T> insertAfterConstructor(AfterConstructorInterceptor<T> interceptor, Class<?> ... paramTypes) throws NotFoundException {
         CtClass[] ctParamTypes = convertTypes(paramTypes);
         CtConstructor targetConstructor = clazz.getDeclaredConstructor(ctParamTypes);
         if (targetConstructor != null) {
@@ -331,14 +372,14 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
-    public Instrumenter<T> addMethod(String methodName, Class<?> returnType, String code, Class<?> [] parameters) throws NotFoundException, CannotCompileException {
-        CtClass[] ccParams = convertTypes(parameters);
+    public Instrumenter<T> addMethod(String methodName, Class<?> returnType, String code, Class<?> ... paramTypes) throws NotFoundException, CannotCompileException {
+        CtClass[] ccParamTypes = convertTypes(paramTypes);
         CtMethod cm = null;
         if (returnType == null) {
-            cm = new CtMethod(CtClass.voidType, methodName, ccParams, clazz);
+            cm = new CtMethod(CtClass.voidType, methodName, ccParamTypes, clazz);
         }    
         else {  
-            cm = new CtMethod(cp.get(returnType.getName()), methodName, ccParams, clazz);
+            cm = new CtMethod(cp.get(returnType.getName()), methodName, ccParamTypes, clazz);
         }    
         cm.setBody(code);
         clazz.addMethod(cm);
@@ -346,10 +387,72 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
         return this;
     }
     
+    protected CtMethod findMethod(CtClass clazz, String methodName, CtClass[] paramTypes) {
+    	try {
+    		try {
+	    		CtMethod cm = clazz.getDeclaredMethod(methodName, paramTypes);
+	    		if ((cm != null) && (isMethodEmpty(cm) == false)) {
+	    			return cm;
+	    		}
+	    	}
+	    	catch (NotFoundException e) {
+	    		
+			}
+    		
+    		try {
+    			CtMethod[] cmList = clazz.getMethods();
+    			if (cmList != null) {
+    				for (CtMethod cm : cmList) {
+    					if (isMethodEmpty(cm) == false) {
+	    					if (cm.getName().equals(methodName)) {
+	    						if (areSameTypes(cm.getParameterTypes(), paramTypes)) {
+	    							return cm;
+	    						}
+	    					}
+    					}	
+    				}
+    			}
+	    	}
+	    	catch (NotFoundException e) {
+	    		
+			}
+    	}
+    	catch (Exception e) {
+    		logger.error("Error at JavassistInstrumenter.findMethod()", e);
+    	}
+    	return null;
+    }
+    
+    protected boolean areSameTypes(CtClass[] types1, CtClass[] types2) {
+    	boolean type1Empty = (types1 == null) || (types1.length == 0);
+    	boolean type2Empty = (types2 == null) || (types2.length == 0);
+    	
+    	if (type1Empty && type2Empty) {
+    		return true;
+    	}
+    	else if (type1Empty == type2Empty) {
+    		if (types1.length == types2.length) {
+    			int length = types1.length;
+    			for (int i = 0; i < length; i++) {
+    				if (types1[i].getName().equals(types2[i].getName()) == false) {
+    					return false;
+    				}
+    			}
+    			return true;
+    		}
+    		else {
+    			return false;
+    		}
+    	}
+    	else {
+    		return false;
+    	}
+    }
+    
     @Override
-    public Instrumenter<T> updateMethod(String methodName, String code, Class<?> [] parameters) throws NotFoundException, CannotCompileException {
-        CtClass[] ctParamTypes = convertTypes(parameters);
-        CtMethod targetMethod = clazz.getDeclaredMethod(methodName, ctParamTypes);
+    public Instrumenter<T> updateMethod(String methodName, String code, Class<?> ... paramTypes) throws NotFoundException, CannotCompileException {
+        CtClass[] ctParamTypes = convertTypes(paramTypes);
+        CtMethod targetMethod = findMethod(clazz, methodName, ctParamTypes);
         if (targetMethod != null) {
             targetMethod.setBody(code);
             injectIntercepterCode(targetMethod);
@@ -358,9 +461,9 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
-    public Instrumenter<T> deleteMethod(String methodName, Class<?> [] parameters) throws NotFoundException {
-        CtClass[] ctParamTypes = convertTypes(parameters);
-        CtMethod targetMethod = clazz.getDeclaredMethod(methodName, ctParamTypes);
+    public Instrumenter<T> deleteMethod(String methodName, Class<?> ... paramTypes) throws NotFoundException {
+        CtClass[] ctParamTypes = convertTypes(paramTypes);
+        CtMethod targetMethod = findMethod(clazz, methodName, ctParamTypes);
         if (targetMethod != null) {
             clazz.removeMethod(targetMethod);
         }    
@@ -368,16 +471,16 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
-    public JavassistInstrumenter<T> insertBeforeMethods(String code) throws CannotCompileException {
+    public DefaultInstrumenter<T> insertBeforeMethods(String code) throws CannotCompileException {
         return insertToMethods(code, true);
     }
     
     @Override
-    public JavassistInstrumenter<T> insertAfterMethods(String code) throws CannotCompileException {
+    public DefaultInstrumenter<T> insertAfterMethods(String code) throws CannotCompileException {
         return insertToMethods(code, false);
     }
     
-    private JavassistInstrumenter<T> insertToMethods(String code, boolean isBefore) throws CannotCompileException {
+    protected DefaultInstrumenter<T> insertToMethods(String code, boolean isBefore) throws CannotCompileException {
         CtMethod[] cmList = clazz.getMethods();
         for (CtMethod cm : cmList) {
             if (isBefore) {
@@ -403,19 +506,19 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
-    public JavassistInstrumenter<T> insertBeforeMethod(String methodName, String code, Class<?> [] paramTypes) throws CannotCompileException, NotFoundException {
+    public DefaultInstrumenter<T> insertBeforeMethod(String methodName, String code, Class<?> ... paramTypes) throws CannotCompileException, NotFoundException {
         return insertToMethod(methodName, code, true);
     }
     
     @Override
-    public JavassistInstrumenter<T> insertAfterMethod(String methodName, String code, Class<?> [] paramTypes) throws CannotCompileException, NotFoundException {
+    public DefaultInstrumenter<T> insertAfterMethod(String methodName, String code, Class<?> ... paramTypes) throws CannotCompileException, NotFoundException {
         return insertToMethod(methodName, code, false);
     }
     
-    private JavassistInstrumenter<T> insertToMethod(String methodName, String code, boolean isBefore, Class<?> ... paramTypes) 
+    protected DefaultInstrumenter<T> insertToMethod(String methodName, String code, boolean isBefore, Class<?> ... paramTypes) 
                 throws NotFoundException, CannotCompileException {
         CtClass[] ctParamTypes = convertTypes(paramTypes);
-        CtMethod targetMethod = clazz.getDeclaredMethod(methodName, ctParamTypes);
+        CtMethod targetMethod = findMethod(clazz, methodName, ctParamTypes);
         if (targetMethod != null) {
             if (isBefore) {
                 targetMethod.insertBefore(code);
@@ -428,10 +531,10 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
-    public Instrumenter<T> insertBeforeMethod(String methodName, BeforeMethodInterceptor<T> interceptor, Class<?> [] paramTypes) 
+    public Instrumenter<T> insertBeforeMethod(String methodName, BeforeMethodInterceptor<T> interceptor, Class<?> ... paramTypes) 
     		throws NotFoundException {
         CtClass[] ctParamTypes = convertTypes(paramTypes);
-        CtMethod targetMethod = clazz.getDeclaredMethod(methodName, ctParamTypes);
+        CtMethod targetMethod = findMethod(clazz, methodName, ctParamTypes);
         if (targetMethod != null) {
         	InterceptorServiceFactory.getInterceptorService().
         		addBeforeMethodInterceptor(sourceClass, processMethodSignature(targetMethod.getLongName()), interceptor);
@@ -440,9 +543,9 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
-    public Instrumenter<T> insertAfterMethod(String methodName, AfterMethodInterceptor<T> interceptor, Class<?> [] paramTypes) throws NotFoundException {
+    public Instrumenter<T> insertAfterMethod(String methodName, AfterMethodInterceptor<T> interceptor, Class<?> ... paramTypes) throws NotFoundException {
         CtClass[] ctParamTypes = convertTypes(paramTypes);
-        CtMethod targetMethod = clazz.getDeclaredMethod(methodName, ctParamTypes);
+        CtMethod targetMethod = findMethod(clazz, methodName, ctParamTypes);
         if (targetMethod != null) {
         	InterceptorServiceFactory.getInterceptorService().
         		addAfterMethodInterceptor(sourceClass, processMethodSignature(targetMethod.getLongName()), interceptor);
@@ -450,8 +553,7 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
         return this;
     }
     
-    private CtClass[] convertTypes(Class<?>[] types) throws NotFoundException
-    {
+    protected CtClass[] convertTypes(Class<?>[] types) throws NotFoundException {
         CtClass[] ctTypes = null;
         if (types != null) {
             ctTypes = new CtClass[types.length];
@@ -467,7 +569,7 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
         return ctTypes;
     }
 
-    private String processConstructorSignature(String signature) {
+    protected String processConstructorSignature(String signature) {
         int paramStartIndex = signature.lastIndexOf("(");
         String params = signature.substring(paramStartIndex,  signature.length());
         String classFullName = signature.substring(0,  paramStartIndex);
@@ -475,7 +577,7 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
         return classFullName + "#" + className + params;
     }
     
-    private String processMethodSignature(String signature) {
+    protected String processMethodSignature(String signature) {
         int paramStartIndex = signature.lastIndexOf("(");
         String params = signature.substring(paramStartIndex, signature.length());
         String methodFullName = signature.substring(0,  paramStartIndex);
@@ -510,4 +612,5 @@ public class JavassistInstrumenter<T> extends AbstractInstrumenter<T> {
         clazz.rebuildClassFile();
         clazz.writeFile(dirName);
     }
+    
 }

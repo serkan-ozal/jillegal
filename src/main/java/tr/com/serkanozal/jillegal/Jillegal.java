@@ -7,25 +7,33 @@
 
 package tr.com.serkanozal.jillegal;
 
-import tr.com.serkanozal.jillegal.agent.AgentInitializer;
-import tr.com.serkanozal.jillegal.instrument.InstrumenterInitializer;
+import tr.com.serkanozal.jillegal.initializer.AgentInitializer;
+import tr.com.serkanozal.jillegal.initializer.InstrumentInitializer;
 
 public class Jillegal {
 
 	public static final String GROUP_ID = "tr.com.serkanozal";
 	public static final String ARTIFACT_ID = "jillegal";
-	public static final String VERSION = "1.1.3-BETA";
+	public static String VERSION = "1.0.0-RELEASE";
 	
+	private static boolean initialized = false;
+	
+	static {
+		init();
+	}
+
 	private Jillegal() {
 		
 	}
 	
 	public static void init() {
-		// ***********************************
-        // ******* Do not change order *******
-        // ***********************************
-		InstrumenterInitializer.init();
-		AgentInitializer.init();
+		if (initialized == false) {
+			AgentInitializer.init();
+			InstrumentInitializer.init();
+			initialized = true;
+		}	
 	}
+	
+	
 	
 }

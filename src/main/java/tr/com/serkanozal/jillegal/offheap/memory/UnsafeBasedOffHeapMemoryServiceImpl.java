@@ -17,10 +17,10 @@ import org.apache.log4j.Logger;
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.agent.JillegalAgent;
 
-@SuppressWarnings( { "unchecked" } )
+@SuppressWarnings( { "unchecked", "restriction" } )
 public class UnsafeBasedOffHeapMemoryServiceImpl implements OffHeapMemoryService {
 	
-	private final static Logger logger = Logger.getLogger(UnsafeBasedOffHeapMemoryServiceImpl.class);
+	private final Logger logger = Logger.getLogger(getClass());
 	
     public static final byte SIZE_32_BIT = 4;
     public static final byte SIZE_64_BIT = 8;
@@ -81,7 +81,7 @@ public class UnsafeBasedOffHeapMemoryServiceImpl implements OffHeapMemoryService
             unsafe = (Unsafe) field.get(null);
         }
         catch (Exception e) {
-        	logger.error("Error at initUnsafe", e);
+        	logger.error("Error at UnsafeBasedOffHeapMemoryServiceImpl.initUnsafe()", e);
         }
     }
     
@@ -111,7 +111,7 @@ public class UnsafeBasedOffHeapMemoryServiceImpl implements OffHeapMemoryService
 			return unsafe.allocateInstance(clazz);
 		} 
     	catch (InstantiationException e) {
-    		logger.error("Error at allocateInstance", e);
+    		logger.error("Error at UnsafeBasedOffHeapMemoryServiceImpl.allocateInstance()", e);
     		return null;
 		}
     }
@@ -204,7 +204,6 @@ public class UnsafeBasedOffHeapMemoryServiceImpl implements OffHeapMemoryService
         objArray[0] = obj;
         long objectAddress = INVALID_ADDRESS;
         
-
         switch (indexScale) {
             case SIZE_32_BIT:
             case SIZE_64_BIT:
