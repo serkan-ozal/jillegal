@@ -7,13 +7,13 @@
 
 package tr.com.serkanozal.jillegal.offheap.domain.model.pool;
 
-import tr.com.serkanozal.jillegal.offheap.memory.OffHeapMemoryService;
+import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 
 public abstract class BaseOffHeapPoolCreateParameter<T> implements OffHeapPoolCreateParameter<T> {
 
 	protected OffHeapPoolType poolType;
 	protected Class<T> elementType;
-	protected OffHeapMemoryService offHeapMemoryService;
+	protected DirectMemoryService directMemoryService;
 	
 	public BaseOffHeapPoolCreateParameter(OffHeapPoolType poolType, Class<T> elementType) {
 		this.poolType = poolType;
@@ -21,10 +21,10 @@ public abstract class BaseOffHeapPoolCreateParameter<T> implements OffHeapPoolCr
 	}
 	
 	public BaseOffHeapPoolCreateParameter(OffHeapPoolType poolType, Class<T> elementType, 
-			OffHeapMemoryService offHeapMemoryService) {
+			DirectMemoryService directMemoryService) {
 		this.poolType = poolType;
 		this.elementType = elementType;
-		this.offHeapMemoryService = offHeapMemoryService;
+		this.directMemoryService = directMemoryService;
 	}
 	
 	@Override
@@ -37,12 +37,12 @@ public abstract class BaseOffHeapPoolCreateParameter<T> implements OffHeapPoolCr
 		return elementType;
 	}
 	
-	public OffHeapMemoryService getOffHeapMemoryService() {
-		return offHeapMemoryService;
+	public DirectMemoryService getDirectMemoryService() {
+		return directMemoryService;
 	}
 	
-	public void setOffHeapMemoryService(OffHeapMemoryService offHeapMemoryService) {
-		this.offHeapMemoryService = offHeapMemoryService;
+	public void setDirectMemoryService(DirectMemoryService directMemoryService) {
+		this.directMemoryService = directMemoryService;
 	}
 
 }

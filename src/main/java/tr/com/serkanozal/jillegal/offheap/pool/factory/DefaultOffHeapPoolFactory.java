@@ -10,14 +10,14 @@ package tr.com.serkanozal.jillegal.offheap.pool.factory;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.BaseOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.SequentialObjectPoolCreateParameter;
-import tr.com.serkanozal.jillegal.offheap.memory.OffHeapMemoryService;
-import tr.com.serkanozal.jillegal.offheap.memory.UnsafeBasedOffHeapMemoryServiceImpl;
+import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
+import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.SequentialObjectPool;
 
 public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 
-	private OffHeapMemoryService offHeapMemoryService = new UnsafeBasedOffHeapMemoryServiceImpl();
+	private DirectMemoryService directMemoryService = DirectMemoryServiceFactory.getDirectMemoryService();
 	
 	@SuppressWarnings("unchecked")
 	@Override
@@ -36,8 +36,8 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 	protected <T> void assignOffHeapMemoryServiceIfNeeded(OffHeapPoolCreateParameter<T> parameter) {
 		if (parameter instanceof BaseOffHeapPoolCreateParameter) {
 			BaseOffHeapPoolCreateParameter<T> baseParameter = (BaseOffHeapPoolCreateParameter<T>)parameter;
-			if (baseParameter.getOffHeapMemoryService() == null) {
-				baseParameter.setOffHeapMemoryService(offHeapMemoryService);
+			if (baseParameter.getDirectMemoryService() == null) {
+				baseParameter.setDirectMemoryService(directMemoryService);
 			}
 		}
 	}

@@ -46,7 +46,7 @@ public class SequentialObjectPoolTest {
 	}
 	
 	@Test
-	public void objectRetrievedFromSequentialObjectPool() {
+	public void objectRetrievedSuccessfullyFromSequentialObjectPool() {
 		final int OBJECT_COUNT = 10000;
 		
 		SequentialObjectPool<SampleClass> sequentialObjectPool = 

@@ -20,7 +20,6 @@ import org.apache.log4j.Logger;
 import sun.management.VMManagement;
 import tr.com.serkanozal.jillegal.Jillegal;
 
-@SuppressWarnings("restriction")
 public class JillegalUtil {
 	
 	private static final Logger logger = Logger.getLogger(JillegalUtil.class);

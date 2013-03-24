@@ -8,7 +8,7 @@
 package tr.com.serkanozal.jillegal.offheap.pool;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.SequentialObjectPoolCreateParameter;
-import tr.com.serkanozal.jillegal.offheap.memory.OffHeapMemoryService;
+import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 
 public class SequentialObjectPool<T> extends BaseOffHeapPool<T, SequentialObjectPoolCreateParameter<T>> {
 
@@ -21,18 +21,18 @@ public class SequentialObjectPool<T> extends BaseOffHeapPool<T, SequentialObject
 	private long addressLimit;
 	
 	public SequentialObjectPool(SequentialObjectPoolCreateParameter<T> parameter) {
-		this(parameter.getElementType(), parameter.getObjectCount(), parameter.getOffHeapMemoryService());
+		this(parameter.getElementType(), parameter.getObjectCount(), parameter.getDirectMemoryService());
 	}
 	
-	public SequentialObjectPool(Class<T> clazz, long objectCount, OffHeapMemoryService offHeapMemoryService) {
-		super(clazz, offHeapMemoryService);
-		init(clazz, objectCount, offHeapMemoryService);
+	public SequentialObjectPool(Class<T> clazz, long objectCount, DirectMemoryService directMemoryService) {
+		super(clazz, directMemoryService);
+		init(clazz, objectCount, directMemoryService);
 	}
 	
 	protected synchronized void init() {
 		this.currentMemoryIndex	= allocatedAddress - objectSize;
 		for (long l = 0; l < objectCount; l++) {
-			offHeapMemoryService.copyMemory(sampleObjectAddress, allocatedAddress + (l * objectSize), objectSize);
+			directMemoryService.copyMemory(sampleObjectAddress, allocatedAddress + (l * objectSize), objectSize);
 		}
 	}
 	
@@ -45,7 +45,7 @@ public class SequentialObjectPool<T> extends BaseOffHeapPool<T, SequentialObject
 		if (currentMemoryIndex >= addressLimit) {
 			return null;
 		}
-		return offHeapMemoryService.getObject((currentMemoryIndex += objectSize));
+		return directMemoryService.getObject((currentMemoryIndex += objectSize));
 	}
 	
 	@Override
@@ -53,7 +53,7 @@ public class SequentialObjectPool<T> extends BaseOffHeapPool<T, SequentialObject
 		if (objectIndex < 0 || objectIndex > objectCount) {
 			return null;
 		}	
-		return offHeapMemoryService.getObject((allocatedAddress + (objectIndex * objectSize)));
+		return directMemoryService.getObject((allocatedAddress + (objectIndex * objectSize)));
 	}
 	
 	@Override
@@ -63,24 +63,24 @@ public class SequentialObjectPool<T> extends BaseOffHeapPool<T, SequentialObject
 	
 	@Override
 	public void free() {
-		offHeapMemoryService.freeMemory(allocatedAddress);
+		directMemoryService.freeMemory(allocatedAddress);
 	}
 
 	@Override
 	public void init(SequentialObjectPoolCreateParameter<T> parameter) {
-		init(parameter.getElementType(), parameter.getObjectCount(), parameter.getOffHeapMemoryService());
+		init(parameter.getElementType(), parameter.getObjectCount(), parameter.getDirectMemoryService());
 	}
 	
 	@SuppressWarnings("unchecked")
-	protected void init(Class<T> clazz, long objectCount, OffHeapMemoryService offHeapMemoryService) {
+	protected void init(Class<T> clazz, long objectCount, DirectMemoryService directMemoryService) {
 		this.elementType = clazz;
 		this.objectCount = objectCount;
-		this.offHeapMemoryService = offHeapMemoryService;
-		this.objectSize = offHeapMemoryService.sizeOf(clazz);
-		this.allocatedAddress = offHeapMemoryService.allocateMemory(objectSize * objectCount);
+		this.directMemoryService = directMemoryService;
+		this.objectSize = directMemoryService.sizeOf(clazz);
+		this.allocatedAddress = directMemoryService.allocateMemory(objectSize * objectCount);
 		this.addressLimit = allocatedAddress + (objectCount * objectSize) - objectSize;
-		this.sampleObject = (T) offHeapMemoryService.allocateInstance(clazz);
-		this.sampleObjectAddress = offHeapMemoryService.addressOf(sampleObject);
+		this.sampleObject = (T) directMemoryService.allocateInstance(clazz);
+		this.sampleObjectAddress = directMemoryService.addressOf(sampleObject);
 		
 		init();
 	}

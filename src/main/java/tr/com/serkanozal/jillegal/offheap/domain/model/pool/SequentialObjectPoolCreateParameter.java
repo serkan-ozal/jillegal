@@ -7,7 +7,7 @@
 
 package tr.com.serkanozal.jillegal.offheap.domain.model.pool;
 
-import tr.com.serkanozal.jillegal.offheap.memory.OffHeapMemoryService;
+import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 
 public class SequentialObjectPoolCreateParameter<T> extends BaseOffHeapPoolCreateParameter<T> {
 
@@ -18,7 +18,7 @@ public class SequentialObjectPoolCreateParameter<T> extends BaseOffHeapPoolCreat
 		this.objectCount = objectCount;
 	}
 	
-	public SequentialObjectPoolCreateParameter(Class<T> elementType, long objectCount, OffHeapMemoryService offHeapMemoryService) {
+	public SequentialObjectPoolCreateParameter(Class<T> elementType, long objectCount, DirectMemoryService offHeapMemoryService) {
 		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType, offHeapMemoryService);
 		this.objectCount = objectCount;
 	}
