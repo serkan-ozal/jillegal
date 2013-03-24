@@ -17,7 +17,7 @@ import org.apache.log4j.Logger;
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.agent.JillegalAgent;
 
-@SuppressWarnings( { "unchecked" } )
+@SuppressWarnings( { "unchecked", "restriction" } )
 public class DirectMemoryServiceImpl implements DirectMemoryService {
 	
 	private final Logger logger = Logger.getLogger(getClass());
