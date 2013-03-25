@@ -4,7 +4,7 @@
   <head>
     <meta charset='utf-8' />
     <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="Jillegal : " />
+    <meta name="description" content="Jillegal : Off Heap Object Pool and On the Fly Instrumentation Tool" />
 
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
 
@@ -19,7 +19,7 @@
           <a id="forkme_banner" href="https://github.com/serkan-ozal/jillegal">View on GitHub</a>
 
           <h1 id="project_title">Jillegal</h1>
-          <h2 id="project_tagline"></h2>
+          <h2 id="project_tagline">Off Heap Object Pool and On the Fly Instrumentation Tool</h2>
 
             <section id="downloads">
               <a class="zip_download_link" href="https://github.com/serkan-ozal/jillegal/zipball/master">Download this project as a .zip file</a>
@@ -40,7 +40,8 @@
 <ul>
 <li><p>Accessing and setting any value at any address (as HEX address) in application is supported.</p></li>
 <li><p>Accessing real memory address of any object is supported. So you can change any object in memory by getting its address and copying your custom object to its address.</p></li>
-<li><p>Sequentially allocated object pool is supported. Objects are allocated from off-heap so GC doesn't know them. With this feature, all objects in pool are exist as sequential at memory, so sequential accessing to them is faster. Because, they will be fetched to CPU cache together as limited size of CPU cache.</p></li>
+<li><p>Sequentially allocated off heap object pool is supported. Objects are allocated from off-heap so GC doesn't know them. With this feature, all objects in pool are exist as sequential at memory, so sequential accessing to them is faster. Because, they will be fetched to CPU cache together as limited size of CPU cache.</p></li>
+<li><p>On the fly class instumentation without giving any VM argument to your Java application. <strong>Jillegal agent</strong> is loaded automatically on the fly whenever you need it.</p></li>
 </ul><h2><strong>Install</strong></h2>
 
 <p>In your <strong>pom.xml</strong>, you must add repository and dependency for Jillegal. 
@@ -49,7 +50,7 @@ You can change <strong>jillegal.version</strong> to any existing Jillegal librar
 <pre><code>...
 &lt;properties&gt;
     ...
-    &lt;jillegal.version&gt;1.0.0-BETA&lt;/jillegal.version&gt;
+    &lt;jillegal.version&gt;1.0.1-RELEASE&lt;/jillegal.version&gt;
     ...
 &lt;/properties&gt;
 ...
@@ -76,10 +77,76 @@ You can change <strong>jillegal.version</strong> to any existing Jillegal librar
 
 <p><strong>Note:</strong> 
 If you don't use <strong>Maven</strong>, you can access <strong>jillegal.jar</strong> including all dependencies 
-with (assuming you are using 1.0.0-BETA version of Jillegal)
-<strong><a href="https://github.com/serkan-ozal/maven-repository/blob/master/tr/com/serkanozal/jillegal/1.0.0-BETA/jillegal-jar-with-dependencies-1.0.0-BETA.jar?raw=true">https://github.com/serkan-ozal/maven-repository/blob/master/tr/com/serkanozal/jillegal/1.0.0-BETA/jillegal-jar-with-dependencies-1.0.0-BETA.jar?raw=true</a></strong></p>
+with (assuming you are using 1.0.1-RELEASE version of Jillegal)
+<strong><a href="https://github.com/serkan-ozal/maven-repository/blob/master/tr/com/serkanozal/jillegal/1.0.0-BETA/jillegal-jar-with-dependencies-1.0.1-RELEASE.jar?raw=true">https://github.com/serkan-ozal/maven-repository/blob/master/tr/com/serkanozal/jillegal/1.0.0-BETA/jillegal-jar-with-dependencies-1.0.1-RELEASE.jar?raw=true</a></strong></p>
 
-<h2><strong>Jillegal with a simple example</strong></h2>
+<h2><strong>Jillegal with simple examples</strong></h2>
+
+<p>You can access all demo codes from here: <a href="https://github.com/serkan-ozal/jillegal-demo">jillegal-demo</a></p>
+
+<h3><em>Direct Memory Access Example</em></h3>
+
+<pre><code>DirectMemoryService directMemoryService = DirectMemoryServiceFactory.getDirectMemoryService();
+
+SampleClass obj = new SampleClass();
+
+long addressOfField_b = directMemoryService.addressOfField(obj, "b");
+long addressOfField_i = directMemoryService.addressOfField(obj, "i");
+long addressOfField_l = directMemoryService.addressOfField(obj, "l");
+
+System.out.println("Value of b with direct memory access: " + directMemoryService.getInt(addressOfField_b));
+System.out.println("Value of i with direct memory access: " + directMemoryService.getInt(addressOfField_i));
+System.out.println("Value of l with direct memory access: " + directMemoryService.getLong(addressOfField_l));
+
+directMemoryService.putByte(addressOfField_b, (byte)10); // Note that b is final static field
+directMemoryService.putInt(addressOfField_i, 55);
+directMemoryService.putLong(addressOfField_l, 100);
+
+System.out.println("Values of b, i and l are changed with direct memory access ...");
+
+System.out.println("Value of b with direct memory access: " + directMemoryService.getByte(addressOfField_b));
+System.out.println("Value of i with direct memory access: " + directMemoryService.getInt(addressOfField_i));
+System.out.println("Value of l with direct memory access: " + directMemoryService.getLong(addressOfField_l));
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
+SampleClass objSource = new SampleClass();
+SampleClass objTarget = new SampleClass();
+
+objSource.setI(100);
+objSource.setL(1000);
+
+objTarget.setI(200);
+objTarget.setL(2000);
+
+System.out.println("Value of i on targetObject: " + objTarget.getI());
+System.out.println("Value of l on targetObject: " + objTarget.getL());
+
+directMemoryService.changeObject(objSource, objTarget);
+
+System.out.println("Source object has been directly copied to target object ...");
+
+System.out.println("Value of i on targetObject: " + objTarget.getI());
+System.out.println("Value of l on targetObject: " + objTarget.getL());
+</code></pre>
+
+<p><em>Output:</em></p>
+
+<pre><code>Value of b with direct memory access: 100
+Value of i with direct memory access: 5
+Value of l with direct memory access: 10
+Values of b, i and l are changed with direct memory access ...
+Value of b with direct memory access: 10
+Value of i with direct memory access: 55
+Value of l with direct memory access: 100
+Value of i on targetObject: 200
+Value of l on targetObject: 2000
+Source object has been directly copied to target object ...
+Value of i on targetObject: 100
+Value of l on targetObject: 1000
+</code></pre>
+
+<h3><em>Off Heap Pool Example</em></h3>
 
 <pre><code>final int OBJECT_COUNT = 10000;
 
@@ -93,15 +160,112 @@ SequentialObjectPool&lt;SampleClass&gt; sequentialObjectPool =
             build()
     );
 
+System.out.println("Off heap object pool for class " + SampleClass.class.getName() + 
+    " has been allocated ...");
+
 for (int i = 0; i &lt; OBJECT_COUNT; i++) {
     SampleClass obj = sequentialObjectPool.newObject();
     obj.setOrder(i);
-}
+    System.out.println("New object has been retrieved from off heap pool and set order value to " + i);
+ }
 
 for (int i = 0; i &lt; OBJECT_COUNT; i++) {
     SampleClass obj = sequentialObjectPool.getObject(i);
-    System.out.println(obj.getOrder());
+    System.out.println("Order value of " + i + ". object at off heap pool: " + obj.getOrder());
 }
+</code></pre>
+
+<p><em>Output:</em></p>
+
+<pre><code>Off heap object pool for class tr.com.serkanozal.jillegaltest.OffHeapDemo$SampleClass has been allocated ...
+New object has been retrieved from off heap pool and set order value to 0
+New object has been retrieved from off heap pool and set order value to 1
+New object has been retrieved from off heap pool and set order value to 2
+...
+New object has been retrieved from off heap pool and set order value to 9999
+Order value of 0. object at off heap pool: 0
+Order value of 1. object at off heap pool: 1
+Order value of 2. object at off heap pool: 2
+...
+Order value of 9999. object at off heap pool: 9999
+</code></pre>
+
+<h3><em>Instrumentation Example</em></h3>
+
+<pre><code>Jillegal.init();
+
+System.out.println("Before Intrumentation: ");
+System.out.println("=====================================================");
+
+SampleClass obj1 = new SampleClass();
+obj1.methodToIntercept();
+
+System.out.println("=====================================================");
+
+
+System.out.println("After Intrumentation: ");
+System.out.println("=====================================================");
+
+InstrumenterService instrumenterService = InstrumenterServiceFactory.getInstrumenterService();
+Instrumenter&lt;SampleClass&gt; inst = instrumenterService.getInstrumenter(SampleClass.class);
+GeneratedClass&lt;SampleClass&gt; redefinedClass =
+
+     inst.
+
+        insertBeforeConstructors(
+            new BeforeConstructorInterceptor&lt;SampleClass&gt;() {
+                @Override
+                public void beforeConstructor(SampleClass obj, 
+                                                Constructor&lt;SampleClass&gt; constructor, Object[] args) {
+                    System.out.println("Intercepted by Jillegal before constructor ...");
+                }
+            }).
+
+        insertAfterConstructors(
+            "System.out.println(\"Intercepted by Jillegal after constructor ...\");").
+
+        insertBeforeMethod("methodToIntercept", 
+            new BeforeMethodInterceptor&lt;SampleClass&gt;() {
+                @Override
+                public void beforeMethod(SampleClass obj, Method method, Object[] args) {
+                    System.out.println("Intercepted by Jillegal before methodToIntercept method ...");
+                }
+            }).
+
+        insertAfterMethod("methodToIntercept", 
+              "System.out.println(\"Intercepted by Jillegal after methodToIntercept method ...\");").
+
+    build();
+
+instrumenterService.redefineClass(redefinedClass); 
+
+SampleClass obj2 = new SampleClass();
+obj2.methodToIntercept();
+
+System.out.println("=====================================================");
+</code></pre>
+
+<p><em>Output:</em></p>
+
+<pre><code>Class Path: D:\Computer Sciences\Software\Workspaces\Eclipse Workspace\T2\jillegal-demo\target\classes;C:\Users\Asus\.m2\repository\tr\com\serkanozal\jillegal\1.0.1-RELEASE\jillegal-1.0.1-RELEASE.jar;C:\Users\Asus\.m2\repository\tr\com\serkanozal\jillegal-agent\1.0.0-RELEASE\jillegal-agent-1.0.0-RELEASE.jar;C:\Users\Asus\.m2\repository\com\sun\tools\1.6.0\tools-1.6.0.jar;C:\Users\Asus\.m2\repository\cglib\cglib\2.2\cglib-2.2.jar;C:\Users\Asus\.m2\repository\asm\asm\3.1\asm-3.1.jar;C:\Users\Asus\.m2\repository\org\javassist\javassist\3.17.1-GA\javassist-3.17.1-GA.jar;C:\Users\Asus\.m2\repository\commons-lang\commons-lang\2.6\commons-lang-2.6.jar;C:\Users\Asus\.m2\repository\log4j\log4j\1.2.16\log4j-1.2.16.jar
+OS Name: Windows 7
+Using ClassPath: D:\Computer Sciences\Software\Workspaces\Eclipse Workspace\T2\jillegal-demo\target\classes;C:\Users\Asus\.m2\repository\tr\com\serkanozal\jillegal\1.0.1-RELEASE\jillegal-1.0.1-RELEASE.jar;C:\Users\Asus\.m2\repository\tr\com\serkanozal\jillegal-agent\1.0.0-RELEASE\jillegal-agent-1.0.0-RELEASE.jar;C:\Users\Asus\.m2\repository\com\sun\tools\1.6.0\tools-1.6.0.jar;C:\Users\Asus\.m2\repository\cglib\cglib\2.2\cglib-2.2.jar;C:\Users\Asus\.m2\repository\asm\asm\3.1\asm-3.1.jar;C:\Users\Asus\.m2\repository\org\javassist\javassist\3.17.1-GA\javassist-3.17.1-GA.jar;C:\Users\Asus\.m2\repository\commons-lang\commons-lang\2.6\commons-lang-2.6.jar;C:\Users\Asus\.m2\repository\log4j\log4j\1.2.16\log4j-1.2.16.jar
+Agent path: C:\Users\Asus\.m2\repository\tr\com\serkanozal\jillegal-agent\1.0.0-RELEASE\jillegal-agent-1.0.0-RELEASE.jar
+Agentmain: sun.instrument.InstrumentationImpl@7f971afc - Arguments: null
+Before Intrumentation: 
+=====================================================
+SampleInstrumentClass.SampleClassToInstrument()
+SampleInstrumentClass.methodToIntercept()
+=====================================================
+After Intrumentation: 
+=====================================================
+Intercepted by Jillegal before constructor ...
+SampleInstrumentClass.SampleClassToInstrument()
+Intercepted by Jillegal after constructor ...
+Intercepted by Jillegal before methodToIntercept method ...
+SampleInstrumentClass.methodToIntercept()
+Intercepted by Jillegal after methodToIntercept method ...
+=====================================================
 </code></pre>
 
 <h2><strong>Roadmap</strong></h2>
@@ -124,18 +288,6 @@ for (int i = 0; i &lt; OBJECT_COUNT; i++) {
         }
     });
 </code></pre>
-
-<ul>
-<li>
-<p>Without any VM argument or additional agent, you can redefine all Java classes (including core Java classes) with your own implementation on the fly. 
-For example:</p>
-
-<pre><code>* You can add pre/post interceptors to constructors or methods programatically.  
-* You can modifiy core Java classes (such as String, Integer, ...) on the fly.
-* You can extend your class from any "final" defined Java class such as "String" class.
-</code></pre>
-</li>
-</ul>
       </section>
     </div>
 
