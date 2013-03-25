@@ -44,56 +44,6 @@ public class DirectMemoryServiceTest {
 		}
 		
 	}
-	
-	/*
-	 * JFreeMemoryService.info( );
-        
-        Unsafe      unsafe          = JFreeMemoryService.getUnsafe( );
-        MyObject    obj1            = new MyObject( );
-        MyObject    obj2            = new MyObject( );
-        MyObject    obj3            = new MyObject( );
-        String      fieldName       = "i";
-        long        objSize1        = JFreeMemoryService.sizeOf( obj1 );
-        long        objAddress1     = JFreeMemoryService.addressOf( obj1 );
-        long        fieldAddress1   = JFreeMemoryService.addressOfField( obj1, fieldName );
-        long        objSize2        = JFreeMemoryService.sizeOf( obj2 );
-        long        objAddress2     = JFreeMemoryService.addressOf( obj2 );
-        long        fieldAddress2   = JFreeMemoryService.addressOfField( obj2, fieldName );
-
-        System.out.println( "Object Size 1    : " + objSize1 );
-        System.out.println( "Object Address 1 : " + JFreeMemoryService.toHexAddress( objAddress1 ) );
-        System.out.println( "Field Address 1  : " + JFreeMemoryService.toHexAddress( fieldAddress1 ) );
-        
-        System.out.println( "Object Size 2    : " + objSize2 );
-        System.out.println( "Object Address 2 : " + JFreeMemoryService.toHexAddress( objAddress2 ) );
-        System.out.println( "Field Address 2  : " + JFreeMemoryService.toHexAddress( fieldAddress2 ) );
-        
-        int newFieldValue1 = 200;
-        System.out.println( "Get value of " + fieldName + " : " + unsafe.getInt( fieldAddress1 ) );
-        System.out.println( "Set value of " + fieldName + " with " + newFieldValue1 + " by direct memory access" );
-        unsafe.putInt( fieldAddress1, newFieldValue1 );
-        System.out.println( "Get value of " + fieldName + " : " + unsafe.getInt( fieldAddress1 ) );
-        
-        int newFieldValue2 = 300;
-        System.out.println( "Get value of " + fieldName + " : " + unsafe.getInt( fieldAddress2 ) );
-        System.out.println( "Set value of " + fieldName + " with " + newFieldValue2 + " by direct memory access" );
-        unsafe.putInt( fieldAddress2, newFieldValue2 );
-        System.out.println( "Get value of " + fieldName + " : " + unsafe.getInt( fieldAddress2 ) );
-        
-        MyObject restoredObj1 = JFreeMemoryService.getObject( objAddress1 );
-        System.out.println( restoredObj1.getI( ) );
-        
-        MyObject restoredObj2 = JFreeMemoryService.getObject( objAddress2 );
-        System.out.println( restoredObj2.getI( ) );
-        
-        System.out.println( "Before object change ..." );
-        System.out.println( "Get value " + fieldName + " of obj1 : " + obj1.getI( ) );
-        System.out.println( "Get value " + fieldName + " of obj3 : " + obj3.getI( ) );
-        JFreeMemoryService.changeObject( obj1, obj3 );
-        System.out.println( "After object change ..." );
-        System.out.println( "Get value " + fieldName + " of obj1 : " + obj1.getI( ) );
-        System.out.println( "Get value " + fieldName + " of obj3 : " + obj3.getI( ) );
-	 */
 
 	@Test
 	public void valueRetrievedAndSetSuccessfullyWithDirectMemoryAccess() throws SecurityException, NoSuchFieldException {
