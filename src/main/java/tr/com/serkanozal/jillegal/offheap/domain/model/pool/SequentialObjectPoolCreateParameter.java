@@ -11,16 +11,26 @@ import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 
 public class SequentialObjectPoolCreateParameter<T> extends BaseOffHeapPoolCreateParameter<T> {
 
-	protected long objectCount;
-	
-	public SequentialObjectPoolCreateParameter(Class<T> elementType, long objectCount) {
-		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType);
-		this.objectCount = objectCount;
+	public enum SequentialObjectPoolReferenceType {
+		LAZY_REFERENCED,
+		EAGER_REFERENCED
 	}
 	
-	public SequentialObjectPoolCreateParameter(Class<T> elementType, long objectCount, DirectMemoryService offHeapMemoryService) {
+	protected long objectCount;
+	protected SequentialObjectPoolReferenceType referenceType;
+	
+	public SequentialObjectPoolCreateParameter(Class<T> elementType, long objectCount, 
+			SequentialObjectPoolReferenceType referenceType) {
+		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType);
+		this.objectCount = objectCount;
+		this.referenceType = referenceType;
+	}
+	
+	public SequentialObjectPoolCreateParameter(Class<T> elementType, long objectCount, 
+			SequentialObjectPoolReferenceType referenceType, DirectMemoryService offHeapMemoryService) {
 		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType, offHeapMemoryService);
 		this.objectCount = objectCount;
+		this.referenceType = referenceType;
 	}
 	
 	public long getObjectCount() {
@@ -29,6 +39,14 @@ public class SequentialObjectPoolCreateParameter<T> extends BaseOffHeapPoolCreat
 	
 	public void setObjectCount(long objectCount) {
 		this.objectCount = objectCount;
+	}
+	
+	public SequentialObjectPoolReferenceType getReferenceType() {
+		return referenceType;
+	}
+	
+	public void setReferenceType(SequentialObjectPoolReferenceType referenceType) {
+		this.referenceType = referenceType;
 	}
 	
 }

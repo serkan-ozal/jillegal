@@ -17,6 +17,10 @@ import org.apache.log4j.Logger;
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.agent.JillegalAgent;
 
+/**
+ * @see http://hg.openjdk.java.net/jdk7/hotspot/hotspot/file/9b0ca45cd756/src/share/vm/oops/oop.hpp
+ * @see http://hg.openjdk.java.net/jdk7/hotspot/hotspot/file/9b0ca45cd756/src/share/vm/oops/klass.hpp
+ */
 @SuppressWarnings( { "unchecked", "restriction" } )
 public class DirectMemoryServiceImpl implements DirectMemoryService {
 	
@@ -25,17 +29,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     public static final byte SIZE_32_BIT = 4;
     public static final byte SIZE_64_BIT = 8;
     public static final byte INVALID_ADDRESS = -1;
-    
-    /**
-     * @link http://hg.openjdk.java.net/jdk7/hotspot/hotspot/file/9b0ca45cd756/src/share/vm/oops/oop.hpp
-     */
-    public static final long CLASS_FIELD_OFFSET_IN_INSTANCE_FOR_32_BIT = 4L;
-    public static final long CLASS_FIELD_OFFSET_IN_INSTANCE_FOR_64_BIT = 8L;
-    /**
-     * @link http://hg.openjdk.java.net/jdk7/hotspot/hotspot/file/9b0ca45cd756/src/share/vm/oops/klass.hpp
-     */
-    public static final long SIZE_FIELD_OFFSET_IN_CLASS = 12L;
-    
+
     private static final int NR_BITS = Integer.valueOf(System.getProperty("sun.arch.data.model"));
     private static final int BYTE = 8;
     private static final int WORD = NR_BITS / BYTE;
@@ -47,14 +41,26 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     private static final int OBJECT_HEADER_SIZE_32_BIT = 8; 
     private static final int OBJECT_HEADER_SIZE_64_BIT = 12; 
     
+    private static final int CLASS_DEF_POINTER_OFFSET_IN_OBJECT_FOR_32_BIT = 4;
+    private static final int CLASS_DEF_POINTER_OFFSET_IN_OBJECT_FOR_64_BIT = 8;
+    
+    private static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT = 8; 
+    private static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT = 12;
+    
+    private static final int SIZE_FIELD_OFFSET_IN_CLASS_32_BIT = 12;
+    private static final int SIZE_FIELD_OFFSET_IN_CLASS_64_BIT = 24;
+    
     private Unsafe unsafe;
     private Object[] objArray;
-    private long classFieldOffset;
+    
     private long baseOffset;
     private int addressSize;
     private int indexScale;
     private int addressShiftSize;
     private int objectHeaderSize;
+	private int classDefPointerOffsetInObject;
+    private int classDefPointerOffsetInClass;
+    private int sizeFieldOffsetOffsetInClass;
     
     public DirectMemoryServiceImpl() {
     	init();
@@ -70,15 +76,19 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
         
         switch (addressSize) {
             case SIZE_32_BIT:
-            	classFieldOffset = CLASS_FIELD_OFFSET_IN_INSTANCE_FOR_32_BIT;
                 addressShiftSize = ADDRESS_SHIFT_SIZE_32_BIT;
                 objectHeaderSize = OBJECT_HEADER_SIZE_32_BIT;
+                classDefPointerOffsetInObject = CLASS_DEF_POINTER_OFFSET_IN_OBJECT_FOR_32_BIT;
+                classDefPointerOffsetInClass = CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT;
+                sizeFieldOffsetOffsetInClass = SIZE_FIELD_OFFSET_IN_CLASS_32_BIT;
                 break;
                 
             case SIZE_64_BIT:
-            	classFieldOffset = CLASS_FIELD_OFFSET_IN_INSTANCE_FOR_64_BIT;
             	addressShiftSize = ADDRESS_SHIFT_SIZE_64_BIT;
             	objectHeaderSize = OBJECT_HEADER_SIZE_64_BIT;
+            	classDefPointerOffsetInObject = CLASS_DEF_POINTER_OFFSET_IN_OBJECT_FOR_64_BIT;
+            	classDefPointerOffsetInClass = CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT;
+            	sizeFieldOffsetOffsetInClass = SIZE_FIELD_OFFSET_IN_CLASS_64_BIT;
                 break;    
         }        
     }
@@ -93,17 +103,60 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
         	logger.error("Error at UnsafeBasedOffHeapMemoryServiceImpl.initUnsafe()", e);
         }
     }
-    
-    public Unsafe getUnsafe() {
+
+    public long getBaseOffset() {
+		return baseOffset;
+	}
+
+	public int getAddressSize() {
+		return addressSize;
+	}
+
+	public int getIndexScale() {
+		return indexScale;
+	}
+
+	public int getAddressShiftSize() {
+		return addressShiftSize;
+	}
+	
+	public int getClassDefPointerOffsetInObject() {
+		return classDefPointerOffsetInObject;
+	}
+
+	public int getClassDefPointerOffsetInClass() {
+		return classDefPointerOffsetInClass;
+	}
+
+	public int getSizeFieldOffsetOffsetInClass() {
+		return sizeFieldOffsetOffsetInClass;
+	}
+
+	@Override
+	public int objectHeaderSize() {
+		return objectHeaderSize;
+	}
+	
+	@Override
+	public int arrayHeaderSize() {
+		return objectHeaderSize + (Integer.SIZE / NR_BITS);
+	}
+	
+	@Override
+	public int addressSize() {
+		return unsafe.addressSize();
+	}
+
+	public Unsafe getUnsafe() {
         return unsafe;
     }
     
     public void info() {
-        System.out.println("Unsafe: " + unsafe );
-        System.out.println("\tAddressSize : " + unsafe.addressSize() );
+        System.out.println("Unsafe: " + unsafe);
+        System.out.println("\tAddressSize : " + unsafe.addressSize());
         System.out.println("\tPage Size   : " + unsafe.pageSize());
     }
-    
+
     @Override
     public long allocateMemory(long size) {
     	return unsafe.allocateMemory(size);
@@ -143,30 +196,24 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
         return JillegalAgent.sizeOf(obj);
     }
     
-    /*
-    TODO Fix and uncomment
-    public static long sizeOfWithUnsafe(Object obj) {
+    public long sizeOfWithUnsafe(Object obj) {
         if (obj == null) {
             return 0;
         }    
         else {
+        	long classAddress = addressOfClass(obj.getClass());
             switch (addressSize) {
                 case SIZE_32_BIT:
-                    return
-                    	unsafe.getAddress( 
-                                normalize(unsafe.getInt(obj, CLASS_FIELD_OFFSET_IN_INSTANCE_FOR_32_BIT)) + SIZE_FIELD_OFFSET_IN_CLASS);  
+                    return unsafe.getInt(classAddress + sizeFieldOffsetOffsetInClass);  
                     
                 case SIZE_64_BIT:
-                    return
-                        unsafe.getAddress(
-                        		normalize(unsafe.getInt(obj, CLASS_FIELD_OFFSET_IN_INSTANCE_FOR_64_BIT)) + SIZE_FIELD_OFFSET_IN_CLASS);  
+                    return unsafe.getInt(classAddress + sizeFieldOffsetOffsetInClass);  
                     
                 default:
                     throw new AssertionError("Unsupported address size: " + addressSize);    
             }
         }    
     }  
-    */
     
     public long sizeOfWithReflection(Class<?> objClass) {
     	List<Field> instanceFields = new LinkedList<Field>();
@@ -197,6 +244,39 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     @Override
     public long sizeOf(Class<?> objClass) {
     	return sizeOfWithReflection(objClass);
+    }
+    
+    @Override
+    public long sizeOfArray(Class<?> elementClass, long elementCount) {
+    	int elementSize = 0;
+    	if (elementClass.equals(boolean.class)) {
+    		elementSize = 1;
+    	}
+    	else if (elementClass.equals(byte.class)) {
+    		elementSize = Byte.SIZE / NR_BITS;
+    	}
+    	else if (elementClass.equals(char.class)) {
+    		elementSize = Character.SIZE / NR_BITS;
+    	}
+    	else if (elementClass.equals(short.class)) {
+    		elementSize = Short.SIZE / NR_BITS;
+    	}
+    	else if (elementClass.equals(int.class)) {
+    		elementSize = Integer.SIZE / NR_BITS;
+    	}
+    	else if (elementClass.equals(float.class)) {
+    		elementSize = Float.SIZE / NR_BITS;
+    	}
+    	else if (elementClass.equals(long.class)) {
+    		elementSize = Long.SIZE / NR_BITS;
+    	}
+    	else if (elementClass.equals(double.class)) {
+    		elementSize = Double.SIZE / NR_BITS;
+    	}
+    	else {
+    		elementSize = unsafe.addressSize();
+    	}
+    	return arrayHeaderSize() + (elementCount * elementSize);
     }
     
     @Override
@@ -257,7 +337,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
         long fieldOffset = 0;
         Field field = obj.getClass().getDeclaredField(fieldName);
         if (Modifier.isStatic(field.getModifiers())) {
-        	baseAddress = addressOfClass(obj);
+        	baseAddress = addressOfClass(obj.getClass());
         	fieldOffset = unsafe.staticFieldOffset(field);
         }
         else {
@@ -268,13 +348,14 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     }
     
     @Override
-    public long addressOfClass(Object obj) {
+    public long addressOfClass(Class<?> clazz) {
+    	long addressOfClass = addressOf(clazz);
     	switch (addressSize) {
 	        case SIZE_32_BIT:
-	            return unsafe.getInt(obj, classFieldOffset);
+	            return unsafe.getInt(addressOfClass + classDefPointerOffsetInClass) << addressShiftSize;
 	            
 	        case SIZE_64_BIT:
-	        	return (unsafe.getLong(obj, classFieldOffset) & 0x00000000FFFFFFFFL) << addressShiftSize;   
+	        	return unsafe.getLong(addressOfClass + classDefPointerOffsetInClass) << addressShiftSize;   
 	            
 	        default:    
                 throw new AssertionError("Unsupported address size: " + addressSize);     

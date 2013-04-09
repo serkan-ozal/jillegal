@@ -12,8 +12,9 @@ import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreatePar
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.SequentialObjectPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
+import tr.com.serkanozal.jillegal.offheap.pool.EagerReferencedObjectPool;
 import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
-import tr.com.serkanozal.jillegal.offheap.pool.SequentialObjectPool;
+import tr.com.serkanozal.jillegal.offheap.pool.LazyReferencedObjectPool;
 
 public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 
@@ -26,8 +27,15 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 		
 		switch (parameter.getPoolType()) {
 			case SEQUENTIAL_OBJECT_POOL:
-				return (O) new SequentialObjectPool<T>((SequentialObjectPoolCreateParameter<T>)parameter);
-				
+				SequentialObjectPoolCreateParameter<T> seqObjPoolParameter = (SequentialObjectPoolCreateParameter<T>)parameter; 
+				switch (seqObjPoolParameter.getReferenceType()) {
+					case LAZY_REFERENCED:
+						return (O) new LazyReferencedObjectPool<T>((SequentialObjectPoolCreateParameter<T>)parameter);
+					case EAGER_REFERENCED:
+						return (O) new EagerReferencedObjectPool<T>((SequentialObjectPoolCreateParameter<T>)parameter);
+					default:
+						return (O) new LazyReferencedObjectPool<T>((SequentialObjectPoolCreateParameter<T>)parameter);
+				}
 			default:
 				return null;
 		}

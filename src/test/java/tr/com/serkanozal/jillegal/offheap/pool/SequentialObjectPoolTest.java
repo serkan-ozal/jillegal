@@ -12,7 +12,7 @@ import junit.framework.Assert;
 import org.junit.Test;
 
 import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.SequentialObjectPoolCreateParameterBuilder;
-import tr.com.serkanozal.jillegal.offheap.pool.SequentialObjectPool;
+import tr.com.serkanozal.jillegal.offheap.pool.LazyReferencedObjectPool;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 
@@ -49,7 +49,7 @@ public class SequentialObjectPoolTest {
 	public void objectRetrievedSuccessfullyFromSequentialObjectPool() {
 		final int OBJECT_COUNT = 10000;
 		
-		SequentialObjectPool<SampleClass> sequentialObjectPool = 
+		LazyReferencedObjectPool<SampleClass> sequentialObjectPool = 
 				offHeapService.createOffHeapPool(
 						new SequentialObjectPoolCreateParameterBuilder<SampleClass>().
 								type(SampleClass.class).

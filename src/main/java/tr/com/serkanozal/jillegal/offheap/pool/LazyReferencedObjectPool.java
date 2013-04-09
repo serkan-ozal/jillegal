@@ -10,7 +10,7 @@ package tr.com.serkanozal.jillegal.offheap.pool;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.SequentialObjectPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 
-public class SequentialObjectPool<T> extends BaseOffHeapPool<T, SequentialObjectPoolCreateParameter<T>> {
+public class LazyReferencedObjectPool<T> extends BaseOffHeapPool<T, SequentialObjectPoolCreateParameter<T>> {
 
 	private long objectCount;
 	private long objectSize;
@@ -20,11 +20,11 @@ public class SequentialObjectPool<T> extends BaseOffHeapPool<T, SequentialObject
 	private long sampleObjectAddress;
 	private long addressLimit;
 	
-	public SequentialObjectPool(SequentialObjectPoolCreateParameter<T> parameter) {
+	public LazyReferencedObjectPool(SequentialObjectPoolCreateParameter<T> parameter) {
 		this(parameter.getElementType(), parameter.getObjectCount(), parameter.getDirectMemoryService());
 	}
 	
-	public SequentialObjectPool(Class<T> clazz, long objectCount, DirectMemoryService directMemoryService) {
+	public LazyReferencedObjectPool(Class<T> clazz, long objectCount, DirectMemoryService directMemoryService) {
 		super(clazz, directMemoryService);
 		init(clazz, objectCount, directMemoryService);
 	}

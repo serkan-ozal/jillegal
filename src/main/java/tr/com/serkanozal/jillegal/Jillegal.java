@@ -28,8 +28,8 @@ public class Jillegal {
 	
 	public static void init() {
 		if (initialized == false) {
-			AgentInitializer.init();
-			InstrumentInitializer.init();
+			//AgentInitializer.init();
+			//InstrumentInitializer.init();
 			initialized = true;
 		}	
 	}
