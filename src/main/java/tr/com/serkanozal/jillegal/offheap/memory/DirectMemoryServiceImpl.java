@@ -7,12 +7,24 @@
 
 package tr.com.serkanozal.jillegal.offheap.memory;
 
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import javax.management.RuntimeMBeanException;
+import javax.management.openmbean.CompositeDataSupport;
 
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
 
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.agent.JillegalAgent;
@@ -50,6 +62,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     private static final int SIZE_FIELD_OFFSET_IN_CLASS_32_BIT = 12;
     private static final int SIZE_FIELD_OFFSET_IN_CLASS_64_BIT = 24;
     
+    private VMOptions OPTIONS;
     private Unsafe unsafe;
     private Object[] objArray;
     
@@ -62,12 +75,83 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     private int classDefPointerOffsetInClass;
     private int sizeFieldOffsetOffsetInClass;
     
+    private class VMOptions {
+    	
+        private final String name;
+        private final boolean compressedRef;
+        private final int compressRefShift;
+        private final int objectAlignment;
+        private final int referenceSize;
+
+        public VMOptions(String name) {
+            this.name = name;
+            this.referenceSize = unsafe.addressSize();
+            this.objectAlignment = guessAlignment(this.referenceSize);
+            this.compressedRef = false;
+            this.compressRefShift = 1;
+        }
+
+        public VMOptions(String name, int shift) {
+            this.name = name;
+            this.referenceSize = 4;
+            this.objectAlignment = guessAlignment(this.referenceSize) << shift;
+            this.compressedRef = true;
+            this.compressRefShift = shift;
+        }
+
+        public long toNativeAddress(long address) {
+            if (compressedRef) {
+                return address << compressRefShift;
+            } 
+            else {
+                return address;
+            }
+        }
+        
+    }
+    
+    @SuppressWarnings("unused")
+    private class CompressedOopsClass {
+        
+		public Object obj1;
+        public Object obj2;
+        
+    }
+
+    @SuppressWarnings("unused")
+    private class HeaderClass {
+    	
+        public boolean b1;
+        
+    }
+    
+    @SuppressWarnings("unused")
+    private class MyObject1 {
+
+    }
+
+    @SuppressWarnings("unused")
+    private class MyObject2 {
+    	
+        private boolean b1;
+        
+    }
+
+    @SuppressWarnings("unused")
+    private class MyObject3 {
+    	
+        private int i1;
+        
+    }
+    
     public DirectMemoryServiceImpl() {
     	init();
     }
     
     private void init() {
         initUnsafe();
+        
+        OPTIONS = getOptions();
         
         objArray = new Object[1];
         baseOffset = unsafe.arrayBaseOffset(Object[].class);
@@ -102,6 +186,260 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
         catch (Exception e) {
         	logger.error("Error at UnsafeBasedOffHeapMemoryServiceImpl.initUnsafe()", e);
         }
+    }
+    
+    private VMOptions getOptions() {
+        // try Hotspot
+        VMOptions hsOpts = getHotspotSpecifics();
+        if (hsOpts != null) {
+        	return hsOpts;
+        }
+
+        // try JRockit
+        VMOptions jrOpts = getJRockitSpecifics();
+        if (jrOpts != null) {
+        	return jrOpts;
+        }
+
+        // When running with CompressedOops on 64-bit platform, the address size
+        // reported by Unsafe is still 8, while the real reference fields are 4 bytes long.
+        // Try to guess the reference field size with this naive trick.
+        int oopSize;
+        try {
+            long off1 = unsafe.objectFieldOffset(CompressedOopsClass.class.getField("obj1"));
+            long off2 = unsafe.objectFieldOffset(CompressedOopsClass.class.getField("obj2"));
+            oopSize = (int) Math.abs(off2 - off1);
+        } 
+        catch (NoSuchFieldException e) {
+            oopSize = -1;
+        }
+
+        if (oopSize != unsafe.addressSize()) {
+            return new VMOptions("Auto-detected", 3); // assume compressed references have << 3 shift
+        } 
+        else {
+            return new VMOptions("Auto-detected");
+        }
+    }
+    
+    private VMOptions getHotspotSpecifics() {
+        String name = System.getProperty("java.vm.name");
+        if (!name.contains("HotSpot") && !name.contains("OpenJDK")) {
+            return null;
+        }
+
+        try {
+            MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+
+            try {
+                ObjectName mbean = new ObjectName("com.sun.management:type=HotSpotDiagnostic");
+                CompositeDataSupport compressedOopsValue = (CompositeDataSupport) server.invoke(mbean, "getVMOption", new Object[]{"UseCompressedOops"}, new String[]{"java.lang.String"});
+                boolean compressedOops = Boolean.valueOf(compressedOopsValue.get("value").toString());
+                if (compressedOops) {
+                    // if compressed oops are enabled, then this option is also accessible
+                    CompositeDataSupport alignmentValue = (CompositeDataSupport) server.invoke(mbean, "getVMOption", new Object[]{"ObjectAlignmentInBytes"}, new String[]{"java.lang.String"});
+                    int align = Integer.valueOf(alignmentValue.get("value").toString());
+                    return new VMOptions("HotSpot", log2p(align));
+                } else {
+                    return new VMOptions("HotSpot");
+                }
+
+            } 
+            catch (RuntimeMBeanException iae) {
+                return new VMOptions("HotSpot");
+            }
+        } 
+        catch (RuntimeException re) {
+            System.err.println("Failed to read HotSpot-specific configuration properly, please report this as the bug");
+            re.printStackTrace();
+            return null;
+        } 
+        catch (Exception exp) {
+            System.err.println("Failed to read HotSpot-specific configuration properly, please report this as the bug");
+            exp.printStackTrace();
+            return null;
+        }
+    }
+
+    private VMOptions getJRockitSpecifics() {
+        String name = System.getProperty("java.vm.name");
+        if (!name.contains("JRockit")) {
+            return null;
+        }
+
+        try {
+            MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+            String str = (String) server.invoke(new ObjectName("oracle.jrockit.management:type=DiagnosticCommand"), "execute", new Object[]{"print_vm_state"}, new String[]{"java.lang.String"});
+            String[] split = str.split("\n");
+            for (String s : split) {
+                if (s.contains("CompRefs")) {
+                    Pattern pattern = Pattern.compile("(.*?)References are compressed, with heap base (.*?) and shift (.*?)\\.");
+                    Matcher matcher = pattern.matcher(s);
+                    if (matcher.matches()) {
+                        return new VMOptions("JRockit", Integer.valueOf(matcher.group(3)));
+                    } 
+                    else {
+                        return new VMOptions("JRockit");
+                    }
+                }
+            }
+            return null;
+        } 
+        catch (RuntimeException re) {
+            System.err.println("Failed to read JRockit-specific configuration properly, please report this as the bug");
+            re.printStackTrace();
+            return null;
+        } 
+        catch (Exception exp) {
+            System.err.println("Failed to read JRockit-specific configuration properly, please report this as the bug");
+            exp.printStackTrace();
+            return null;
+        }
+    }
+    
+    private int align(int addr) {
+        int align = OPTIONS.objectAlignment;
+        if ((addr % align) == 0) {
+            return addr;
+        } 
+        else {
+            return ((addr / align) + 1) * align;
+        }
+    }
+
+    private int log2p(int x) {
+        int r = 0;
+        while ((x >>= 1) != 0) {
+            r++;
+        }    
+        return r;
+    }
+    
+    private int guessAlignment(int oopSize) {
+        final int COUNT = 1000 * 1000;
+        Object[] array = new Object[COUNT];
+        long[] offsets = new long[COUNT];
+
+        for (int c = 0; c < COUNT - 3; c += 3) {
+            array[c + 0] = new MyObject1();
+            array[c + 1] = new MyObject2();
+            array[c + 1] = new MyObject3();
+        }
+
+        for (int c = 0; c < COUNT; c++) {
+            offsets[c] = addressOfInternal(array[c], oopSize);
+        }
+
+        Arrays.sort(offsets);
+
+        Multiset<Integer> sizes = HashMultiset.create();
+        for (int c = 1; c < COUNT; c++) {
+            sizes.add((int) (offsets[c] - offsets[c - 1]));
+        }
+
+        int min = -1;
+        for (int s : sizes.elementSet()) {
+            if (s <= 0) {
+            	continue;
+            }
+            if (min == -1) {
+                min = s;
+            } 
+            else {
+                min = gcd(min, s);
+            }
+        }
+
+        return min;
+    }
+    
+    private long addressOfInternal(Object o, int oopSize) {
+        Object[] array = new Object[]{o};
+
+        long baseOffset = unsafe.arrayBaseOffset(Object[].class);
+        long objectAddress;
+        switch (oopSize) {
+            case 4:
+                objectAddress = unsafe.getInt(array, baseOffset);
+                break;
+            case 8:
+                objectAddress = unsafe.getLong(array, baseOffset);
+                break;
+            default:
+                throw new Error("unsupported address size: " + oopSize);
+        }
+
+        return (objectAddress);
+    }
+    
+    private int sizeOfArrayInternal(Object o) {
+        int base = unsafe.arrayBaseOffset(o.getClass());
+        int scale = unsafe.arrayIndexScale(o.getClass());
+        Class<?> type = o.getClass().getComponentType();
+        if (type == boolean.class) {
+        	return base + ((boolean[]) o).length * scale;
+        }
+        if (type == byte.class) {
+        	return base + ((byte[]) o).length * scale;
+        }
+        if (type == short.class) {
+        	return base + ((short[]) o).length * scale;
+        }
+        if (type == char.class) {
+        	return base + ((char[]) o).length * scale;
+        }
+        if (type == int.class) {
+        	return base + ((int[]) o).length * scale;
+        }
+        if (type == float.class) {
+        	return base + ((float[]) o).length * scale;
+        }
+        if (type == long.class) {
+        	return base + ((long[]) o).length * scale;
+        }
+        if (type == double.class) {
+        	return base + ((double[]) o).length * scale;
+        }
+        return base + ((Object[]) o).length * scale;
+    }
+    
+    public int sizeOfType(Class<?> type) {
+        if (type == byte.class) { 
+        	return 1; 
+        }
+        else if (type == boolean.class) { 
+        	return 1; 
+        }
+        else if (type == short.class) { 
+        	return 2; 
+        }
+        else if (type == char.class) { 
+        	return 2; 
+        }
+        else if (type == int.class) { 
+        	return 4; 
+        }
+        else if (type == float.class) { 
+        	return 4; 
+        }
+        else if (type == long.class) { 
+        	return 8; 
+        }
+        else if (type == double.class) { 
+        	return 8; 
+        }
+        else {
+        	return OPTIONS.referenceSize;
+        }	
+    }
+
+    private int gcd(int a, int b) {
+        while (b > 0) {
+            int temp = b;
+            b = a % b;
+            a = temp;
+        }
+        return a;
     }
 
     public long getBaseOffset() {
@@ -155,6 +493,12 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
         System.out.println("Unsafe: " + unsafe);
         System.out.println("\tAddressSize : " + unsafe.addressSize());
         System.out.println("\tPage Size   : " + unsafe.pageSize());
+        System.out.println("Running " + (addressSize * 8) + "-bit " + OPTIONS.name + " VM.");
+        if (OPTIONS.compressedRef) {
+        	System.out.println("Using compressed references with " + OPTIONS.compressRefShift + "-bit shift.");
+        }
+        System.out.println("Objects are " + OPTIONS.objectAlignment + " bytes aligned.");
+        System.out.println();
     }
 
     @Override

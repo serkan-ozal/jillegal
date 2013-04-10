@@ -21,12 +21,13 @@
         
         <jillegal.agent.version>1.0.0-RELEASE</jillegal.agent.version>
         <tools.version>1.6.0</tools.version>
-        <junit.version>4.11</junit.version>
-        <mockito.version>1.9.0</mockito.version>
+        <guava.version>13.0</guava.version>
         <commons.lang.version>2.6</commons.lang.version>
         <javassist.version>3.17.1-GA</javassist.version>
         <cglib.version>2.2</cglib.version>
         <log4j.version>1.2.16</log4j.version>
+        <junit.version>4.11</junit.version>
+        <mockito.version>1.9.0</mockito.version>
 
     </properties>
   
@@ -147,6 +148,12 @@
 			<artifactId>javassist</artifactId>
 			<version>${javassist.version}</version>
 		</dependency>
+		
+		<dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>${guava.version}</version>
+        </dependency>
         
         <!-- test -->
         <dependency>
