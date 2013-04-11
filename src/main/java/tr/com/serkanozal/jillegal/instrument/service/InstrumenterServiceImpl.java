@@ -12,16 +12,12 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.agent.JillegalAgent;
 import tr.com.serkanozal.jillegal.instrument.Instrumenter;
 import tr.com.serkanozal.jillegal.instrument.domain.model.GeneratedClass;
 import tr.com.serkanozal.jillegal.instrument.factory.DefaultInstrumenterFactory;
 import tr.com.serkanozal.jillegal.instrument.factory.InstrumenterFactory;
-import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceImpl;
-import tr.com.serkanozal.jillegal.util.JvmUtil;
 
-@SuppressWarnings("restriction")
 public class InstrumenterServiceImpl implements InstrumenterService {
 
 	private final Logger logger = Logger.getLogger(getClass());
@@ -81,13 +77,15 @@ public class InstrumenterServiceImpl implements InstrumenterService {
 	
 	@Override
 	public <T> void redefineClass(Class<T> cls, byte[] byteCodes) {
-		redefineWithUnsafe(cls, byteCodes);
+		redefineWithAgent(cls, byteCodes);
 	}
 	
 	public <T> void redefineWithAgent(Class<T> cls, byte[] byteCodes) {
 		JillegalAgent.redefineClass(cls, byteCodes);
 	}
 	
+	/*
+	// TODO In development
 	@SuppressWarnings({ "unchecked" })
 	public <T> void redefineWithUnsafe(Class<T> cls, byte[] byteCodes) {
 		try {
@@ -145,6 +143,7 @@ public class InstrumenterServiceImpl implements InstrumenterService {
 		}
 		
 	}
+	*/
 
 	@Override
 	public <T> void redefineClass(GeneratedClass<T> generatedClass) {

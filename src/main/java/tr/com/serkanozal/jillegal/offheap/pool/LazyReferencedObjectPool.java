@@ -31,6 +31,7 @@ public class LazyReferencedObjectPool<T> extends BaseOffHeapPool<T, SequentialOb
 	
 	protected synchronized void init() {
 		this.currentMemoryIndex	= allocatedAddress - objectSize;
+		// Copy sample object to allocated memory region for each object
 		for (long l = 0; l < objectCount; l++) {
 			directMemoryService.copyMemory(sampleObjectAddress, allocatedAddress + (l * objectSize), objectSize);
 		}

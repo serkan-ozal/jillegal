@@ -12,6 +12,7 @@ import junit.framework.Assert;
 import org.junit.Test;
 
 import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.SequentialObjectPoolCreateParameterBuilder;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.SequentialObjectPoolCreateParameter.SequentialObjectPoolReferenceType;
 import tr.com.serkanozal.jillegal.offheap.pool.LazyReferencedObjectPool;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
@@ -46,7 +47,7 @@ public class SequentialObjectPoolTest {
 	}
 	
 	@Test
-	public void objectRetrievedSuccessfullyFromSequentialObjectPool() {
+	public void objectRetrievedSuccessfullyFromLazyReferencedSequentialObjectPool() {
 		final int OBJECT_COUNT = 10000;
 		
 		LazyReferencedObjectPool<SampleClass> sequentialObjectPool = 
@@ -54,6 +55,30 @@ public class SequentialObjectPoolTest {
 						new SequentialObjectPoolCreateParameterBuilder<SampleClass>().
 								type(SampleClass.class).
 								objectCount(OBJECT_COUNT).
+								referenceType(SequentialObjectPoolReferenceType.LAZY_REFERENCED).
+							build()
+				);
+   
+    	for (int i = 0; i < OBJECT_COUNT; i++) {
+    		SampleClass obj = sequentialObjectPool.newObject();
+    		obj.setOrder(i);
+    	}
+    	for (int i = 0; i < OBJECT_COUNT; i++) {
+    		SampleClass obj = sequentialObjectPool.getObject(i);
+    		Assert.assertEquals(i, obj.getOrder());
+    	}
+	}
+	
+	@Test
+	public void objectRetrievedSuccessfullyFromEagerReferencedSequentialObjectPool() {
+		final int OBJECT_COUNT = 10000;
+		
+		EagerReferencedObjectPool<SampleClass> sequentialObjectPool = 
+				offHeapService.createOffHeapPool(
+						new SequentialObjectPoolCreateParameterBuilder<SampleClass>().
+								type(SampleClass.class).
+								objectCount(OBJECT_COUNT).
+								referenceType(SequentialObjectPoolReferenceType.EAGER_REFERENCED).
 							build()
 				);
    

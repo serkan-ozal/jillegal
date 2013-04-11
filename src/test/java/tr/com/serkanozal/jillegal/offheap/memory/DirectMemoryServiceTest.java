@@ -64,34 +64,6 @@ public class DirectMemoryServiceTest {
 		Assert.assertEquals(10, directMemoryService.getByte(addressOfField_b));
 		Assert.assertEquals(55, directMemoryService.getInt(addressOfField_i));
 		Assert.assertEquals(100, directMemoryService.getLong(addressOfField_l));
-		
-		SampleClass[] sampleObjectArray = new SampleClass[100];
-		SampleClass sc = new SampleClass();
-		//c1 0f 69 ff : 1111 1111 0110 1001 0000 1111 1100 0001 
-		//4b 13 69 ff : 1111 1111 0110 1001 0001 0011 0100 1011 
-		for (int i = 0; i < 100; i++) {
-	    	System.out.print(String.format("%02x ", directMemoryService.getByte(SampleClass.class, (long)i)));
-			if ((i + 1) % 16 == 0) {
-				System.out.println();
-			}
-    	}	
-    	System.out.println();
-		
-		for (int i = 0; i < 100; i++) {
-	    	System.out.print(String.format("%02x ", directMemoryService.getByte(sampleObjectArray, (long)i)));
-			if ((i + 1) % 16 == 0) {
-				System.out.println();
-			}
-    	}	
-    	System.out.println();
-    	
-    	for (int i = 0; i < 100; i++) {
-	    	System.out.print(String.format("%02x ", directMemoryService.getByte(sc, (long)i)));
-			if ((i + 1) % 16 == 0) {
-				System.out.println();
-			}
-    	}	
-    	System.out.println();
 	}
 	
 	@Test

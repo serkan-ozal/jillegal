@@ -14,7 +14,7 @@ public class Jillegal {
 
 	public static final String GROUP_ID = "tr.com.serkanozal";
 	public static final String ARTIFACT_ID = "jillegal";
-	public static String VERSION = "1.0.0-RELEASE";
+	public static String VERSION = "1.0.1-RELEASE";
 	
 	private static boolean initialized = false;
 	
@@ -28,12 +28,10 @@ public class Jillegal {
 	
 	public static void init() {
 		if (initialized == false) {
-			//AgentInitializer.init();
-			//InstrumentInitializer.init();
+			AgentInitializer.init();
+			InstrumentInitializer.init();
 			initialized = true;
 		}	
 	}
-	
-	
 	
 }

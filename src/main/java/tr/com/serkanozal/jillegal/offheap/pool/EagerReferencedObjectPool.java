@@ -24,7 +24,6 @@ public class EagerReferencedObjectPool<T> extends BaseOffHeapPool<T, SequentialO
 	private T[] sampleArray;
 	private T[] objectArray;
 	private long sampleObjectAddress;
-	private long addressLimit;
 	
 	public EagerReferencedObjectPool(SequentialObjectPoolCreateParameter<T> parameter) {
 		this(parameter.getElementType(), parameter.getObjectCount(), parameter.getDirectMemoryService());
@@ -40,37 +39,37 @@ public class EagerReferencedObjectPool<T> extends BaseOffHeapPool<T, SequentialO
 		this.currentArrayIndex = 0;
 		
 		int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
+		int arrayIndexScale = JvmUtil.arrayIndexScale(elementType);
 		long arrayIndexStartAddress = allocatedAddress + JvmUtil.arrayBaseOffset(elementType);
 		long objStartAddress = allocatedAddress + JvmUtil.sizeOfArray(elementType, objectCount);
+		
+		// Allocated objects must start aligned as address size from start address of allocated address
 		long diffBetweenArrayAndObjectStartAddresses = objStartAddress - allocatedAddress;
 		long addressMod = diffBetweenArrayAndObjectStartAddresses % JvmUtil.getAddressSize();
 		if (addressMod != 0) {
 			objStartAddress += (JvmUtil.getAddressSize() - addressMod);
 		}
 
+		// Copy sample array header to object pool array header
 		for (int i = 0; i < arrayHeaderSize; i++) {
 			directMemoryService.putByte(allocatedAddress + i, directMemoryService.getByte(sampleArray, i));
 		}
+		
+		// Set length of array object pool array
 		directMemoryService.putInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize(), (int)objectCount);
 
+		// All index is object pool array header point to allocated objects 
 		for (long l = 0; l < objectCount; l++) {
-			//System.out.println(Long.toHexString((((objStartAddress + (l * objectSize) + arrayHeaderSize + 8)))));
-			//System.out.println(Long.toHexString(((int)((objStartAddress + (l * objectSize) + arrayHeaderSize + 8)) >> 3) << 3));
-			directMemoryService.putLong(arrayIndexStartAddress + (l * 4), (int) ((objStartAddress + (l * objectSize))) >> 3);
+			directMemoryService.putLong(arrayIndexStartAddress + (l * arrayIndexScale), 
+					JvmUtil.toJvmAddress((objStartAddress + (l * objectSize))));
 		}
 
+		// Copy sample object to allocated memory region for each object
 		for (long l = 0; l < objectCount; l++) {
 			directMemoryService.copyMemory(sampleObjectAddress, objStartAddress + (l * objectSize), objectSize);
 		}
 		
 		this.objectArray = (T[]) directMemoryService.getObject(allocatedAddress);
-
-		for (int i = 0; i < 64; i++) {
-			System.out.print(String.format("%02x ", directMemoryService.getByte(objectArray, i)));
-			if ((i + 1) % 16 == 0) {
-				System.out.println();
-			}
-		}
 	}
 	
 	public long getObjectCount() {
@@ -79,7 +78,7 @@ public class EagerReferencedObjectPool<T> extends BaseOffHeapPool<T, SequentialO
 	
 	@Override
 	public synchronized T newObject() {
-		if (currentArrayIndex >= addressLimit) {
+		if (currentArrayIndex >= objectCount) {
 			return null;
 		}
 		return objectArray[currentArrayIndex++];
@@ -115,8 +114,9 @@ public class EagerReferencedObjectPool<T> extends BaseOffHeapPool<T, SequentialO
 		this.directMemoryService = directMemoryService;
 		this.objectSize = directMemoryService.sizeOf(clazz);
 		this.arraySize = JvmUtil.sizeOfArray(clazz, objectCount);
-		this.allocatedAddress = directMemoryService.allocateMemory(arraySize + (objectCount * objectSize));
-		this.addressLimit = allocatedAddress + arraySize + (objectCount * objectSize);
+		this.allocatedAddress = 
+				directMemoryService.allocateMemory(arraySize + (objectCount * objectSize) + 
+						JvmUtil.getAddressSize()); // Extra memory for possible aligning
 		try {
 			this.sampleObject = (T) clazz.newInstance();
 		} 

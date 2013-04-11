@@ -29,6 +29,8 @@ import com.google.common.collect.Multiset;
 /**
  * @link http://hg.openjdk.java.net/jdk7/hotspot/hotspot/file/9b0ca45cd756/src/share/vm/oops/oop.hpp
  * @link http://hg.openjdk.java.net/jdk7/hotspot/hotspot/file/9b0ca45cd756/src/share/vm/oops/klass.hpp
+ * 
+ * @link https://blogs.oracle.com/jrockit/entry/understanding_compressed_refer
  */
 @SuppressWarnings("restriction")
 public class JvmUtil {
@@ -36,14 +38,18 @@ public class JvmUtil {
 	public static final byte SIZE_32_BIT = 4;
     public static final byte SIZE_64_BIT = 8;
     public static final byte INVALID_ADDRESS = -1;
+    
+    public static final byte ADDRESSING_4_BYTE = 4;
+    public static final byte ADDRESSING_8_BYTE = 8;
+    public static final byte ADDRESSING_16_BYTE = 16;
 
     public static final int NR_BITS = Integer.valueOf(System.getProperty("sun.arch.data.model"));
     public static final int BYTE = 8;
     public static final int WORD = NR_BITS / BYTE;
     public static final int MIN_SIZE = 16; 
     
-    public static final int ADDRESS_SHIFT_SIZE_32_BIT = 0; 
-    public static final int ADDRESS_SHIFT_SIZE_64_BIT = 3; 
+    public static final int ADDRESS_SHIFT_SIZE_FOR_BETWEEN_32GB_AND_64_GB = 3; 
+    public static final int ADDRESS_SHIFT_SIZE_FOR_BIGGER_THAN_64_GB = 4; 
     
     public static final int OBJECT_HEADER_SIZE_32_BIT = 8; 
     public static final int OBJECT_HEADER_SIZE_64_BIT = 12; 
@@ -58,13 +64,13 @@ public class JvmUtil {
     public static final int SIZE_FIELD_OFFSET_IN_CLASS_64_BIT = 24;
     
     public static final int BOOLEAN_SIZE = 1;
-    public static final int BYTE_SIZE = Byte.SIZE / NR_BITS;
-    public static final int CHAR_SIZE = Character.SIZE / NR_BITS;
-    public static final int SHORT_SIZE = Short.SIZE / NR_BITS;
-    public static final int INT_SIZE = Integer.SIZE / NR_BITS;
-    public static final int FLOAT_SIZE = Float.SIZE / NR_BITS;
-    public static final int LONG_SIZE = Long.SIZE / NR_BITS;
-    public static final int DOUBLE_SIZE = Double.SIZE / NR_BITS;
+    public static final int BYTE_SIZE = Byte.SIZE / BYTE;
+    public static final int CHAR_SIZE = Character.SIZE / BYTE;
+    public static final int SHORT_SIZE = Short.SIZE / BYTE;
+    public static final int INT_SIZE = Integer.SIZE / BYTE;
+    public static final int FLOAT_SIZE = Float.SIZE / BYTE;
+    public static final int LONG_SIZE = Long.SIZE / BYTE;
+    public static final int DOUBLE_SIZE = Double.SIZE / BYTE;
     
     private static final Logger logger = Logger.getLogger(JvmUtil.class);
     
@@ -84,7 +90,6 @@ public class JvmUtil {
     }
 	
 	private static void init() {
-        // steal Unsafe
         try {
             Field unsafeField = Unsafe.class.getDeclaredField("theUnsafe");
             unsafeField.setAccessible(true);
@@ -108,7 +113,7 @@ public class JvmUtil {
 
         JvmUtil.addressSize = unsafe.addressSize();
         JvmUtil.headerSize = headerSize;
-        JvmUtil.arrayHeaderSize = headerSize + (Integer.SIZE / NR_BITS);
+        JvmUtil.arrayHeaderSize = headerSize + (Integer.SIZE / BYTE);
         JvmUtil.options = findOptions();
         
         JvmUtil.baseOffset = unsafe.arrayBaseOffset(Object[].class);
@@ -125,7 +130,10 @@ public class JvmUtil {
             	JvmUtil.classDefPointerOffsetInObject = CLASS_DEF_POINTER_OFFSET_IN_OBJECT_FOR_64_BIT;
             	JvmUtil.classDefPointerOffsetInClass = CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT;
             	JvmUtil.sizeFieldOffsetOffsetInClass = SIZE_FIELD_OFFSET_IN_CLASS_64_BIT;
-                break;    
+                break;
+                
+            default:
+            	throw new AssertionError("Unsupported address size: " + addressSize); 
         }        
     }
 	
@@ -182,6 +190,40 @@ public class JvmUtil {
         return normalize(System.identityHashCode(obj));
     }
     
+    public static boolean isPrimitiveType(Class<?> type) {
+    	if (type == boolean.class) { 
+        	return true; 
+        }
+    	else if (type == byte.class) { 
+        	return true; 
+        }
+    	else if (type == char.class) { 
+        	return true;
+        }
+        else if (type == short.class) { 
+        	return true;
+        }
+        else if (type == int.class) { 
+        	return true;
+        }
+        else if (type == float.class) { 
+        	return true;
+        }
+        else if (type == long.class) { 
+        	return true;
+        }
+        else if (type == double.class) { 
+        	return true;
+        }
+        else {
+        	return false;
+        }	
+    }
+    
+    public static boolean isComplexType(Class<?> type) {
+    	return !isPrimitiveType(type);
+    }
+    
     public static int sizeOfType(Class<?> type) {
     	if (type == boolean.class) { 
         	return BOOLEAN_SIZE; 
@@ -219,30 +261,33 @@ public class JvmUtil {
         if (type == boolean.class) {
         	return base + ((boolean[]) o).length * scale;
         }
-        if (type == byte.class) {
+        else if (type == byte.class) {
         	return base + ((byte[]) o).length * scale;
         }
-        if (type == short.class) {
+        else if (type == short.class) {
         	return base + ((short[]) o).length * scale;
         }
-        if (type == char.class) {
+        else if (type == char.class) {
         	return base + ((char[]) o).length * scale;
         }
-        if (type == int.class) {
+        else if (type == int.class) {
         	return base + ((int[]) o).length * scale;
         }
-        if (type == float.class) {
+        else if (type == float.class) {
         	return base + ((float[]) o).length * scale;
         }
-        if (type == long.class) {
+        else if (type == long.class) {
         	return base + ((long[]) o).length * scale;
         }
-        if (type == double.class) {
+        else if (type == double.class) {
         	return base + ((double[]) o).length * scale;
         }
-        return base + ((Object[]) o).length * scale;
+        else {
+        	return base + ((Object[]) o).length * scale;
+        }	
     }
 	
+	// TODO Don't create new empty array for each call, maybe caching can be implemented
 	public static long sizeOfArray(Class<?> elementClass, long elementCount) {
 		Object array = Array.newInstance(elementClass, 0);
 		int base = unsafe.arrayBaseOffset(array.getClass());
@@ -250,11 +295,13 @@ public class JvmUtil {
     	return base + elementCount * scale;
     }
 	
+	// TODO Don't create new empty array for each call, maybe caching can be implemented
 	public static int arrayBaseOffset(Class<?> elementClass) {
 		Object array = Array.newInstance(elementClass, 0);
 		return unsafe.arrayBaseOffset(array.getClass());
     }
 	
+	// TODO Don't create new empty array for each call, maybe caching can be implemented
 	public static int arrayIndexScale(Class<?> elementClass) {
 		Object array = Array.newInstance(elementClass, 0);
 		return unsafe.arrayIndexScale(array.getClass());
@@ -283,7 +330,7 @@ public class JvmUtil {
     }
     
     public static void info() {
-        System.out.println("Running " + (addressSize * NR_BITS) + "-bit " + options.name + " VM.");
+        System.out.println("Running " + (addressSize * BYTE) + "-bit " + options.name + " VM.");
         if (options.compressedRef) {
         	System.out.println("Using compressed references with " + options.compressRefShift + "-bit shift.");
         }
@@ -318,10 +365,17 @@ public class JvmUtil {
         }
 
         if (oopSize != unsafe.addressSize()) {
-            return new VMOptions("Auto-detected", ADDRESS_SHIFT_SIZE_64_BIT); // assume compressed references have << 3 shift
-        } 
+        	switch (oopSize) {
+	            case ADDRESSING_8_BYTE:
+	            	return new VMOptions("Auto-detected", ADDRESS_SHIFT_SIZE_FOR_BETWEEN_32GB_AND_64_GB);
+	            case ADDRESSING_16_BYTE:
+	            	return new VMOptions("Auto-detected", ADDRESS_SHIFT_SIZE_FOR_BIGGER_THAN_64_GB);
+	            default:
+	            	throw new AssertionError("Unsupported address size for compressed reference shifting: " + oopSize); 
+        	}    	
+        }
         else {
-            return new VMOptions("Auto-detected", ADDRESS_SHIFT_SIZE_32_BIT);
+            return new VMOptions("Auto-detected");
         }
     }
     
@@ -357,14 +411,10 @@ public class JvmUtil {
                 return new VMOptions("HotSpot");
             }
         } 
-        catch (RuntimeException e) {
-        	logger.error("Failed to read HotSpot-specific configuration properly, please report this as the bug", e);
+        catch (Exception e) {
+        	logger.error("Error at JvmUtil.getHotspotSpecifics()", e);
             return null;
         } 
-        catch (Exception e) {
-        	logger.error("Failed to read HotSpot-specific configuration properly, please report this as the bug", e);
-            return null;
-        }
     }
 
     private static VMOptions getJRockitSpecifics() {
@@ -392,11 +442,11 @@ public class JvmUtil {
             return null;
         } 
         catch (RuntimeException e) {
-        	logger.error("Failed to read JRockit-specific configuration properly, please report this as the bug", e);
+        	logger.error("Failed to read JRockit-specific configuration properly", e);
             return null;
         } 
         catch (Exception e) {
-        	logger.error("Failed to read JRockit-specific configuration properly, please report this as the bug", e);
+        	logger.error("Failed to read JRockit-specific configuration properly", e);
             return null;
         }
     }
@@ -471,7 +521,7 @@ public class JvmUtil {
                 objectAddress = unsafe.getLong(array, baseOffset);
                 break;
             default:
-                throw new Error("Unsupported address size: " + oopSize);
+            	throw new AssertionError("Unsupported address size: " + oopSize); 
         }
 
         return objectAddress;
@@ -499,7 +549,7 @@ public class JvmUtil {
             this.referenceSize = unsafe.addressSize();
             this.objectAlignment = guessAlignment(this.referenceSize);
             this.compressedRef = false;
-            this.compressRefShift = ADDRESS_SHIFT_SIZE_32_BIT;
+            this.compressRefShift = 0;
         }
 
         public VMOptions(String name, int shift) {
