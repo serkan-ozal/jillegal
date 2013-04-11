@@ -9,19 +9,13 @@ package tr.com.serkanozal.jillegal.offheap.memory;
 
 public interface DirectMemoryService {
 
-	int addressSize();
-	int objectHeaderSize();
-	int arrayHeaderSize();
-	
 	long allocateMemory(long size);
 	void freeMemory(long address);
 	Object allocateInstance(Class<?> clazz);
 	void copyMemory(long sourceAddress, long destinationAddress, long size);
 	
 	long sizeOf(Class<?> objClass);
-	long sizeOfArray(Class<?> elementClass, long elementCount);
 	
-	long internalAddressOf(Object obj);
 	long addressOf(Object obj);
     long addressOfField(Object obj, String fieldName) throws SecurityException, NoSuchFieldException;
     long addressOfClass(Class<?> clazz);

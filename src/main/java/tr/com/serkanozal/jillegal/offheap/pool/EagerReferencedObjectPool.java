@@ -11,6 +11,7 @@ import java.lang.reflect.Array;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.SequentialObjectPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
+import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 public class EagerReferencedObjectPool<T> extends BaseOffHeapPool<T, SequentialObjectPoolCreateParameter<T>> {
 
@@ -38,24 +39,34 @@ public class EagerReferencedObjectPool<T> extends BaseOffHeapPool<T, SequentialO
 	protected synchronized void init() {
 		this.currentArrayIndex = 0;
 		
-		int arrayHeaderSize = directMemoryService.arrayHeaderSize();
-		long objStartAddress = allocatedAddress + directMemoryService.arrayHeaderSize() + 4;
-		
+		int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
+		long arrayIndexStartAddress = allocatedAddress + JvmUtil.arrayBaseOffset(elementType);
+		long objStartAddress = allocatedAddress + JvmUtil.sizeOfArray(elementType, objectCount);
+		long diffBetweenArrayAndObjectStartAddresses = objStartAddress - allocatedAddress;
+		long addressMod = diffBetweenArrayAndObjectStartAddresses % JvmUtil.getAddressSize();
+		if (addressMod != 0) {
+			objStartAddress += (JvmUtil.getAddressSize() - addressMod);
+		}
+
 		for (int i = 0; i < arrayHeaderSize; i++) {
 			directMemoryService.putByte(allocatedAddress + i, directMemoryService.getByte(sampleArray, i));
 		}
-		directMemoryService.putInt(objStartAddress - 4, (int)objectCount);
+		directMemoryService.putInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize(), (int)objectCount);
+
 		for (long l = 0; l < objectCount; l++) {
-			directMemoryService.putLong(objStartAddress + (l * 4), ((objStartAddress + (l * objectSize) + arrayHeaderSize + 4) >> 3));
+			//System.out.println(Long.toHexString((((objStartAddress + (l * objectSize) + arrayHeaderSize + 8)))));
+			//System.out.println(Long.toHexString(((int)((objStartAddress + (l * objectSize) + arrayHeaderSize + 8)) >> 3) << 3));
+			directMemoryService.putLong(arrayIndexStartAddress + (l * 4), (int) ((objStartAddress + (l * objectSize))) >> 3);
 		}
+
 		for (long l = 0; l < objectCount; l++) {
-			directMemoryService.copyMemory(sampleObjectAddress, 
-					allocatedAddress + 4 + directMemoryService.sizeOfArray(elementType, objectCount) + (l * objectSize), objectSize);
+			directMemoryService.copyMemory(sampleObjectAddress, objStartAddress + (l * objectSize), objectSize);
 		}
+		
 		this.objectArray = (T[]) directMemoryService.getObject(allocatedAddress);
 
-		for (int i = 0; i < 100; i++) {
-			System.out.print(String.format("%02x ", directMemoryService.getByte(allocatedAddress + i)));
+		for (int i = 0; i < 64; i++) {
+			System.out.print(String.format("%02x ", directMemoryService.getByte(objectArray, i)));
 			if ((i + 1) % 16 == 0) {
 				System.out.println();
 			}
@@ -103,7 +114,7 @@ public class EagerReferencedObjectPool<T> extends BaseOffHeapPool<T, SequentialO
 		this.objectCount = objectCount;
 		this.directMemoryService = directMemoryService;
 		this.objectSize = directMemoryService.sizeOf(clazz);
-		this.arraySize = directMemoryService.sizeOfArray(clazz, objectCount);
+		this.arraySize = JvmUtil.sizeOfArray(clazz, objectCount);
 		this.allocatedAddress = directMemoryService.allocateMemory(arraySize + (objectCount * objectSize));
 		this.addressLimit = allocatedAddress + arraySize + (objectCount * objectSize);
 		try {

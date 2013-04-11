@@ -19,6 +19,7 @@ import tr.com.serkanozal.jillegal.instrument.domain.model.GeneratedClass;
 import tr.com.serkanozal.jillegal.instrument.factory.DefaultInstrumenterFactory;
 import tr.com.serkanozal.jillegal.instrument.factory.InstrumenterFactory;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceImpl;
+import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 @SuppressWarnings("restriction")
 public class InstrumenterServiceImpl implements InstrumenterService {
@@ -93,7 +94,7 @@ public class InstrumenterServiceImpl implements InstrumenterService {
 			DirectMemoryServiceImpl impl = new DirectMemoryServiceImpl();
 			Class<T> newClass = (Class<T>) new InstrumentationClassLoader().buildClass(byteCodes);
 			newClass.newInstance();
-			Unsafe u = impl.getUnsafe();
+			Unsafe u = JvmUtil.getUnsafe();
 			long oldClassAddress1 = impl.addressOfClass(cls);
 			long oldClassAddress2 = impl.addressOf(cls);
 			

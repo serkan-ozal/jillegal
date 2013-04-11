@@ -7,142 +7,25 @@
 
 package tr.com.serkanozal.jillegal.offheap.memory;
 
-import java.lang.management.ManagementFactory;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
-import javax.management.RuntimeMBeanException;
-import javax.management.openmbean.CompositeDataSupport;
 
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.HashMultiset;
-import com.google.common.collect.Multiset;
-
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.agent.JillegalAgent;
+import tr.com.serkanozal.jillegal.util.JvmUtil;
 
-/**
- * @see http://hg.openjdk.java.net/jdk7/hotspot/hotspot/file/9b0ca45cd756/src/share/vm/oops/oop.hpp
- * @see http://hg.openjdk.java.net/jdk7/hotspot/hotspot/file/9b0ca45cd756/src/share/vm/oops/klass.hpp
- */
+
 @SuppressWarnings( { "unchecked", "restriction" } )
 public class DirectMemoryServiceImpl implements DirectMemoryService {
 	
 	private final Logger logger = Logger.getLogger(getClass());
-	
-    public static final byte SIZE_32_BIT = 4;
-    public static final byte SIZE_64_BIT = 8;
-    public static final byte INVALID_ADDRESS = -1;
 
-    private static final int NR_BITS = Integer.valueOf(System.getProperty("sun.arch.data.model"));
-    private static final int BYTE = 8;
-    private static final int WORD = NR_BITS / BYTE;
-    private static final int MIN_SIZE = 16; 
-    
-    private static final int ADDRESS_SHIFT_SIZE_32_BIT = 0; 
-    private static final int ADDRESS_SHIFT_SIZE_64_BIT = 3; 
-    
-    private static final int OBJECT_HEADER_SIZE_32_BIT = 8; 
-    private static final int OBJECT_HEADER_SIZE_64_BIT = 12; 
-    
-    private static final int CLASS_DEF_POINTER_OFFSET_IN_OBJECT_FOR_32_BIT = 4;
-    private static final int CLASS_DEF_POINTER_OFFSET_IN_OBJECT_FOR_64_BIT = 8;
-    
-    private static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT = 8; 
-    private static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT = 12;
-    
-    private static final int SIZE_FIELD_OFFSET_IN_CLASS_32_BIT = 12;
-    private static final int SIZE_FIELD_OFFSET_IN_CLASS_64_BIT = 24;
-    
-    private VMOptions OPTIONS;
     private Unsafe unsafe;
     private Object[] objArray;
-    
-    private long baseOffset;
-    private int addressSize;
-    private int indexScale;
-    private int addressShiftSize;
-    private int objectHeaderSize;
-	private int classDefPointerOffsetInObject;
-    private int classDefPointerOffsetInClass;
-    private int sizeFieldOffsetOffsetInClass;
-    
-    private class VMOptions {
-    	
-        private final String name;
-        private final boolean compressedRef;
-        private final int compressRefShift;
-        private final int objectAlignment;
-        private final int referenceSize;
-
-        public VMOptions(String name) {
-            this.name = name;
-            this.referenceSize = unsafe.addressSize();
-            this.objectAlignment = guessAlignment(this.referenceSize);
-            this.compressedRef = false;
-            this.compressRefShift = 1;
-        }
-
-        public VMOptions(String name, int shift) {
-            this.name = name;
-            this.referenceSize = 4;
-            this.objectAlignment = guessAlignment(this.referenceSize) << shift;
-            this.compressedRef = true;
-            this.compressRefShift = shift;
-        }
-
-        public long toNativeAddress(long address) {
-            if (compressedRef) {
-                return address << compressRefShift;
-            } 
-            else {
-                return address;
-            }
-        }
-        
-    }
-    
-    @SuppressWarnings("unused")
-    private class CompressedOopsClass {
-        
-		public Object obj1;
-        public Object obj2;
-        
-    }
-
-    @SuppressWarnings("unused")
-    private class HeaderClass {
-    	
-        public boolean b1;
-        
-    }
-    
-    @SuppressWarnings("unused")
-    private class MyObject1 {
-
-    }
-
-    @SuppressWarnings("unused")
-    private class MyObject2 {
-    	
-        private boolean b1;
-        
-    }
-
-    @SuppressWarnings("unused")
-    private class MyObject3 {
-    	
-        private int i1;
-        
-    }
     
     public DirectMemoryServiceImpl() {
     	init();
@@ -150,355 +33,12 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     
     private void init() {
         initUnsafe();
-        
-        OPTIONS = getOptions();
-        
-        objArray = new Object[1];
-        baseOffset = unsafe.arrayBaseOffset(Object[].class);
-        indexScale = unsafe.arrayIndexScale(Object[].class);
-        addressSize = unsafe.addressSize();
-        
-        switch (addressSize) {
-            case SIZE_32_BIT:
-                addressShiftSize = ADDRESS_SHIFT_SIZE_32_BIT;
-                objectHeaderSize = OBJECT_HEADER_SIZE_32_BIT;
-                classDefPointerOffsetInObject = CLASS_DEF_POINTER_OFFSET_IN_OBJECT_FOR_32_BIT;
-                classDefPointerOffsetInClass = CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT;
-                sizeFieldOffsetOffsetInClass = SIZE_FIELD_OFFSET_IN_CLASS_32_BIT;
-                break;
-                
-            case SIZE_64_BIT:
-            	addressShiftSize = ADDRESS_SHIFT_SIZE_64_BIT;
-            	objectHeaderSize = OBJECT_HEADER_SIZE_64_BIT;
-            	classDefPointerOffsetInObject = CLASS_DEF_POINTER_OFFSET_IN_OBJECT_FOR_64_BIT;
-            	classDefPointerOffsetInClass = CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT;
-            	sizeFieldOffsetOffsetInClass = SIZE_FIELD_OFFSET_IN_CLASS_64_BIT;
-                break;    
-        }        
+
     }
     
     private void initUnsafe() {
-        try {
-            Field field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            unsafe = (Unsafe) field.get(null);
-        }
-        catch (Exception e) {
-        	logger.error("Error at UnsafeBasedOffHeapMemoryServiceImpl.initUnsafe()", e);
-        }
-    }
-    
-    private VMOptions getOptions() {
-        // try Hotspot
-        VMOptions hsOpts = getHotspotSpecifics();
-        if (hsOpts != null) {
-        	return hsOpts;
-        }
-
-        // try JRockit
-        VMOptions jrOpts = getJRockitSpecifics();
-        if (jrOpts != null) {
-        	return jrOpts;
-        }
-
-        // When running with CompressedOops on 64-bit platform, the address size
-        // reported by Unsafe is still 8, while the real reference fields are 4 bytes long.
-        // Try to guess the reference field size with this naive trick.
-        int oopSize;
-        try {
-            long off1 = unsafe.objectFieldOffset(CompressedOopsClass.class.getField("obj1"));
-            long off2 = unsafe.objectFieldOffset(CompressedOopsClass.class.getField("obj2"));
-            oopSize = (int) Math.abs(off2 - off1);
-        } 
-        catch (NoSuchFieldException e) {
-            oopSize = -1;
-        }
-
-        if (oopSize != unsafe.addressSize()) {
-            return new VMOptions("Auto-detected", 3); // assume compressed references have << 3 shift
-        } 
-        else {
-            return new VMOptions("Auto-detected");
-        }
-    }
-    
-    private VMOptions getHotspotSpecifics() {
-        String name = System.getProperty("java.vm.name");
-        if (!name.contains("HotSpot") && !name.contains("OpenJDK")) {
-            return null;
-        }
-
-        try {
-            MBeanServer server = ManagementFactory.getPlatformMBeanServer();
-
-            try {
-                ObjectName mbean = new ObjectName("com.sun.management:type=HotSpotDiagnostic");
-                CompositeDataSupport compressedOopsValue = (CompositeDataSupport) server.invoke(mbean, "getVMOption", new Object[]{"UseCompressedOops"}, new String[]{"java.lang.String"});
-                boolean compressedOops = Boolean.valueOf(compressedOopsValue.get("value").toString());
-                if (compressedOops) {
-                    // if compressed oops are enabled, then this option is also accessible
-                    CompositeDataSupport alignmentValue = (CompositeDataSupport) server.invoke(mbean, "getVMOption", new Object[]{"ObjectAlignmentInBytes"}, new String[]{"java.lang.String"});
-                    int align = Integer.valueOf(alignmentValue.get("value").toString());
-                    return new VMOptions("HotSpot", log2p(align));
-                } else {
-                    return new VMOptions("HotSpot");
-                }
-
-            } 
-            catch (RuntimeMBeanException iae) {
-                return new VMOptions("HotSpot");
-            }
-        } 
-        catch (RuntimeException re) {
-            System.err.println("Failed to read HotSpot-specific configuration properly, please report this as the bug");
-            re.printStackTrace();
-            return null;
-        } 
-        catch (Exception exp) {
-            System.err.println("Failed to read HotSpot-specific configuration properly, please report this as the bug");
-            exp.printStackTrace();
-            return null;
-        }
-    }
-
-    private VMOptions getJRockitSpecifics() {
-        String name = System.getProperty("java.vm.name");
-        if (!name.contains("JRockit")) {
-            return null;
-        }
-
-        try {
-            MBeanServer server = ManagementFactory.getPlatformMBeanServer();
-            String str = (String) server.invoke(new ObjectName("oracle.jrockit.management:type=DiagnosticCommand"), "execute", new Object[]{"print_vm_state"}, new String[]{"java.lang.String"});
-            String[] split = str.split("\n");
-            for (String s : split) {
-                if (s.contains("CompRefs")) {
-                    Pattern pattern = Pattern.compile("(.*?)References are compressed, with heap base (.*?) and shift (.*?)\\.");
-                    Matcher matcher = pattern.matcher(s);
-                    if (matcher.matches()) {
-                        return new VMOptions("JRockit", Integer.valueOf(matcher.group(3)));
-                    } 
-                    else {
-                        return new VMOptions("JRockit");
-                    }
-                }
-            }
-            return null;
-        } 
-        catch (RuntimeException re) {
-            System.err.println("Failed to read JRockit-specific configuration properly, please report this as the bug");
-            re.printStackTrace();
-            return null;
-        } 
-        catch (Exception exp) {
-            System.err.println("Failed to read JRockit-specific configuration properly, please report this as the bug");
-            exp.printStackTrace();
-            return null;
-        }
-    }
-    
-    private int align(int addr) {
-        int align = OPTIONS.objectAlignment;
-        if ((addr % align) == 0) {
-            return addr;
-        } 
-        else {
-            return ((addr / align) + 1) * align;
-        }
-    }
-
-    private int log2p(int x) {
-        int r = 0;
-        while ((x >>= 1) != 0) {
-            r++;
-        }    
-        return r;
-    }
-    
-    private int guessAlignment(int oopSize) {
-        final int COUNT = 1000 * 1000;
-        Object[] array = new Object[COUNT];
-        long[] offsets = new long[COUNT];
-
-        for (int c = 0; c < COUNT - 3; c += 3) {
-            array[c + 0] = new MyObject1();
-            array[c + 1] = new MyObject2();
-            array[c + 1] = new MyObject3();
-        }
-
-        for (int c = 0; c < COUNT; c++) {
-            offsets[c] = addressOfInternal(array[c], oopSize);
-        }
-
-        Arrays.sort(offsets);
-
-        Multiset<Integer> sizes = HashMultiset.create();
-        for (int c = 1; c < COUNT; c++) {
-            sizes.add((int) (offsets[c] - offsets[c - 1]));
-        }
-
-        int min = -1;
-        for (int s : sizes.elementSet()) {
-            if (s <= 0) {
-            	continue;
-            }
-            if (min == -1) {
-                min = s;
-            } 
-            else {
-                min = gcd(min, s);
-            }
-        }
-
-        return min;
-    }
-    
-    private long addressOfInternal(Object o, int oopSize) {
-        Object[] array = new Object[]{o};
-
-        long baseOffset = unsafe.arrayBaseOffset(Object[].class);
-        long objectAddress;
-        switch (oopSize) {
-            case 4:
-                objectAddress = unsafe.getInt(array, baseOffset);
-                break;
-            case 8:
-                objectAddress = unsafe.getLong(array, baseOffset);
-                break;
-            default:
-                throw new Error("unsupported address size: " + oopSize);
-        }
-
-        return (objectAddress);
-    }
-    
-    private int sizeOfArrayInternal(Object o) {
-        int base = unsafe.arrayBaseOffset(o.getClass());
-        int scale = unsafe.arrayIndexScale(o.getClass());
-        Class<?> type = o.getClass().getComponentType();
-        if (type == boolean.class) {
-        	return base + ((boolean[]) o).length * scale;
-        }
-        if (type == byte.class) {
-        	return base + ((byte[]) o).length * scale;
-        }
-        if (type == short.class) {
-        	return base + ((short[]) o).length * scale;
-        }
-        if (type == char.class) {
-        	return base + ((char[]) o).length * scale;
-        }
-        if (type == int.class) {
-        	return base + ((int[]) o).length * scale;
-        }
-        if (type == float.class) {
-        	return base + ((float[]) o).length * scale;
-        }
-        if (type == long.class) {
-        	return base + ((long[]) o).length * scale;
-        }
-        if (type == double.class) {
-        	return base + ((double[]) o).length * scale;
-        }
-        return base + ((Object[]) o).length * scale;
-    }
-    
-    public int sizeOfType(Class<?> type) {
-        if (type == byte.class) { 
-        	return 1; 
-        }
-        else if (type == boolean.class) { 
-        	return 1; 
-        }
-        else if (type == short.class) { 
-        	return 2; 
-        }
-        else if (type == char.class) { 
-        	return 2; 
-        }
-        else if (type == int.class) { 
-        	return 4; 
-        }
-        else if (type == float.class) { 
-        	return 4; 
-        }
-        else if (type == long.class) { 
-        	return 8; 
-        }
-        else if (type == double.class) { 
-        	return 8; 
-        }
-        else {
-        	return OPTIONS.referenceSize;
-        }	
-    }
-
-    private int gcd(int a, int b) {
-        while (b > 0) {
-            int temp = b;
-            b = a % b;
-            a = temp;
-        }
-        return a;
-    }
-
-    public long getBaseOffset() {
-		return baseOffset;
-	}
-
-	public int getAddressSize() {
-		return addressSize;
-	}
-
-	public int getIndexScale() {
-		return indexScale;
-	}
-
-	public int getAddressShiftSize() {
-		return addressShiftSize;
-	}
-	
-	public int getClassDefPointerOffsetInObject() {
-		return classDefPointerOffsetInObject;
-	}
-
-	public int getClassDefPointerOffsetInClass() {
-		return classDefPointerOffsetInClass;
-	}
-
-	public int getSizeFieldOffsetOffsetInClass() {
-		return sizeFieldOffsetOffsetInClass;
-	}
-
-	@Override
-	public int objectHeaderSize() {
-		return objectHeaderSize;
-	}
-	
-	@Override
-	public int arrayHeaderSize() {
-		return objectHeaderSize + (Integer.SIZE / NR_BITS);
-	}
-	
-	@Override
-	public int addressSize() {
-		return unsafe.addressSize();
-	}
-
-	public Unsafe getUnsafe() {
-        return unsafe;
-    }
-    
-    public void info() {
-        System.out.println("Unsafe: " + unsafe);
-        System.out.println("\tAddressSize : " + unsafe.addressSize());
-        System.out.println("\tPage Size   : " + unsafe.pageSize());
-        System.out.println("Running " + (addressSize * 8) + "-bit " + OPTIONS.name + " VM.");
-        if (OPTIONS.compressedRef) {
-        	System.out.println("Using compressed references with " + OPTIONS.compressRefShift + "-bit shift.");
-        }
-        System.out.println("Objects are " + OPTIONS.objectAlignment + " bytes aligned.");
-        System.out.println();
+        unsafe = JvmUtil.getUnsafe();
+        objArray = new Object[1];
     }
 
     @Override
@@ -526,16 +66,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     public void copyMemory(long sourceAddress, long destinationAddress, long size) {
     	unsafe.copyMemory(sourceAddress, destinationAddress, size);
     }
-    
-    public long normalize(int value) {
-        if (value >= 0) {
-            return value;
-        }    
-        else {
-            return (~0L >>> 32) & value;
-        }    
-    }
-    
+   
     public long sizeOfWithAgent(Object obj) {
         return JillegalAgent.sizeOf(obj);
     }
@@ -546,15 +77,15 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
         }    
         else {
         	long classAddress = addressOfClass(obj.getClass());
-            switch (addressSize) {
-                case SIZE_32_BIT:
-                    return unsafe.getInt(classAddress + sizeFieldOffsetOffsetInClass);  
+            switch (JvmUtil.getAddressSize()) {
+                case JvmUtil.SIZE_32_BIT:
+                    return unsafe.getInt(classAddress + JvmUtil.getSizeFieldOffsetOffsetInClass());  
                     
-                case SIZE_64_BIT:
-                    return unsafe.getInt(classAddress + sizeFieldOffsetOffsetInClass);  
+                case JvmUtil.SIZE_64_BIT:
+                    return unsafe.getInt(classAddress + JvmUtil.getSizeFieldOffsetOffsetInClass());  
                     
                 default:
-                    throw new AssertionError("Unsupported address size: " + addressSize);    
+                    throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());    
             }
         }    
     }  
@@ -564,7 +95,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     	
         do {
             if (objClass == Object.class) {
-            	return MIN_SIZE;
+            	return JvmUtil.MIN_SIZE;
             }
             for (Field f : objClass.getDeclaredFields()) {
                 if ((f.getModifiers() & Modifier.STATIC) == 0) {
@@ -582,50 +113,12 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
             	maxOffset = offset; 
             }	
         }
-        return (((long) maxOffset / WORD) + 1) * WORD; 
-    }	
-    
+        return (((long) maxOffset / JvmUtil.WORD) + 1) * JvmUtil.WORD; 
+    }
+
     @Override
     public long sizeOf(Class<?> objClass) {
     	return sizeOfWithReflection(objClass);
-    }
-    
-    @Override
-    public long sizeOfArray(Class<?> elementClass, long elementCount) {
-    	int elementSize = 0;
-    	if (elementClass.equals(boolean.class)) {
-    		elementSize = 1;
-    	}
-    	else if (elementClass.equals(byte.class)) {
-    		elementSize = Byte.SIZE / NR_BITS;
-    	}
-    	else if (elementClass.equals(char.class)) {
-    		elementSize = Character.SIZE / NR_BITS;
-    	}
-    	else if (elementClass.equals(short.class)) {
-    		elementSize = Short.SIZE / NR_BITS;
-    	}
-    	else if (elementClass.equals(int.class)) {
-    		elementSize = Integer.SIZE / NR_BITS;
-    	}
-    	else if (elementClass.equals(float.class)) {
-    		elementSize = Float.SIZE / NR_BITS;
-    	}
-    	else if (elementClass.equals(long.class)) {
-    		elementSize = Long.SIZE / NR_BITS;
-    	}
-    	else if (elementClass.equals(double.class)) {
-    		elementSize = Double.SIZE / NR_BITS;
-    	}
-    	else {
-    		elementSize = unsafe.addressSize();
-    	}
-    	return arrayHeaderSize() + (elementCount * elementSize);
-    }
-    
-    @Override
-    public long internalAddressOf(Object obj) {
-        return normalize(System.identityHashCode(obj));
     }
     
     @Override
@@ -635,44 +128,34 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
         }
         
         objArray[0] = obj;
-        long objectAddress = INVALID_ADDRESS;
+        long objectAddress = JvmUtil.INVALID_ADDRESS;
         
-        switch (indexScale) {
-            case SIZE_32_BIT:
-            case SIZE_64_BIT:
-                switch (addressSize) {
-                    case SIZE_32_BIT:
-                        objectAddress = unsafe.getInt(objArray, baseOffset);
+        switch (JvmUtil.getIndexScale()) {
+            case JvmUtil.SIZE_32_BIT:
+            case JvmUtil.SIZE_64_BIT:
+                switch (JvmUtil.getAddressSize()) {
+                    case JvmUtil.SIZE_32_BIT:
+                        objectAddress = unsafe.getInt(objArray, JvmUtil.getBaseOffset());
                         break;
                         
-                    case SIZE_64_BIT:
-                        objectAddress = unsafe.getLong(objArray, baseOffset);
+                    case JvmUtil.SIZE_64_BIT:
+                        objectAddress = unsafe.getLong(objArray, JvmUtil.getBaseOffset());
                         break;    
                     
                     default:    
-                        throw new AssertionError("Unsupported address size: " + addressSize); 
+                        throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize()); 
                 }
                 break; 
 
             default:
-                throw new AssertionError("Unsupported index scale: " + indexScale);
+                throw new AssertionError("Unsupported index scale: " + JvmUtil.getIndexScale());
         }       
 
-        if (objectAddress != INVALID_ADDRESS) {
-        	objectAddress = objectAddress << addressShiftSize;
+        if (objectAddress != JvmUtil.INVALID_ADDRESS) {
+        	objectAddress = JvmUtil.toNativeAddress(objectAddress);
         }
         
         return objectAddress;
-    }
-    
-    public void dumpObject(Object obj, long size) {
-    	for (int i = 0; i < size; i++) {
-	    	System.out.print(String.format("%02x ", unsafe.getByte(obj, (long)i)));
-			if ((i + 1) % 16 == 0) {
-				System.out.println();
-			}
-    	}	
-    	System.out.println();
     }
   
     @Override
@@ -694,33 +177,33 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     @Override
     public long addressOfClass(Class<?> clazz) {
     	long addressOfClass = addressOf(clazz);
-    	switch (addressSize) {
-	        case SIZE_32_BIT:
-	            return unsafe.getInt(addressOfClass + classDefPointerOffsetInClass) << addressShiftSize;
+    	switch (JvmUtil.getAddressSize()) {
+	        case JvmUtil.SIZE_32_BIT:
+	            return JvmUtil.toNativeAddress(unsafe.getInt(addressOfClass + JvmUtil.getClassDefPointerOffsetInClass()));
 	            
-	        case SIZE_64_BIT:
-	        	return unsafe.getLong(addressOfClass + classDefPointerOffsetInClass) << addressShiftSize;   
+	        case JvmUtil.SIZE_64_BIT:
+	        	return JvmUtil.toNativeAddress(unsafe.getLong(addressOfClass + JvmUtil.getClassDefPointerOffsetInClass()));   
 	            
 	        default:    
-                throw new AssertionError("Unsupported address size: " + addressSize);     
+                throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());     
     	}
     }
     
     @Override
     public synchronized <T> T getObject(long address) {
-    	address = address >> addressShiftSize;
+    	address = JvmUtil.toJvmAddress(address);
     	
-    	switch (addressSize) {
-            case SIZE_32_BIT:
-                unsafe.putInt(objArray, baseOffset, (int)address);
+    	switch (JvmUtil.getAddressSize()) {
+            case JvmUtil.SIZE_32_BIT:
+                unsafe.putInt(objArray, JvmUtil.getBaseOffset(), (int)address);
                 break;
                 
-            case SIZE_64_BIT:
-                unsafe.putLong( objArray, baseOffset, address);
+            case JvmUtil.SIZE_64_BIT:
+                unsafe.putLong(objArray, JvmUtil.getBaseOffset(), address);
                 break;    
                 
             default:
-                throw new AssertionError("Unsupported index scale: " + indexScale);
+                throw new AssertionError("Unsupported index size: " + JvmUtil.getAddressSize());
         }       
     	
         return (T) objArray[0];
@@ -729,23 +212,23 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     @Override
     public synchronized <T> void setObject(long address, T obj) {
         if (obj == null) {
-            switch (addressSize) {
-                case SIZE_32_BIT:
+            switch (JvmUtil.getAddressSize()) {
+                case JvmUtil.SIZE_32_BIT:
                     unsafe.putInt(address, 0);
                     break;
                     
-                case SIZE_64_BIT:
+                case JvmUtil.SIZE_64_BIT:
                     unsafe.putLong(address, 0L);
                     break;    
                     
                 default:
-                    throw new AssertionError("Unsupported address size: " + addressSize);
+                    throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
             }
         }
         else {
             long objSize = sizeOf(obj.getClass());
             long objAddress = addressOf(obj);
-            unsafe.copyMemory(objAddress, address, objectHeaderSize + objSize);   
+            unsafe.copyMemory(objAddress, address, JvmUtil.getHeaderSize() + objSize);   
         }    
     }
     
@@ -929,5 +412,5 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     public void putObject(Object o, long offset, Object x) {
     	unsafe.putObject(o, offset, x);
     }
-    
+
 }
