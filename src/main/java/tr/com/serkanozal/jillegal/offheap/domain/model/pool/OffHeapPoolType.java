@@ -9,6 +9,8 @@ package tr.com.serkanozal.jillegal.offheap.domain.model.pool;
 
 public enum OffHeapPoolType {
 
-	SEQUENTIAL_OBJECT_POOL
+	SEQUENTIAL_OBJECT_POOL,
+	ARRAY_POOL,
+	EXTENDABLE_OBJECT_POOL
 	
 }

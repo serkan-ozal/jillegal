@@ -11,25 +11,25 @@ import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 
 public abstract class BaseOffHeapPoolCreateParameter<T> implements OffHeapPoolCreateParameter<T> {
 
-	protected OffHeapPoolType poolType;
+	protected OffHeapPoolType offHeapPoolType;
 	protected Class<T> elementType;
 	protected DirectMemoryService directMemoryService;
 	
-	public BaseOffHeapPoolCreateParameter(OffHeapPoolType poolType, Class<T> elementType) {
-		this.poolType = poolType;
+	public BaseOffHeapPoolCreateParameter(OffHeapPoolType offHeapPoolType, Class<T> elementType) {
+		this.offHeapPoolType = offHeapPoolType;
 		this.elementType = elementType;
 	}
 	
-	public BaseOffHeapPoolCreateParameter(OffHeapPoolType poolType, Class<T> elementType, 
+	public BaseOffHeapPoolCreateParameter(OffHeapPoolType offHeapPoolType, Class<T> elementType, 
 			DirectMemoryService directMemoryService) {
-		this.poolType = poolType;
+		this.offHeapPoolType = offHeapPoolType;
 		this.elementType = elementType;
 		this.directMemoryService = directMemoryService;
 	}
 	
 	@Override
-	public OffHeapPoolType getPoolType() {
-		return poolType;
+	public OffHeapPoolType getOffHeapPoolType() {
+		return offHeapPoolType;
 	}
 	
 	@Override

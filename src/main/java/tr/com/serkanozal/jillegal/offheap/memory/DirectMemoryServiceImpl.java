@@ -234,6 +234,28 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     }
     
     @Override
+    public synchronized <T> T copyObject(T original) {
+    	if (original == null) {
+            throw new IllegalArgumentException("Original object is null !");
+        }
+        long originalAddress = addressOf(original);
+        Object[] array = new Object[] {null};
+        
+        switch (JvmUtil.getAddressSize()) {
+	        case JvmUtil.SIZE_32_BIT:
+	        	unsafe.putInt(array, JvmUtil.getBaseOffset(), (int)originalAddress);
+	            break;
+	        case JvmUtil.SIZE_64_BIT:
+	        	unsafe.putLong(array, JvmUtil.getBaseOffset(), originalAddress);
+	            break;    
+	        default:
+	            throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
+        }
+
+        return (T) array[0];
+    }
+    
+    @Override
     public byte getByte(long address) {
     	return unsafe.getByte(address);
     }

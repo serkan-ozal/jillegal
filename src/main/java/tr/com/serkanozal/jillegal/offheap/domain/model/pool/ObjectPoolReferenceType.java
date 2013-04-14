@@ -7,9 +7,9 @@
 
 package tr.com.serkanozal.jillegal.offheap.domain.model.pool;
 
-public interface OffHeapPoolCreateParameter<T> {
+public enum ObjectPoolReferenceType {
 
-	OffHeapPoolType getOffHeapPoolType();
-	Class<T> getElementType();
+	LAZY_REFERENCED,
+	EAGER_REFERENCED
 	
 }

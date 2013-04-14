@@ -5,38 +5,49 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.offheap.pool;
+package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
 import java.lang.reflect.Array;
 
-import tr.com.serkanozal.jillegal.offheap.domain.model.pool.SequentialObjectPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.SequentialObjectOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
+import tr.com.serkanozal.jillegal.offheap.pool.DeeplyForkableObjectOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.LimitedObjectOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.RandomlyReadableOffHeapPool;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
-public class EagerReferencedObjectPool<T> extends BaseOffHeapPool<T, SequentialObjectPoolCreateParameter<T>> {
+public class EagerReferencedObjectOffHeapPool<T> extends BaseOffHeapPool<T, SequentialObjectOffHeapPoolCreateParameter<T>> 
+		implements 	ObjectOffHeapPool<T, SequentialObjectOffHeapPoolCreateParameter<T>>,
+					LimitedObjectOffHeapPool<T, SequentialObjectOffHeapPoolCreateParameter<T>>,
+					RandomlyReadableOffHeapPool<T, SequentialObjectOffHeapPoolCreateParameter<T>>,
+					DeeplyForkableObjectOffHeapPool<T, SequentialObjectOffHeapPoolCreateParameter<T>> {
 
-	private long objectCount;
-	private long objectSize;
-	private long arraySize;
-	private int currentArrayIndex;
-	private long allocatedAddress;
-	private T sampleObject;
-	private T[] sampleArray;
-	private T[] objectArray;
-	private long sampleObjectAddress;
+	protected int objectCount;
+	protected long objectSize;
+	protected long arraySize;
+	protected int currentIndex;
+	protected long allocatedAddress;
+	protected T sampleObject;
+	protected T[] sampleArray;
+	protected T[] objectArray;
+	protected long sampleObjectAddress;
 	
-	public EagerReferencedObjectPool(SequentialObjectPoolCreateParameter<T> parameter) {
+	public EagerReferencedObjectOffHeapPool(SequentialObjectOffHeapPoolCreateParameter<T> parameter) {
 		this(parameter.getElementType(), parameter.getObjectCount(), parameter.getDirectMemoryService());
 	}
 	
-	public EagerReferencedObjectPool(Class<T> clazz, long objectCount, DirectMemoryService directMemoryService) {
-		super(clazz, directMemoryService);
-		init(clazz, objectCount, directMemoryService);
+	public EagerReferencedObjectOffHeapPool(Class<T> elementType, int objectCount, DirectMemoryService directMemoryService) {
+		super(elementType, directMemoryService);
+		if (objectCount <= 0) {
+			throw new IllegalArgumentException("\"objectCount\" must be positive !");
+		}
+		init(elementType, objectCount, directMemoryService);
 	}
 	
 	@SuppressWarnings("unchecked")
 	protected synchronized void init() {
-		this.currentArrayIndex = 0;
+		this.currentIndex = 0;
 		
 		int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
 		int arrayIndexScale = JvmUtil.arrayIndexScale(elementType);
@@ -72,24 +83,34 @@ public class EagerReferencedObjectPool<T> extends BaseOffHeapPool<T, SequentialO
 		this.objectArray = (T[]) directMemoryService.getObject(allocatedAddress);
 	}
 	
-	public long getObjectCount() {
+	public int getObjectCount() {
 		return objectCount;
 	}
 	
 	@Override
-	public synchronized T newObject() {
-		if (currentArrayIndex >= objectCount) {
+	public synchronized T get() {
+		if (currentIndex >= objectCount) {
 			return null;
 		}
-		return objectArray[currentArrayIndex++];
+		return objectArray[currentIndex++];
 	}
 	
 	@Override
-	public synchronized T getObject(long objectIndex) {
-		if (objectIndex < 0 || objectIndex > objectCount) {
-			return null;
+	public T getAt(int index) {
+		if (index < 0 || index >= objectCount) {
+			throw new IllegalArgumentException("Invalid index: " + index);
 		}	
-		return objectArray[(int)objectIndex];
+		return objectArray[index];
+	}
+	
+	@Override
+	public long getElementCount() {
+		return objectCount;
+	}
+
+	@Override
+	public boolean hasMoreElement() {
+		return currentIndex < objectCount;
 	}
 	
 	@Override
@@ -103,31 +124,37 @@ public class EagerReferencedObjectPool<T> extends BaseOffHeapPool<T, SequentialO
 	}
 
 	@Override
-	public void init(SequentialObjectPoolCreateParameter<T> parameter) {
+	public void init(SequentialObjectOffHeapPoolCreateParameter<T> parameter) {
 		init(parameter.getElementType(), parameter.getObjectCount(), parameter.getDirectMemoryService());
 	}
 	
 	@SuppressWarnings("unchecked")
-	protected void init(Class<T> clazz, long objectCount, DirectMemoryService directMemoryService) {
-		this.elementType = clazz;
+	protected void init(Class<T> elementType, int objectCount, DirectMemoryService directMemoryService) {
+		this.elementType = elementType;
 		this.objectCount = objectCount;
 		this.directMemoryService = directMemoryService;
-		this.objectSize = directMemoryService.sizeOf(clazz);
-		this.arraySize = JvmUtil.sizeOfArray(clazz, objectCount);
+		this.objectSize = directMemoryService.sizeOf(elementType);
+		this.arraySize = JvmUtil.sizeOfArray(elementType, objectCount);
 		this.allocatedAddress = 
 				directMemoryService.allocateMemory(arraySize + (objectCount * objectSize) + 
 						JvmUtil.getAddressSize()); // Extra memory for possible aligning
 		try {
-			this.sampleObject = (T) clazz.newInstance();
+			this.sampleObject = (T) elementType.newInstance();
 		} 
 		catch (Exception e) {
 			e.printStackTrace();
-			this.sampleObject = (T) directMemoryService.allocateInstance(clazz);
+			this.sampleObject = (T) directMemoryService.allocateInstance(elementType);
 		} 
-		this.sampleArray = (T[]) Array.newInstance(clazz, 0);
+		this.sampleArray = (T[]) Array.newInstance(elementType, 0);
 		this.sampleObjectAddress = directMemoryService.addressOf(sampleObject);
 		
 		init();
 	}
+	
+	@Override
+	public DeeplyForkableObjectOffHeapPool<T, SequentialObjectOffHeapPoolCreateParameter<T>> fork() {
+		return new EagerReferencedObjectOffHeapPool<T>(getElementType(), (int)getElementCount(), getDirectMemoryService());
+	}
+	
 	
 }

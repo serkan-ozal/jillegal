@@ -23,6 +23,7 @@ public interface DirectMemoryService {
     <T> T getObject(long address);
     <T> void setObject(long address, T obj);
 	<T> T changeObject(T source, T target);
+	<T> T copyObject(T original);
 	
 	byte getByte(long address);
 	void putByte(long address, byte x);

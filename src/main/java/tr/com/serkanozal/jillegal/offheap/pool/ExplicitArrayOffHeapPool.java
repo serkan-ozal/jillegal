@@ -9,11 +9,10 @@ package tr.com.serkanozal.jillegal.offheap.pool;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 
-public interface OffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> {
+public interface ExplicitArrayOffHeapPool<T, A, P extends OffHeapPoolCreateParameter<T>> 
+		extends RandomlyReadableOffHeapPool<T, P>, RandomlyWritableOffHeapPool<T, P> {
 
-	Class<T> getElementType();
-	void init(P parameter);
-	void reset();
-	void free();
-	
+	A getArray();
+	int getLength();
+
 }
