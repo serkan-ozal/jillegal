@@ -50,7 +50,7 @@ public class PrimitiveTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Arra
 		}
 		
 		// Set length of array object pool array
-		directMemoryService.putInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize(), (int)length);
+		JvmUtil.setArrayLength(allocatedAddress, elementType, length);
 
 		this.objectArray = (A) directMemoryService.getObject(allocatedAddress);
 	}

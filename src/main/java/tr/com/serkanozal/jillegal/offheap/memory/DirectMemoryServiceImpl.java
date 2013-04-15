@@ -18,7 +18,6 @@ import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.agent.JillegalAgent;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
-
 @SuppressWarnings( { "unchecked", "restriction" } )
 public class DirectMemoryServiceImpl implements DirectMemoryService {
 	

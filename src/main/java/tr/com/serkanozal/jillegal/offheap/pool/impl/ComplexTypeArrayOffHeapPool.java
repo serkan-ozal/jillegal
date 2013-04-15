@@ -67,7 +67,7 @@ public class ComplexTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOffH
 		}
 		
 		// Set length of array object pool array
-		directMemoryService.putInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize(), (int)length);
+		JvmUtil.setArrayLength(allocatedAddress, elementType, length);
 
 		if (initializeElements) {
 			// All index is object pool array header point to allocated objects 

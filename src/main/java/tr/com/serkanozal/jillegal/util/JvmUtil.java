@@ -16,6 +16,7 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -39,6 +40,9 @@ import com.google.common.collect.Multiset;
  * @link http://hg.openjdk.java.net/jdk7/hotspot/hotspot/file/9b0ca45cd756/src/share/vm/oops/klass.hpp
  * 
  * @link https://blogs.oracle.com/jrockit/entry/understanding_compressed_refer
+ * @link https://wikis.oracle.com/display/HotSpotInternals/CompressedOops
+ * 
+ * Note: Use "-XX:-UseCompressedOops" for 64 bit JVM to disable CompressedOops
  */
 @SuppressWarnings("restriction")
 public class JvmUtil {
@@ -100,6 +104,8 @@ public class JvmUtil {
 	private static int classDefPointerOffsetInObject;
     private static int classDefPointerOffsetInClass;
     private static int sizeFieldOffsetOffsetInClass;
+    
+    private static final Map<Class<?>, ClassCache> classCache = new HashMap<Class<?>, ClassCache>();
     
     static {
     	init();
@@ -386,28 +392,54 @@ public class JvmUtil {
         }	
     }
 	
-	// TODO Don't create new empty array for each call, maybe caching can be implemented
 	public static long sizeOfArray(Class<?> elementClass, long elementCount) {
-		Object array = Array.newInstance(elementClass, 0);
-		int base = unsafe.arrayBaseOffset(array.getClass());
-        int scale = unsafe.arrayIndexScale(array.getClass());
-    	return base + elementCount * scale;
+    	return arrayBaseOffset(elementClass) + (elementCount * arrayIndexScale(elementClass));
     }
 	
-	// TODO Don't create new empty array for each call, maybe caching can be implemented
 	public static int arrayBaseOffset(Class<?> elementClass) {
-		Object array = Array.newInstance(elementClass, 0);
-		return unsafe.arrayBaseOffset(array.getClass());
+		return getCacheEntry(elementClass).arrayBaseOffset;
     }
 	
-	// TODO Don't create new empty array for each call, maybe caching can be implemented
 	public static int arrayIndexScale(Class<?> elementClass) {
-		Object array = Array.newInstance(elementClass, 0);
-		return unsafe.arrayIndexScale(array.getClass());
+		return getCacheEntry(elementClass).arrayIndexScale;
     }
 	
 	public static int arrayLengthSize() {
-		return INT_SIZE;
+		return options.referenceSize;
+	}
+	
+	public static int getArrayLength(long arrayStartAddress, Class<?> elementType) {
+		long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+		int referenceSize = JvmUtil.getReferenceSize();
+		switch (referenceSize) {
+			case JvmUtil.ADDRESSING_4_BYTE:
+				return unsafe.getInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize());
+			case JvmUtil.ADDRESSING_8_BYTE:
+				return (int)unsafe.getLong(arrayIndexStartAddress - JvmUtil.arrayLengthSize());
+			case JvmUtil.ADDRESSING_16_BYTE:
+				return (int)unsafe.getLong(arrayIndexStartAddress - JvmUtil.arrayLengthSize() + JvmUtil.LONG_SIZE);
+			default:
+				throw new AssertionError("Unsupported reference size: " + referenceSize); 
+		}
+	}
+	
+	public static void setArrayLength(long arrayStartAddress, Class<?> elementType, int length) {
+		long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+		int referenceSize = JvmUtil.getReferenceSize();
+		switch (referenceSize) {
+			case JvmUtil.ADDRESSING_4_BYTE:
+				unsafe.putInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize(), length);
+				break;
+			case JvmUtil.ADDRESSING_8_BYTE:
+				unsafe.putLong(arrayIndexStartAddress - JvmUtil.arrayLengthSize(), length);
+				break;
+			case JvmUtil.ADDRESSING_16_BYTE:
+				unsafe.putLong(arrayIndexStartAddress - JvmUtil.arrayLengthSize(), 0L);
+				unsafe.putLong(arrayIndexStartAddress - JvmUtil.arrayLengthSize() + JvmUtil.LONG_SIZE, length);
+				break;	
+			default:
+				throw new AssertionError("Unsupported reference size: " + referenceSize); 
+		}
 	}
     
     public static long toNativeAddress(long address) {
@@ -416,6 +448,16 @@ public class JvmUtil {
     
     public static long toJvmAddress(long address) {
     	return options.toJvmAddress(address);
+    }
+    
+    public static void dump(long address, long size) {
+    	for (int i = 0; i < size; i++) {
+	    	System.out.print(String.format("%02x ", unsafe.getByte(address + i)));
+			if ((i + 1) % 16 == 0) {
+				System.out.println();
+			}
+    	}	
+    	System.out.println();
     }
     
     public static void dump(Object obj, long size) {
@@ -436,9 +478,6 @@ public class JvmUtil {
 		return ObjectTree.dump(root);
 	}
     
-	 /**
-	  * Attempts to dump physical object's memory as a string.
-	  */
     public static String objectMemoryAsString(Object o) {
         final ByteOrder byteOrder = ByteOrder.nativeOrder();
         
@@ -453,7 +492,7 @@ public class JvmUtil {
         		b.append(String.format("%#06x", i));
         	}
       
-        	// we go short by short because J9 fails on odd addresses (everything is aligned, including byte fields.
+        	// We go short by short because J9 fails on odd addresses (everything is aligned, including byte fields.
         	int shortValue = unsafe.getShort(o, (long) i);
       
         	if (byteOrder == ByteOrder.BIG_ENDIAN) {
@@ -468,10 +507,6 @@ public class JvmUtil {
         return b.toString();
 	}
 	
-    /**
-     * Attempts to dump a layout of a class's fields in memory 
-     * (offsets from base object pointer).
-     */
 	@SuppressWarnings({"unchecked"})
 	public static String fieldsLayoutAsString(Class<?> clazz) {
         TreeMap<Long, String> fields = new TreeMap<Long, String>(); 
@@ -499,41 +534,21 @@ public class JvmUtil {
         return b.toString();
 	}
 	
-	/** 
-	 * Aligns an object size to be the next multiple of {@link #NUM_BYTES_OBJECT_ALIGNMENT}. 
-	 */
 	public static long alignObjectSize(long size) {
 		size += (long) options.getObjectAlignment() - 1L;
 	    return size - (size % options.getObjectAlignment());
 	}
 
-	/** 
-	 * Estimates the RAM usage by the given object. It will
-	 * walk the object tree and sum up all referenced objects.
-	 * 
-	 * <p><b>Resource Usage:</b> This method internally uses a set of
-	 * every object seen during traversals so it does allocate memory
-	 * (it isn't side-effect free). After the method exits, this memory
-	 * should be GCed.</p>
-	 */
 	public static long sizeOf(Object obj) {
 	    ArrayList<Object> stack = new ArrayList<Object>();
 	    stack.add(obj);
 	    return measureSizeOf(stack);
 	}
 
-	/**
-	 * Same as {@link #sizeOf(Object)} but sums up all the arguments. Not an
-	 * overload to prevent accidental parameter conflicts with {@link #sizeOf(Object)}.
-	 */
 	public static long sizeOfAll(Object... objects) {
 	    return sizeOfAll(Arrays.asList(objects));
 	}
 
-	/**
-	 * Same as {@link #sizeOf(Object)} but sums up all the arguments. Not an
-	 * overload to prevent accidental parameter conflicts with {@link #sizeOf(Object)}.
-	 */
 	public static long sizeOfAll(Iterable<Object> objects) {
 	    final ArrayList<Object> stack;
 	    if (objects instanceof Collection<?>) {
@@ -550,14 +565,6 @@ public class JvmUtil {
 	    return measureSizeOf(stack);
 	}
 
-	
-	/** 
-	 * Estimates a "shallow" memory usage of the given object. For arrays, this will be the
-	 * memory taken by array storage (no subreferences will be followed). For objects, this
-	 * will be the memory taken by the fields.
-	 * 
-	 * JVM object alignments are also applied.
-	 */
 	public static long shallowSizeOf(Object obj) {
 		if (obj == null) {
 			return 0;
@@ -567,24 +574,18 @@ public class JvmUtil {
 	    	return shallowSizeOfArray(obj);
 	    } 
 	    else {
-	    	return shallowSizeOfInstance(clz);
+	    	return sizeOf(clz);
 	    }
 	}
+	
+	public static long sizeOf(Class<?> clazz) {
+		return getCacheEntry(clazz).size;
+	}
 
-	/**
-	 * Same as {@link #shallowSizeOf(Object)} but sums up all the arguments. Not an
-	 * overload to prevent accidental parameter conflicts with {@link #shallowSizeOf(Object)}.
-	 */
 	public static long shallowSizeOfAll(Object... objects) {
 		return shallowSizeOfAll(Arrays.asList(objects));
 	}
 
-	/**
-	 * Same as {@link #shallowSizeOf(Object)} but sums up all the arguments. Duplicate
-	 * objects are not resolved and will be counted twice. 
-	 * Not an overload to prevent accidental parameter conflicts with 
-	 * {@link #shallowSizeOf(Object)}.
-	 */
 	public static long shallowSizeOfAll(Iterable<Object> objects) {
 	    long sum = 0;
 	    for (Object o : objects) {
@@ -593,15 +594,7 @@ public class JvmUtil {
 	    return sum;
 	}
 
-	/**
-	 * Returns the shallow instance size in bytes an instance of the given class would occupy.
-	 * This works with all conventional classes and primitive types, but not with arrays
-	 * (the size then depends on the number of elements and varies from object to object).
-	 * 
-	 * @see #shallowSizeOf(Object)
-	 * @throws IllegalArgumentException if {@code clazz} is an array class. 
-	 */
-	public static long shallowSizeOfInstance(Class<?> clazz) {
+	private static long shallowSizeOfInstance(Class<?> clazz) {
 	    if (clazz.isArray()) {
 	    	throw new IllegalArgumentException("This method does not work with array classes.");
 	    }  
@@ -621,9 +614,6 @@ public class JvmUtil {
 	    return alignObjectSize(size);    
 	}
 	
-	/**
-	 * Return shallow size of any <code>array</code>.
-	*/
 	private static long shallowSizeOfArray(Object array) {
 		long size = arrayHeaderSize;
 	    final int len = Array.getLength(array);
@@ -639,14 +629,6 @@ public class JvmUtil {
 	    return alignObjectSize(size);
 	}
 
-	/**
-	 * Non-recursive version of object descend. This consumes more memory than recursive in-depth 
-	 * traversal but prevents stack overflows on long chains of objects
-	 * or complex graphs (a max. recursion depth on my machine was ~5000 objects linked in a chain
-	 * so not too much).
-	 * 
-	 * @param stack Root objects.
-	 */
 	private static long measureSizeOf(ArrayList<Object> stack) {
 	    final IdentityHashSet<Object> seen = new IdentityHashSet<Object>();
 	    final IdentityHashMap<Class<?>, ClassCache> classCache = new IdentityHashMap<Class<?>, ClassCache>();
@@ -708,7 +690,7 @@ public class JvmUtil {
 	    			totalSize += cachedInfo.alignedShallowInstanceSize;
 	    		} 
 	    		catch (IllegalAccessException e) {
-	    			// this should never happen as we enabled setAccessible().
+	    			// This should never happen as we enabled setAccessible().
 	    			throw new RuntimeException("Reflective field access failed?", e);
 	    		}
 	    	}
@@ -722,10 +704,6 @@ public class JvmUtil {
 	    return totalSize;
 	}
 	
-	/**
-	 * Create a cached information about shallow size and reference fields for 
-	 * a given class.
-	 */
 	private static ClassCache createCacheEntry(final Class<?> clazz) {
 	    ClassCache cachedInfo;
 	    long shallowInstanceSize = headerSize;
@@ -744,19 +722,26 @@ public class JvmUtil {
 	    	}
 	    }
 
-	    cachedInfo = new ClassCache(
-	        alignObjectSize(shallowInstanceSize), 
-	        referenceFields.toArray(new Field[referenceFields.size()]));
+	    long size = shallowSizeOfInstance(clazz);
+	    Object array = Array.newInstance(clazz, 0);
+        int arrayBaseOffset = unsafe.arrayBaseOffset(array.getClass());
+        int arrayIndexScale = unsafe.arrayIndexScale(array.getClass());	
+	    cachedInfo = 
+	    	new ClassCache(	alignObjectSize(shallowInstanceSize), 
+	    					referenceFields.toArray(new Field[referenceFields.size()]),
+	    					size, arrayBaseOffset, arrayIndexScale);
 	    return cachedInfo;
 	}
+	
+	private static ClassCache getCacheEntry(final Class<?> clazz) {
+		ClassCache cacheEntry = classCache.get(clazz);
+		if (cacheEntry == null) {
+			cacheEntry = createCacheEntry(clazz);
+			classCache.put(clazz, cacheEntry);
+		}
+	    return cacheEntry;
+	}
 
-	/**
-	 * This method returns the maximum representation size of an object. <code>sizeSoFar</code>
-	 * is the object's size measured so far. <code>f</code> is the field being probed.
-	 * 
-	 * <p>The returned offset will be the maximum of whatever was measured so far and 
-	 * <code>f</code> field's offset and representation size (unaligned).
-	 */
 	private static long adjustForField(long sizeSoFar, final Field f) {
 		f.setAccessible(true);
 	    final Class<?> type = f.getType();
@@ -800,21 +785,23 @@ public class JvmUtil {
     }
 
     private static VMOptions findOptions() {
-        // try Hotspot
+        // Try Hotspot
         VMOptions hsOpts = getHotspotSpecifics();
         if (hsOpts != null) {
         	return hsOpts;
         }
 
-        // try JRockit
+        // Try JRockit
         VMOptions jrOpts = getJRockitSpecifics();
         if (jrOpts != null) {
         	return jrOpts;
         }
-
-        // When running with CompressedOops on 64-bit platform, the address size
-        // reported by Unsafe is still 8, while the real reference fields are 4 bytes long.
-        // Try to guess the reference field size with this naive trick.
+        
+        /*
+         * When running with CompressedOops on 64-bit platform, the address size
+         * reported by Unsafe is still 8, while the real reference fields are 4 bytes long.
+         * Try to guess the reference field size with this naive trick.
+         */
         int oopSize;
         try {
             long off1 = unsafe.objectFieldOffset(CompressedOopsClass.class.getField("obj1"));
@@ -856,7 +843,7 @@ public class JvmUtil {
                 				new Object[]{"UseCompressedOops"}, new String[]{"java.lang.String"});
                 boolean compressedOops = Boolean.valueOf(compressedOopsValue.get("value").toString());
                 if (compressedOops) {
-                    // if compressed oops are enabled, then this option is also accessible
+                    // If compressed oops are enabled, then this option is also accessible
                     CompositeDataSupport alignmentValue = 
                     		(CompositeDataSupport) server.invoke(mbean, "getVMOption", 
                     				new Object[]{"ObjectAlignmentInBytes"}, new String[]{"java.lang.String"});
@@ -1002,17 +989,23 @@ public class JvmUtil {
         return a;
     }
     
-    /**
-     * Cached information about a given class.   
-     */
     private static final class ClassCache {
-        public final long alignedShallowInstanceSize;
-        public final Field[] referenceFields;
+    	
+        final long alignedShallowInstanceSize;
+        final Field[] referenceFields;
+        final long size;
+        final int arrayBaseOffset;
+        final int arrayIndexScale;
+        
+		ClassCache(long alignedShallowInstanceSize, Field[] referenceFields, long size, int arrayBaseOffset, int arrayIndexScale) {
+			super();
+			this.alignedShallowInstanceSize = alignedShallowInstanceSize;
+			this.referenceFields = referenceFields;
+			this.size = size;
+			this.arrayBaseOffset = arrayBaseOffset;
+			this.arrayIndexScale = arrayIndexScale;
+		}
 
-        public ClassCache(long alignedShallowInstanceSize, Field[] referenceFields) {
-        	this.alignedShallowInstanceSize = alignedShallowInstanceSize;
-        	this.referenceFields = referenceFields;
-        }    
 	}
     
     public static class VMOptions {

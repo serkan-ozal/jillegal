@@ -65,10 +65,10 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseOffHeapPool<T, Sequ
 		for (int i = 0; i < arrayHeaderSize; i++) {
 			directMemoryService.putByte(allocatedAddress + i, directMemoryService.getByte(sampleArray, i));
 		}
-		
-		// Set length of array object pool array
-		directMemoryService.putInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize(), (int)objectCount);
 
+		// Set length of array object pool array
+		JvmUtil.setArrayLength(allocatedAddress, elementType, objectCount);
+		
 		// All index is object pool array header point to allocated objects 
 		for (long l = 0; l < objectCount; l++) {
 			directMemoryService.putLong(arrayIndexStartAddress + (l * arrayIndexScale), 
