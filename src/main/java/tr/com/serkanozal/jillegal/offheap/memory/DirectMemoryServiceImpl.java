@@ -32,7 +32,6 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     
     private void init() {
         initUnsafe();
-
     }
     
     private void initUnsafe() {

@@ -7,6 +7,8 @@
 
 package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
+import org.apache.log4j.Logger;
+
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
@@ -14,6 +16,8 @@ import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 
 public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> implements OffHeapPool<T, P> {
 
+	protected final Logger logger = Logger.getLogger(getClass());
+	
 	protected Class<T> elementType;
 	protected DirectMemoryService directMemoryService;
 	

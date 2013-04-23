@@ -18,7 +18,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -1104,5 +1106,209 @@ public class JvmUtil {
         private int i1;
         
     }
+    
+    /**
+     * An identity hash set implemented using open addressing. No null keys are allowed.
+     */
+    final static class IdentityHashSet<KType> implements Iterable<KType> {
+
+    	public final static float DEFAULT_LOAD_FACTOR = 0.75f;
+    	public final static int MIN_CAPACITY = 4;
+
+    	public Object[] keys;
+    	public int assigned;
+    	public final float loadFactor;
+    	private int resizeThreshold;
+
+    	public IdentityHashSet() {
+    		this(16, DEFAULT_LOAD_FACTOR);
+    	}
+      
+    	public IdentityHashSet(int initialCapacity) {
+    		this(initialCapacity, DEFAULT_LOAD_FACTOR);
+    	}
+      
+    	public IdentityHashSet(int initialCapacity, float loadFactor) {
+    	    initialCapacity = Math.max(MIN_CAPACITY, initialCapacity);
+    	    
+    	    assert initialCapacity > 0 : "Initial capacity must be between (0, " + Integer.MAX_VALUE + "].";
+    	    assert loadFactor > 0 && loadFactor < 1 : "Load factor must be between (0, 1).";
+    	    this.loadFactor = loadFactor;
+    	    allocateBuffers(roundCapacity(initialCapacity));
+    	}
+      
+    	public boolean add(KType e) {
+    	    assert e != null : "Null keys not allowed.";
+    	    
+    	    if (assigned >= resizeThreshold) {
+    	    	expandAndRehash();
+    	    }
+    	    
+    	    final int mask = keys.length - 1;
+    	    int slot = rehash(e) & mask;
+    	    Object existing;
+    	    while ((existing = keys[slot]) != null) {
+    	    	if (e == existing) {
+    	    		return false; // already found.
+    	    	}
+    	    	slot = (slot + 1) & mask;
+    	    }
+    	    assigned++;
+    	    keys[slot] = e;
+    	    return true;
+    	}
+
+    	public boolean contains(KType e) {
+    	    final int mask = keys.length - 1;
+    	    int slot = rehash(e) & mask;
+    	    Object existing;
+    	    while ((existing = keys[slot]) != null) {
+    	    	if (e == existing) {
+    	    		return true;
+    	    	}
+    	    	slot = (slot + 1) & mask;
+    	    }
+    	    return false;
+    	}
+
+    	private static int rehash(Object o) {
+    		return MurmurHash3.hash(System.identityHashCode(o));
+    	}
+      
+    	private void expandAndRehash() {
+    		final Object[] oldKeys = this.keys;
+        
+    		assert assigned >= resizeThreshold;
+    		allocateBuffers(nextCapacity(keys.length));
+        
+    		// Rehash all assigned slots from the old hash table.
+    		final int mask = keys.length - 1;
+    		for (int i = 0; i < oldKeys.length; i++) {
+    			final Object key = oldKeys[i];
+    			if (key != null) {
+    				int slot = rehash(key) & mask;
+    				while (keys[slot] != null) {
+    					slot = (slot + 1) & mask;
+    				}
+    				keys[slot] = key;
+    			}
+    		}
+    		Arrays.fill(oldKeys, null);
+    	}
+
+    	private void allocateBuffers(int capacity) {
+    		this.keys = new Object[capacity];
+    		this.resizeThreshold = (int) (capacity * DEFAULT_LOAD_FACTOR);
+    	}
+      
+    	protected int nextCapacity(int current) {
+    		assert current > 0 && Long.bitCount(current) == 1 : "Capacity must be a power of two.";
+    		assert ((current << 1) > 0) : "Maximum capacity exceeded (" + (0x80000000 >>> 1) + ").";
+        
+    		if (current < MIN_CAPACITY / 2) {
+    			current = MIN_CAPACITY / 2;
+    		}
+    		return current << 1;
+    	}
+      
+    	protected int roundCapacity(int requestedCapacity) {
+    		// Maximum positive integer that is a power of two.
+    		if (requestedCapacity > (0x80000000 >>> 1)) {
+    			return (0x80000000 >>> 1);
+    		}
+        
+    		int capacity = MIN_CAPACITY;
+    		while (capacity < requestedCapacity) {
+    			capacity <<= 1;
+    		}
+
+    		return capacity;
+    	}
+      
+    	public void clear() {
+    		assigned = 0;
+    		Arrays.fill(keys, null);
+    	}
+      
+    	public int size() {
+    		return assigned;
+    	}
+      
+    	public boolean isEmpty() {
+    		return size() == 0;
+    	}
+
+    	@Override
+    	public Iterator<KType> iterator() {
+    		return new Iterator<KType>() {
+    			
+    			int pos = -1;
+    			Object nextElement = fetchNext();
+
+    			@Override
+    			public boolean hasNext() {
+    				return nextElement != null;
+    			}
+
+    			@SuppressWarnings("unchecked")
+    			@Override
+    			public KType next() {
+    				Object r = this.nextElement;
+    				if (r == null) {
+    					throw new NoSuchElementException();
+    				}
+    				this.nextElement = fetchNext();
+    				return (KType) r;
+    			}
+
+    			private Object fetchNext() {
+    				pos++;
+    				while (pos < keys.length && keys[pos] == null) {
+    					pos++;
+    				}
+
+    				return (pos >= keys.length ? null : keys[pos]);
+    			}
+
+    			@Override
+    			public void remove() {
+    				throw new UnsupportedOperationException();
+    			}
+    		};
+    	}
+    
+    }
+    
+	/**
+	 * Hash routines for primitive types. The implementation is based on the
+	 * finalization step from Austin Appleby's <code>MurmurHash3</code>.
+	 * 
+	 * @see "http://sites.google.com/site/murmurhash/"
+	 */
+	final static class MurmurHash3 {
+		
+		private MurmurHash3() {
+			// no instances.
+		}
+	  
+		public static int hash(int k) {
+			k ^= k >>> 16;
+			k *= 0x85ebca6b;
+			k ^= k >>> 13;
+			k *= 0xc2b2ae35;
+			k ^= k >>> 16;
+			return k;
+		}
+	  
+		public static long hash(long k) {
+		    k ^= k >>> 33;
+		    k *= 0xff51afd7ed558ccdL;
+		    k ^= k >>> 33;
+		    k *= 0xc4ceb9fe1a85ec53L;
+		    k ^= k >>> 33;
+		    
+		    return k;
+		}
+	}
     
 }
