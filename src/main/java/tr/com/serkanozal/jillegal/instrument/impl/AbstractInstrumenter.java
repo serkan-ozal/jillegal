@@ -25,4 +25,8 @@ public abstract class AbstractInstrumenter<T> implements Instrumenter<T> {
         return sourceClass;
     }
     
+    protected boolean classLoadedByBootstrapClassLoader() {
+    	return sourceClass.getClassLoader() == null;
+    }
+    
 }

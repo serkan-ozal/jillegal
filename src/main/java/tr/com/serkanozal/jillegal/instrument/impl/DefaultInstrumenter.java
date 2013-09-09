@@ -70,7 +70,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     	CodeAttribute ca = methodInfo.getCodeAttribute();
         return ca == null;
     }
-    
+
     protected void injectIntercepterCodes() {
         try {
         	addAdditionalClass(InterceptorServiceFactory.class);
@@ -119,13 +119,56 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
 			}	
         }
         catch (CannotCompileException e) {
-            logger.error("Error at JavassistInstrumenter.injectIntercepterCodes()", e);
+            logger.error("Error at DefaultInstrumenter.injectIntercepterCodes()", e);
         } 
     }
     
-    protected void injectIntercepterCode(CtConstructor cc) {
-        String beforeIntercepterCode = "InterceptorServiceFactory.getInterceptorService().notifyBeforeConstructorInterceptors((Object)$0, $signature, $params);\n";
-        String afterIntercepterCode = "InterceptorServiceFactory.getInterceptorService().notifyAfterConstructorInterceptors((Object)$0, $signature, $params);\n";
+    
+    protected void injectIntercepterCodeForClassLoadedByBootstrapClassLoader(CtConstructor cc) {
+    	String beforeIntercepterCode = 	"try {" + "\n" + 
+				"\t" + "ClassLoader.getSystemClassLoader().loadClass(" + "\"" +  InterceptorServiceFactory.class.getName() + "\"" + ")." + "\n" +
+				"\t" + "\t" + "getDeclaredMethod(\"notifyBeforeConstructorInterceptors\", new Class[] { Object.class, String.class, Object[].class })." + "\n" +
+				"\t" + "\t" + "\t" + "invoke(null, new Object[] { (Object)$0, $signature, $params });\n" +
+				"}" + "\n" + 
+				"catch (Exception e) {" + "\n" +  
+				"\t" + "e.printStackTrace();" + "\n" +  
+				"}" + "\n";
+		String afterIntercepterCode = 	"try {" + "\n" + 
+						"\t" + "ClassLoader.getSystemClassLoader().loadClass(" + "\"" +  InterceptorServiceFactory.class.getName() + "\"" + ")." + "\n" +
+						"\t" + "\t" + "getDeclaredMethod(\"notifyAfterConstructorInterceptors\", new Class[] { Object.class, String.class, Object[].class })." + "\n" +
+						"\t" + "\t" + "\t" + "invoke(null, new Object[] { (Object)$0, $signature, $params });\n" +
+						"}" + "\n" + 
+						"catch (Exception e) {" + "\n" +  
+						"\t" + "e.printStackTrace();" + "\n" +  
+						"}" + "\n";
+		String signature = generateSignatureExpression(cc);
+		
+		beforeIntercepterCode = beforeIntercepterCode.replace("$signature", signature);
+		beforeIntercepterCode = beforeIntercepterCode.replace("$params", "$args");
+		
+		afterIntercepterCode = afterIntercepterCode.replace("$signature", signature);
+		afterIntercepterCode = afterIntercepterCode.replace("$params", "$args");
+		
+		try {
+			cc.insertBeforeBody(beforeIntercepterCode);
+		}
+		catch (CannotCompileException e) {
+			logger.error("Error at DefaultInstrumenter.injectIntercepterCode()", e);
+		}
+		
+		try {
+			cc.insertAfter(afterIntercepterCode);
+		}
+		catch (CannotCompileException e) {
+			logger.error("Error at DefaultInstrumenter.injectIntercepterCode()", e);
+		}
+    }
+    
+    protected void injectIntercepterCodeForClassNotLoadedByBootstrapClassLoader(CtConstructor cc) {
+    	String beforeIntercepterCode = InterceptorServiceFactory.class.getName() + 
+    										".getInterceptorService().notifyBeforeConstructorInterceptors((Object)$0, $signature, $params);\n";
+        String afterIntercepterCode = InterceptorServiceFactory.class.getName() + 
+        									"InterceptorServiceFactory.getInterceptorService().notifyAfterConstructorInterceptors((Object)$0, $signature, $params);\n";
         String signature = generateSignatureExpression(cc);
 
         beforeIntercepterCode = beforeIntercepterCode.replace("$signature", signature);
@@ -138,43 +181,106 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
             cc.insertBeforeBody(beforeIntercepterCode);
         }
         catch (CannotCompileException e) {
-        	logger.error("Error at JavassistInstrumenter.injectIntercepterCode()", e);
+        	logger.error("Error at DefaultInstrumenter.injectIntercepterCode()", e);
         }
 		
         try {
             cc.insertAfter(afterIntercepterCode);
         }
         catch (CannotCompileException e) {
-        	logger.error("Error at JavassistInstrumenter.injectIntercepterCode()", e);
+        	logger.error("Error at DefaultInstrumenter.injectIntercepterCode()", e);
         }
     }
     
-    protected void injectIntercepterCode(CtMethod cm) {
-        boolean isStatic = Modifier.isStatic(cm.getModifiers());
-        String  obj = isStatic ? "null" : "this";
-        
-        String beforeIntercepterCode = "InterceptorServiceFactory.getInterceptorService().notifyBeforeMethodInterceptors((Object)" + obj + ", $signature, $params);\n";
-        String afterIntercepterCode = "InterceptorServiceFactory.getInterceptorService().notifyAfterMethodInterceptors((Object)" + obj + ", $signature, $params);\n";
-        String signature = generateSignatureExpression(cm);
+    protected void injectIntercepterCode(CtConstructor cc) {
+        if (classLoadedByBootstrapClassLoader()) {
+        	injectIntercepterCodeForClassLoadedByBootstrapClassLoader(cc);
+        }
+        else {
+        	injectIntercepterCodeForClassNotLoadedByBootstrapClassLoader(cc);
+        }
+    }
+    
+    protected void injectIntercepterCodeForClassLoadedByBootstrapClassLoader(CtMethod cm) {
+    	 boolean isStatic = Modifier.isStatic(cm.getModifiers());
+         String  obj = isStatic ? "null" : "this";
+         
+         String beforeIntercepterCode = 	"try {" + "\n" + 
+ 										"\t" + "ClassLoader.getSystemClassLoader().loadClass(" + "\"" +  InterceptorServiceFactory.class.getName() + "\"" + ")." + "\n" +
+ 										"\t" + "\t" + "getDeclaredMethod(\"notifyBeforeMethodInterceptors\", new Class[] { Object.class, String.class, Object[].class })." + "\n" +
+ 										"\t" + "\t" + "\t" + "invoke(null, new Object[] { (Object)" + obj + ", $signature, $params });\n" +
+ 										"}" + "\n" + 
+ 										"catch (Exception e) {" + "\n" +  
+ 										"\t" + "e.printStackTrace();" + "\n" +  
+ 										"}" + "\n";
+         String afterIntercepterCode = 	"try {" + "\n" + 
+ 										"\t" + "ClassLoader.getSystemClassLoader().loadClass(" + "\"" +  InterceptorServiceFactory.class.getName() + "\"" + ")." + "\n" +
+ 										"\t" + "\t" + "getDeclaredMethod(\"notifyAfterMethodInterceptors\", new Class[] { Object.class, String.class, Object[].class })." + "\n" +
+ 										"\t" + "\t" + "\t" + "invoke(null, new Object[] { (Object)" + obj + ", $signature, $params });\n" +
+ 										"}" + "\n" + 
+ 										"catch (Exception e) {" + "\n" +  
+ 										"\t" + "e.printStackTrace();" + "\n" +  
+ 										"}" + "\n";
+         String signature = generateSignatureExpression(cm);
 
-        beforeIntercepterCode = beforeIntercepterCode.replace("$signature", signature);
-        beforeIntercepterCode = beforeIntercepterCode.replace("$params", "$args");
-        
-        afterIntercepterCode = afterIntercepterCode.replace("$signature", signature);
-        afterIntercepterCode = afterIntercepterCode.replace("$params", "$args");
-        
-        try {
-            cm.insertBefore(beforeIntercepterCode);
+         beforeIntercepterCode = beforeIntercepterCode.replace("$signature", signature);
+         beforeIntercepterCode = beforeIntercepterCode.replace("$params", "$args");
+         
+         afterIntercepterCode = afterIntercepterCode.replace("$signature", signature);
+         afterIntercepterCode = afterIntercepterCode.replace("$params", "$args");
+         
+         try {
+             cm.insertBefore(beforeIntercepterCode);
+         }
+         catch (CannotCompileException e) {
+         	logger.error("Error at DefaultInstrumenter.injectIntercepterCode", e);
+         }
+         
+         try {
+             cm.insertAfter(afterIntercepterCode);
+         }
+         catch (CannotCompileException e) {
+         	logger.error("Error at DefaultInstrumenter.injectIntercepterCode", e);
+         }
+    }
+    
+    protected void injectIntercepterCodeForClassNotLoadedByBootstrapClassLoader(CtMethod cm) {
+    	 boolean isStatic = Modifier.isStatic(cm.getModifiers());
+         String  obj = isStatic ? "null" : "this";
+         
+         String beforeIntercepterCode = InterceptorServiceFactory.class.getName() + 
+        		 							".getInterceptorService().notifyBeforeMethodInterceptors((Object)" + obj + ", $signature, $params);\n";
+         String afterIntercepterCode = InterceptorServiceFactory.class.getName() + 
+        		 							".getInterceptorService().notifyAfterMethodInterceptors((Object)" + obj + ", $signature, $params);\n";
+         String signature = generateSignatureExpression(cm);
+
+         beforeIntercepterCode = beforeIntercepterCode.replace("$signature", signature);
+         beforeIntercepterCode = beforeIntercepterCode.replace("$params", "$args");
+         
+         afterIntercepterCode = afterIntercepterCode.replace("$signature", signature);
+         afterIntercepterCode = afterIntercepterCode.replace("$params", "$args");
+         
+         try {
+             cm.insertBefore(beforeIntercepterCode);
+         }
+         catch (CannotCompileException e) {
+         	logger.error("Error at DefaultInstrumenter.injectIntercepterCode", e);
+         }
+         
+         try {
+             cm.insertAfter(afterIntercepterCode);
+         }
+         catch (CannotCompileException e) {
+         	logger.error("Error at DefaultInstrumenter.injectIntercepterCode", e);
+         }
+    }
+    
+    protected void injectIntercepterCode(CtMethod cm) {
+    	if (classLoadedByBootstrapClassLoader()) {
+        	injectIntercepterCodeForClassLoadedByBootstrapClassLoader(cm);
         }
-        catch (CannotCompileException e) {
-        	logger.error("Error at JavassistInstrumenter.injectIntercepterCode", e);
-        }
-        
-        try {
-            cm.insertAfter(afterIntercepterCode);
-        }
-        catch (CannotCompileException e) {
-        	logger.error("Error at JavassistInstrumenter.injectIntercepterCode", e);
+        else {
+        	injectIntercepterCodeForClassNotLoadedByBootstrapClassLoader(cm);
         }
     }
     
@@ -202,7 +308,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
             }
         }
         catch (NotFoundException e) {
-        	logger.error("Error at JavassistInstrumenter.generateParametersExpression()", e);
+        	logger.error("Error at DefaultInstrumenter.generateParametersExpression()", e);
             params = "null";
         }
         return params;
@@ -418,7 +524,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
 			}
     	}
     	catch (Exception e) {
-    		logger.error("Error at JavassistInstrumenter.findMethod()", e);
+    		logger.error("Error at DefaultInstrumenter.findMethod()", e);
     	}
     	return null;
     }
