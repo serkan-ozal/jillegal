@@ -285,7 +285,7 @@ public class InterceptorServiceImpl implements InterceptorService {
             objClass = obj.getClass();
         }    
         else {
-            String className = methodSignature.substring(0, methodSignature.lastIndexOf("."));
+            String className = methodSignature.substring(0, methodSignature.indexOf("#"));
             try {
                 objClass = Class.forName(className);
             }
@@ -304,9 +304,9 @@ public class InterceptorServiceImpl implements InterceptorService {
                 
                 if (paramsStart > 0 && paramsEnd > 0) {
                     int lastDotIndex = methodSignature.lastIndexOf( "#" );
-                    String methodName = methodSignature.substring( lastDotIndex + 1, paramsStart );
-                    String paramsSignature = methodSignature.substring( paramsStart + 1, paramsEnd ).trim( );
-                    String[] paramTypeNames = paramsSignature.split( "," );
+                    String methodName = methodSignature.substring(lastDotIndex + 1, paramsStart);
+                    String paramsSignature = methodSignature.substring(paramsStart + 1, paramsEnd).trim();
+                    String[] paramTypeNames = paramsSignature.split(",");
                     int size = paramTypeNames == null ? 0 : paramTypeNames.length;
                     Class[] paramTypes = new Class<?>[size];
                     if (size == 1 && paramTypeNames[0].trim().length() == 0) {

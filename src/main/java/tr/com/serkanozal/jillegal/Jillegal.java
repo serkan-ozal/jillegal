@@ -14,7 +14,7 @@ public class Jillegal {
 
 	public static final String GROUP_ID = "tr.com.serkanozal";
 	public static final String ARTIFACT_ID = "jillegal";
-	public static String VERSION = "1.0.1-RELEASE";
+	public static String VERSION = "1.0.3-RELEASE";
 	
 	private static boolean initialized = false;
 	
