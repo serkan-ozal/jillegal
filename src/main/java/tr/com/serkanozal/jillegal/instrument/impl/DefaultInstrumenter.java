@@ -125,7 +125,8 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     
     
     protected void injectIntercepterCodeForClassLoadedByBootstrapClassLoader(CtConstructor cc) {
-    	String beforeIntercepterCode = 	"try {" + "\n" + 
+    	String beforeIntercepterCode = 	
+    			"try {" + "\n" + 
 				"\t" + "ClassLoader.getSystemClassLoader().loadClass(" + "\"" +  InterceptorServiceFactory.class.getName() + "\"" + ")." + "\n" +
 				"\t" + "\t" + "getDeclaredMethod(\"notifyBeforeConstructorInterceptors\", new Class[] { Object.class, String.class, Object[].class })." + "\n" +
 				"\t" + "\t" + "\t" + "invoke(null, new Object[] { (Object)$0, $signature, $params });\n" +
@@ -133,14 +134,15 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
 				"catch (Exception e) {" + "\n" +  
 				"\t" + "e.printStackTrace();" + "\n" +  
 				"}" + "\n";
-		String afterIntercepterCode = 	"try {" + "\n" + 
-						"\t" + "ClassLoader.getSystemClassLoader().loadClass(" + "\"" +  InterceptorServiceFactory.class.getName() + "\"" + ")." + "\n" +
-						"\t" + "\t" + "getDeclaredMethod(\"notifyAfterConstructorInterceptors\", new Class[] { Object.class, String.class, Object[].class })." + "\n" +
-						"\t" + "\t" + "\t" + "invoke(null, new Object[] { (Object)$0, $signature, $params });\n" +
-						"}" + "\n" + 
-						"catch (Exception e) {" + "\n" +  
-						"\t" + "e.printStackTrace();" + "\n" +  
-						"}" + "\n";
+		String afterIntercepterCode = 	
+				"try {" + "\n" + 
+				"\t" + "ClassLoader.getSystemClassLoader().loadClass(" + "\"" +  InterceptorServiceFactory.class.getName() + "\"" + ")." + "\n" +
+				"\t" + "\t" + "getDeclaredMethod(\"notifyAfterConstructorInterceptors\", new Class[] { Object.class, String.class, Object[].class })." + "\n" +
+				"\t" + "\t" + "\t" + "invoke(null, new Object[] { (Object)$0, $signature, $params });\n" +
+				"}" + "\n" + 
+				"catch (Exception e) {" + "\n" +  
+				"\t" + "e.printStackTrace();" + "\n" +  
+				"}" + "\n";
 		String signature = generateSignatureExpression(cc);
 		
 		beforeIntercepterCode = beforeIntercepterCode.replace("$signature", signature);
@@ -205,22 +207,24 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     	 boolean isStatic = Modifier.isStatic(cm.getModifiers());
          String  obj = isStatic ? "null" : "this";
          
-         String beforeIntercepterCode = 	"try {" + "\n" + 
- 										"\t" + "ClassLoader.getSystemClassLoader().loadClass(" + "\"" +  InterceptorServiceFactory.class.getName() + "\"" + ")." + "\n" +
- 										"\t" + "\t" + "getDeclaredMethod(\"notifyBeforeMethodInterceptors\", new Class[] { Object.class, String.class, Object[].class })." + "\n" +
- 										"\t" + "\t" + "\t" + "invoke(null, new Object[] { (Object)" + obj + ", $signature, $params });\n" +
- 										"}" + "\n" + 
- 										"catch (Exception e) {" + "\n" +  
- 										"\t" + "e.printStackTrace();" + "\n" +  
- 										"}" + "\n";
-         String afterIntercepterCode = 	"try {" + "\n" + 
- 										"\t" + "ClassLoader.getSystemClassLoader().loadClass(" + "\"" +  InterceptorServiceFactory.class.getName() + "\"" + ")." + "\n" +
- 										"\t" + "\t" + "getDeclaredMethod(\"notifyAfterMethodInterceptors\", new Class[] { Object.class, String.class, Object[].class })." + "\n" +
- 										"\t" + "\t" + "\t" + "invoke(null, new Object[] { (Object)" + obj + ", $signature, $params });\n" +
- 										"}" + "\n" + 
- 										"catch (Exception e) {" + "\n" +  
- 										"\t" + "e.printStackTrace();" + "\n" +  
- 										"}" + "\n";
+         String beforeIntercepterCode = 	
+        		"try {" + "\n" + 
+ 				"\t" + "ClassLoader.getSystemClassLoader().loadClass(" + "\"" +  InterceptorServiceFactory.class.getName() + "\"" + ")." + "\n" +
+ 				"\t" + "\t" + "getDeclaredMethod(\"notifyBeforeMethodInterceptors\", new Class[] { Object.class, String.class, Object[].class })." + "\n" +
+ 				"\t" + "\t" + "\t" + "invoke(null, new Object[] { (Object)" + obj + ", $signature, $params });\n" +
+ 				"}" + "\n" + 
+ 				"catch (Exception e) {" + "\n" +  
+ 				"\t" + "e.printStackTrace();" + "\n" +  
+ 				"}" + "\n";
+         String afterIntercepterCode = 	
+        		"try {" + "\n" + 
+ 				"\t" + "ClassLoader.getSystemClassLoader().loadClass(" + "\"" +  InterceptorServiceFactory.class.getName() + "\"" + ")." + "\n" +
+ 				"\t" + "\t" + "getDeclaredMethod(\"notifyAfterMethodInterceptors\", new Class[] { Object.class, String.class, Object[].class })." + "\n" +
+ 				"\t" + "\t" + "\t" + "invoke(null, new Object[] { (Object)" + obj + ", $signature, $params });\n" +
+ 				"}" + "\n" + 
+ 				"catch (Exception e) {" + "\n" +  
+ 				"\t" + "e.printStackTrace();" + "\n" +  
+ 				"}" + "\n";
          String signature = generateSignatureExpression(cm);
 
          beforeIntercepterCode = beforeIntercepterCode.replace("$signature", signature);
