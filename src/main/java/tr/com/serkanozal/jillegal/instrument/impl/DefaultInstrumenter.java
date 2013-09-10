@@ -41,6 +41,10 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     private ClassPool cp = ClassPool.getDefault();
     private CtClass clazz;
     private List<Class<?>> additionalClasses = new ArrayList<Class<?>>();
+    private Map<CtConstructor, CtConstructor> interceptedContructors = new HashMap<CtConstructor, CtConstructor>();
+    private Map<CtMethod, CtMethod> interceptedMethods = new HashMap<CtMethod, CtMethod>();
+    private boolean constructorsIntercepted = false;
+    private boolean methodsIntercepted = false;
     
     public DefaultInstrumenter(Class<T> cls) throws NotFoundException {
         super(cls);
@@ -62,7 +66,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     protected void init() {
-        injectIntercepterCodes();
+    	addInterceptorClassesIfNeeded();
     }
     
     protected boolean isMethodEmpty(CtMethod method) {
@@ -72,57 +76,94 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     }
 
     protected void injectIntercepterCodes() {
-        try {
-        	addAdditionalClass(InterceptorServiceFactory.class);
-            addAdditionalClass(InterceptorService.class);
-
-            CtConstructor[] ccList = clazz.getDeclaredConstructors();
-            boolean hasAnyConstructor = (ccList != null) && (ccList.length > 0);
-            if (hasAnyConstructor) {
-                for (CtConstructor cc : ccList) {
-                    injectIntercepterCode(cc);
-                }    
-            }
-            else {
-            	CtConstructor cc = CtNewConstructor.make("public " + clazz.getSimpleName() + "() {}", clazz);
-            	clazz.addConstructor(cc);
-            	injectIntercepterCode(cc);
-            }
-  
-            CtMethod[] cmList;
-            
-            Map<String, CtMethod> usedMethods = new HashMap<String, CtMethod>();
-            
-            cmList = clazz.getDeclaredMethods();
-            if (cmList != null) {
-                for (CtMethod cm : cmList) {
-                	if (isMethodEmpty(cm) == false) {
-	                	String signature = cm.getSignature();
-	                	if (usedMethods.containsKey(signature) == false) {
-	                		injectIntercepterCode(cm);
-	                		usedMethods.put(signature, cm);
-	                	}	
-                	}	
-                }    
-            }        
-            cmList = clazz.getMethods();
-			if (cmList != null) {
-				for (CtMethod cm : cmList) {
-					if (isMethodEmpty(cm) == false) {
-						String signature = cm.getSignature();
-	                	if (usedMethods.containsKey(signature) == false) {
-	                		injectIntercepterCode(cm);
-	                		usedMethods.put(signature, cm);
-	                	}
-					}	
-				}
-			}	
-        }
-        catch (CannotCompileException e) {
-            logger.error("Error at DefaultInstrumenter.injectIntercepterCodes()", e);
-        } 
+    	injectContructorInterceptorCodes();
+    	injectMethodInterceptorCodes();
     }
     
+    protected void addInterceptorClassesIfNeeded() {
+    	try {
+	    	if (additionalClasses.contains(InterceptorServiceFactory.class) == false) {
+	    		addAdditionalClass(InterceptorServiceFactory.class);
+	    	}
+	    	if (additionalClasses.contains(InterceptorService.class) == false) {
+	    		addAdditionalClass(InterceptorService.class);
+	    	}
+    	}
+    	catch (CannotCompileException e) {
+	        logger.error("Error at DefaultInstrumenter.addInterceptorClassesIfNeeded()", e);
+	    }
+    }
+    
+    protected void injectContructorInterceptorCodes() {
+    	try {
+    		addInterceptorClassesIfNeeded();
+            
+	    	CtConstructor[] ccList = clazz.getDeclaredConstructors();
+	        boolean hasAnyConstructor = (ccList != null) && (ccList.length > 0);
+	        if (hasAnyConstructor) {
+	             for (CtConstructor cc : ccList) {
+	                 injectIntercepterCode(cc);
+	             }    
+	        }
+	        else {
+	        	CtConstructor cc = CtNewConstructor.make("public " + clazz.getSimpleName() + "() {}", clazz);
+	         	clazz.addConstructor(cc);
+	         	injectIntercepterCode(cc);
+	        }
+	        
+	        constructorsIntercepted = true;
+	    }
+	    catch (CannotCompileException e) {
+	        logger.error("Error at DefaultInstrumenter.injectContructorInterceptorCodes()", e);
+	    }     
+    }
+    
+    protected void injectContructorInterceptorCodesIfNeeded() {
+    	if (constructorsIntercepted == false) {
+    		injectContructorInterceptorCodes();
+		}
+    }
+    
+    protected void injectMethodInterceptorCodes() {
+    	addInterceptorClassesIfNeeded();
+        
+    	CtMethod[] cmList;
+        
+        Map<String, CtMethod> usedMethods = new HashMap<String, CtMethod>();
+        
+        cmList = clazz.getDeclaredMethods();
+        if (cmList != null) {
+            for (CtMethod cm : cmList) {
+            	if (isMethodEmpty(cm) == false) {
+                	String signature = cm.getSignature();
+                	if (usedMethods.containsKey(signature) == false) {
+                		injectIntercepterCode(cm);
+                		usedMethods.put(signature, cm);
+                	}	
+            	}	
+            }    
+        }        
+        cmList = clazz.getMethods();
+		if (cmList != null) {
+			for (CtMethod cm : cmList) {
+				if (isMethodEmpty(cm) == false) {
+					String signature = cm.getSignature();
+                	if (usedMethods.containsKey(signature) == false) {
+                		injectIntercepterCode(cm);
+                		usedMethods.put(signature, cm);
+                	}
+				}	
+			}
+		}	
+		
+		methodsIntercepted = true;
+    }
+    
+    protected void injectMethodInterceptorCodesIfNeeded() {
+    	if (methodsIntercepted == false) {
+    		injectMethodInterceptorCodes();
+		}
+    }
     
     protected void injectIntercepterCodeForClassLoadedByBootstrapClassLoader(CtConstructor cc) {
     	String beforeIntercepterCode = 	
@@ -195,12 +236,15 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     protected void injectIntercepterCode(CtConstructor cc) {
-        if (classLoadedByBootstrapClassLoader()) {
-        	injectIntercepterCodeForClassLoadedByBootstrapClassLoader(cc);
-        }
-        else {
-        	injectIntercepterCodeForClassNotLoadedByBootstrapClassLoader(cc);
-        }
+    	if (interceptedContructors.containsKey(cc) == false) { 
+    		 if (classLoadedByBootstrapClassLoader()) {
+    			 injectIntercepterCodeForClassLoadedByBootstrapClassLoader(cc);
+    	     }
+    	     else {
+    	    	 injectIntercepterCodeForClassNotLoadedByBootstrapClassLoader(cc);
+    	     }
+    	     interceptedContructors.put(cc, cc);
+        }	
     }
     
     protected void injectIntercepterCodeForClassLoadedByBootstrapClassLoader(CtMethod cm) {
@@ -280,12 +324,15 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     protected void injectIntercepterCode(CtMethod cm) {
-    	if (classLoadedByBootstrapClassLoader()) {
-        	injectIntercepterCodeForClassLoadedByBootstrapClassLoader(cm);
-        }
-        else {
-        	injectIntercepterCodeForClassNotLoadedByBootstrapClassLoader(cm);
-        }
+    	if (interceptedMethods.containsKey(cm) == false) { 
+	    	if (classLoadedByBootstrapClassLoader()) {
+	        	injectIntercepterCodeForClassLoadedByBootstrapClassLoader(cm);
+	        }
+	        else {
+	        	injectIntercepterCodeForClassNotLoadedByBootstrapClassLoader(cm);
+	        }
+	    	interceptedMethods.put(cm, cm);
+    	}
     }
     
     protected String generateParametersExpression(CtBehavior cb) {
@@ -396,6 +443,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
         CtConstructor targetConstructor = clazz.getDeclaredConstructor(ctParamTypes);
         if (targetConstructor != null) {
             clazz.removeConstructor(targetConstructor);
+            interceptedContructors.remove(targetConstructor);
         }    
         return this;
     }
@@ -413,6 +461,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     protected DefaultInstrumenter<T> insertToConstructors(String code, boolean isBefore) throws CannotCompileException {
         CtConstructor[] ccList = clazz.getConstructors();
         for (CtConstructor cc : ccList) {
+        	injectIntercepterCode(cc);
             if (isBefore) {
                 cc.insertBefore(code);
             }    
@@ -425,12 +474,14 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     
     @Override
     public Instrumenter<T> insertBeforeConstructors(BeforeConstructorInterceptor<T> interceptor) {
+    	injectContructorInterceptorCodesIfNeeded();
     	InterceptorServiceFactory.getInterceptorService().addBeforeConstructorsInterceptor(sourceClass, interceptor);
         return this;
     }
     
     @Override
     public Instrumenter<T> insertAfterConstructors(AfterConstructorInterceptor<T> interceptor) {
+    	injectContructorInterceptorCodesIfNeeded();
     	InterceptorServiceFactory.getInterceptorService().addAfterConstructorsInterceptor(sourceClass, interceptor);
         return this;
     }
@@ -449,6 +500,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
         CtClass[] ctParamTypes = convertTypes(paramTypes);
         CtConstructor targetConstructor = clazz.getDeclaredConstructor(ctParamTypes);
         if (targetConstructor != null) {
+        	injectIntercepterCode(targetConstructor);
             if (isBefore) {
                 targetConstructor.insertBefore(code);
             }    
@@ -464,6 +516,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
         CtClass[] ctParamTypes = convertTypes(paramTypes);
         CtConstructor targetConstructor = clazz.getDeclaredConstructor(ctParamTypes);
         if (targetConstructor != null) {
+        	injectIntercepterCode(targetConstructor);
         	InterceptorServiceFactory.getInterceptorService().
         		addBeforeConstructorInterceptor(sourceClass, processConstructorSignature(targetConstructor.getLongName()), interceptor);
         }
@@ -475,6 +528,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
         CtClass[] ctParamTypes = convertTypes(paramTypes);
         CtConstructor targetConstructor = clazz.getDeclaredConstructor(ctParamTypes);
         if (targetConstructor != null) {
+        	injectIntercepterCode(targetConstructor);
         	InterceptorServiceFactory.getInterceptorService().
         		addAfterConstructorInterceptor(sourceClass, processConstructorSignature(targetConstructor.getLongName()), interceptor);
         }
@@ -576,6 +630,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
         CtMethod targetMethod = findMethod(clazz, methodName, ctParamTypes);
         if (targetMethod != null) {
             clazz.removeMethod(targetMethod);
+            interceptedMethods.remove(targetMethod);
         }    
         return this;
     }
@@ -593,6 +648,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     protected DefaultInstrumenter<T> insertToMethods(String code, boolean isBefore) throws CannotCompileException {
         CtMethod[] cmList = clazz.getMethods();
         for (CtMethod cm : cmList) {
+        	injectIntercepterCode(cm);
             if (isBefore) {
                 cm.insertBefore(code);
             }    
@@ -605,12 +661,14 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     
     @Override
     public Instrumenter<T> insertBeforeMethods(BeforeMethodInterceptor<T> interceptor) {
+    	injectMethodInterceptorCodesIfNeeded();
     	InterceptorServiceFactory.getInterceptorService().addBeforeMethodsInterceptor(sourceClass, interceptor);
         return this;
     }
     
     @Override
     public Instrumenter<T> insertAfterMethods(AfterMethodInterceptor<T> interceptor) {
+    	injectMethodInterceptorCodesIfNeeded();
     	InterceptorServiceFactory.getInterceptorService().addAfterMethodsInterceptor(sourceClass, interceptor);
         return this;
     }
@@ -630,6 +688,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
         CtClass[] ctParamTypes = convertTypes(paramTypes);
         CtMethod targetMethod = findMethod(clazz, methodName, ctParamTypes);
         if (targetMethod != null) {
+        	injectIntercepterCode(targetMethod);
             if (isBefore) {
                 targetMethod.insertBefore(code);
             }    
@@ -646,6 +705,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
         CtClass[] ctParamTypes = convertTypes(paramTypes);
         CtMethod targetMethod = findMethod(clazz, methodName, ctParamTypes);
         if (targetMethod != null) {
+        	injectIntercepterCode(targetMethod);
         	InterceptorServiceFactory.getInterceptorService().
         		addBeforeMethodInterceptor(sourceClass, processMethodSignature(targetMethod.getLongName()), interceptor);
         }
@@ -657,6 +717,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
         CtClass[] ctParamTypes = convertTypes(paramTypes);
         CtMethod targetMethod = findMethod(clazz, methodName, ctParamTypes);
         if (targetMethod != null) {
+        	injectIntercepterCode(targetMethod);
         	InterceptorServiceFactory.getInterceptorService().
         		addAfterMethodInterceptor(sourceClass, processMethodSignature(targetMethod.getLongName()), interceptor);
         }
