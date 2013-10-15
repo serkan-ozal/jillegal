@@ -7,33 +7,28 @@
 
 package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
-import tr.com.serkanozal.jillegal.offheap.domain.model.pool.SequentialObjectOffHeapPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.pool.DeeplyForkableObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.LimitedObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.RandomlyReadableOffHeapPool;
+import tr.com.serkanozal.jillegal.util.JvmUtil;
 
-public class LazyReferencedObjectOffHeapPool<T> extends BaseOffHeapPool<T, SequentialObjectOffHeapPoolCreateParameter<T>> 
-		implements 	ObjectOffHeapPool<T, SequentialObjectOffHeapPoolCreateParameter<T>>, 
-					LimitedObjectOffHeapPool<T, SequentialObjectOffHeapPoolCreateParameter<T>>,
-					RandomlyReadableOffHeapPool<T, SequentialObjectOffHeapPoolCreateParameter<T>>,
-					DeeplyForkableObjectOffHeapPool<T, SequentialObjectOffHeapPoolCreateParameter<T>> {
+public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T, ObjectOffHeapPoolCreateParameter<T>> 
+		implements 	ObjectOffHeapPool<T, ObjectOffHeapPoolCreateParameter<T>>, 
+					LimitedObjectOffHeapPool<T, ObjectOffHeapPoolCreateParameter<T>>,
+					RandomlyReadableOffHeapPool<T, ObjectOffHeapPoolCreateParameter<T>>,
+					DeeplyForkableObjectOffHeapPool<T, ObjectOffHeapPoolCreateParameter<T>> {
 
-	protected int objectCount;
-	protected long objectSize;
-	protected long currentIndex;
-	protected long allocatedAddress;
-	protected T sampleObject;
-	protected long sampleObjectAddress;
-	protected long addressLimit;
-	
-	public LazyReferencedObjectOffHeapPool(SequentialObjectOffHeapPoolCreateParameter<T> parameter) {
-		this(parameter.getElementType(), parameter.getObjectCount(), parameter.getDirectMemoryService());
+	public LazyReferencedObjectOffHeapPool(ObjectOffHeapPoolCreateParameter<T> parameter) {
+		this(parameter.getElementType(), parameter.getObjectCount(), 
+				parameter.isAutoImplementNonPrimitiveFieldSetters(), parameter.getDirectMemoryService());
 	}
 	
-	public LazyReferencedObjectOffHeapPool(Class<T> elementType, int objectCount, DirectMemoryService directMemoryService) {
-		super(elementType, directMemoryService);
+	public LazyReferencedObjectOffHeapPool(Class<T> elementType, int objectCount, 
+			boolean autoImplementNonPrimitiveFieldSetters, DirectMemoryService directMemoryService) {
+		super(elementType, autoImplementNonPrimitiveFieldSetters, directMemoryService);
 		if (objectCount <= 0) {
 			throw new IllegalArgumentException("\"objectCount\" must be positive !");
 		}
@@ -41,11 +36,11 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseOffHeapPool<T, Seque
 	}
 	
 	protected synchronized void init() {
-		this.currentIndex = allocatedAddress - objectSize;
+		this.currentAddress = allocatedAddress - objectSize;
 		
 		// Copy sample object to allocated memory region for each object
 		for (long l = 0; l < objectCount; l++) {
-			directMemoryService.copyMemory(sampleObjectAddress, allocatedAddress + (l * objectSize), objectSize);
+			directMemoryService.copyMemory(offHeapSampleObjectAddress, allocatedAddress + (l * objectSize), objectSize);
 		}
 	}
 	
@@ -55,18 +50,18 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseOffHeapPool<T, Seque
 	
 	@Override
 	public synchronized T get() {
-		if (currentIndex >= addressLimit) {
+		if (currentAddress >= addressLimit) {
 			return null;
 		}
-		return directMemoryService.getObject((currentIndex += objectSize));
+		return directMemoryService.getObject(updateClassPointerOfObject((currentAddress += objectSize)));
 	}
 	
 	@Override
 	public T getAt(int index) {
 		if (index < 0 || index >= objectCount) {
 			throw new IllegalArgumentException("Invalid index: " + index);
-		}	
-		return directMemoryService.getObject((allocatedAddress + (index * objectSize)));
+		}
+		return directMemoryService.getObject(updateClassPointerOfObject((allocatedAddress + (index * objectSize))));
 	}
 	
 	@Override
@@ -76,7 +71,7 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseOffHeapPool<T, Seque
 
 	@Override
 	public boolean hasMoreElement() {
-		return currentIndex < objectCount;
+		return currentAddress < objectCount;
 	}
 	
 	@Override
@@ -90,27 +85,22 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseOffHeapPool<T, Seque
 	}
 
 	@Override
-	public void init(SequentialObjectOffHeapPoolCreateParameter<T> parameter) {
+	public void init(ObjectOffHeapPoolCreateParameter<T> parameter) {
 		init(parameter.getElementType(), parameter.getObjectCount(), parameter.getDirectMemoryService());
 	}
 	
-	@SuppressWarnings("unchecked")
 	protected void init(Class<T> elementType, int objectCount, DirectMemoryService directMemoryService) {
-		this.elementType = elementType;
-		this.objectCount = objectCount;
-		this.directMemoryService = directMemoryService;
-		this.objectSize = directMemoryService.sizeOf(elementType);
-		this.allocatedAddress = directMemoryService.allocateMemory(objectSize * objectCount);
+		super.init(elementType, objectCount, directMemoryService);
+		this.allocatedAddress = directMemoryService.allocateMemory(objectSize * objectCount + 
+									JvmUtil.getAddressSize()); // Extra memory for possible aligning);
 		this.addressLimit = allocatedAddress + (objectCount * objectSize) - objectSize;
-		this.sampleObject = (T) directMemoryService.allocateInstance(elementType);
-		this.sampleObjectAddress = directMemoryService.addressOf(sampleObject);
-		
 		init();
 	}
 
 	@Override
-	public DeeplyForkableObjectOffHeapPool<T, SequentialObjectOffHeapPoolCreateParameter<T>> fork() {
-		return new LazyReferencedObjectOffHeapPool<T>(getElementType(), (int)getElementCount(), getDirectMemoryService());
+	public DeeplyForkableObjectOffHeapPool<T, ObjectOffHeapPoolCreateParameter<T>> fork() {
+		return new LazyReferencedObjectOffHeapPool<T>(getElementType(), (int)getElementCount(), 
+						autoImplementNonPrimitiveFieldSetters, getDirectMemoryService());
 	}
 	
 }

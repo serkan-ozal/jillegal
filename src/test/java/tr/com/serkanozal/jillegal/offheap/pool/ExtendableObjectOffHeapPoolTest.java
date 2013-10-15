@@ -16,7 +16,7 @@ import org.junit.Test;
 
 import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.DefaultExtendableObjectOffHeapPoolCreateParameterBuilder;
 import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.ExtendableObjectOffHeapPoolCreateParameterBuilder;
-import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.SequentialObjectOffHeapPoolCreateParameterBuilder;
+import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.ObjectOffHeapPoolCreateParameterBuilder;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectPoolReferenceType;
 import tr.com.serkanozal.jillegal.offheap.pool.impl.EagerReferencedObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.impl.ExtendableObjectOffHeapPool;
@@ -36,7 +36,7 @@ public class ExtendableObjectOffHeapPoolTest {
 	public void objectRetrievedSuccessfullyFromExtendableObjectOffHeapPoolWithLazyReferencedSequentialObjectPoolOffHeap() {
 		LazyReferencedObjectOffHeapPool<SampleOffHeapPoolTestClass> sequentialObjectPool = 
 				offHeapService.createOffHeapPool(
-						new SequentialObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapPoolTestClass>().
+						new ObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapPoolTestClass>().
 								type(SampleOffHeapPoolTestClass.class).
 								objectCount(ELEMENT_COUNT).
 								referenceType(ObjectPoolReferenceType.LAZY_REFERENCED).
@@ -66,7 +66,7 @@ public class ExtendableObjectOffHeapPoolTest {
 	public void objectRetrievedSuccessfullyFromExtendableObjectOffHeapPoolWithEagerReferencedSequentialObjectPoolOffHeap() {
 		EagerReferencedObjectOffHeapPool<SampleOffHeapPoolTestClass> sequentialObjectPool = 
 				offHeapService.createOffHeapPool(
-						new SequentialObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapPoolTestClass>().
+						new ObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapPoolTestClass>().
 								type(SampleOffHeapPoolTestClass.class).
 								objectCount(ELEMENT_COUNT).
 								referenceType(ObjectPoolReferenceType.EAGER_REFERENCED).

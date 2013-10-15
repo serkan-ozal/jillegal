@@ -42,6 +42,7 @@ import org.apache.log4j.Logger;
 
 import sun.management.VMManagement;
 import sun.misc.Unsafe;
+import tr.com.serkanozal.jcommon.util.ReflectionUtil;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
@@ -60,7 +61,7 @@ import com.google.common.collect.Multiset;
  */
 @SuppressWarnings("restriction")
 public class JvmUtil {
-
+	
 	public static final String JAVA_1_6 = "1.6";
 	public static final String JAVA_1_7 = "1.7";
 	
@@ -133,7 +134,11 @@ public class JvmUtil {
     private static int classDefPointerOffsetInClass;
     private static int sizeFieldOffsetOffsetInClass;
     
+    private static JvmAwareUtil jvmAwareUtil;
+    
     private static final Map<Class<?>, ClassInfo> classCache = new HashMap<Class<?>, ClassInfo>();
+    private static final Map<Class<?>, Map<String, Field>> classFieldCache = new HashMap<Class<?>, Map<String, Field>>();
+    private static final Map<Class<?>, Map<Field, Long>> classFieldOffsetCache = new HashMap<Class<?>, Map<Field, Long>>();
     
     static {
     	init();
@@ -184,6 +189,7 @@ public class JvmUtil {
             		JvmUtil.classDefPointerOffsetInClass = CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT_FOR_JAVA_1_7;
             	}
             	JvmUtil.sizeFieldOffsetOffsetInClass = SIZE_FIELD_OFFSET_IN_CLASS_32_BIT;
+            	jvmAwareUtil = new Address32BitJvmUtil();
                 break;
             case SIZE_64_BIT:
             	JvmUtil.classDefPointerOffsetInObject = CLASS_DEF_POINTER_OFFSET_IN_OBJECT_FOR_64_BIT;
@@ -191,21 +197,28 @@ public class JvmUtil {
             		if (options.compressedRef) {
             			JvmUtil.classDefPointerOffsetInClass = 
             					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITH_COMPRESSED_REF_FOR_JAVA_1_6;
+            			jvmAwareUtil = new Address64BitWithCompressedOopsJvmUtil();
             		}
             		else {
             			JvmUtil.classDefPointerOffsetInClass = 
             					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITHOUT_COMPRESSED_REF_FOR_JAVA_1_6;
+            			jvmAwareUtil = new Address64BitWithoutCompressedOopsJvmUtil();
             		}
             	}
             	else if (isJava_1_7()) {
             		if (options.compressedRef) {
             			JvmUtil.classDefPointerOffsetInClass = 
             					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITH_COMPRESSED_REF_FOR_JAVA_1_7;
+            			jvmAwareUtil = new Address64BitWithCompressedOopsJvmUtil();
             		}
             		else {
             			JvmUtil.classDefPointerOffsetInClass = 
             					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITHOUT_COMPRESSED_REF_FOR_JAVA_1_7;
+            			jvmAwareUtil = new Address64BitWithoutCompressedOopsJvmUtil();
             		}
+            	}
+            	else {
+            		throw new AssertionError("Java version is not supported: " + JAVA_SPEC_VERSION); 
             	}
             	JvmUtil.sizeFieldOffsetOffsetInClass = SIZE_FIELD_OFFSET_IN_CLASS_64_BIT;
                 break;
@@ -315,100 +328,277 @@ public class JvmUtil {
         return normalize(System.identityHashCode(obj));
     }
     
+    private interface JvmAwareUtil {
+    	
+    	long addressOf(Object obj);
+    	long addressOfClass(Object o);
+    	long jvmAddressOf(Object obj);
+    	long jvmAddressOfClass(Object o);
+    	long addressOfClassBase(Class<?> clazz);
+    	long addressOfClassInternal(Class<?> clazz);
+    	long sizeOfWithUnsafe(Object obj);
+    	int getArrayLength(long arrayStartAddress, Class<?> elementType);
+    	void setArrayLength(long arrayStartAddress, Class<?> elementType, int length);
+    	
+    }
+    
+    private static abstract class BaseJvmAwaretil implements JvmAwareUtil {
+
+    	@Override
+		public long sizeOfWithUnsafe(Object obj) {
+			if (obj == null) {
+				return 0;
+			}    
+			else {
+				long classAddress = JvmUtil.addressOfClassBase(obj.getClass());
+				return unsafe.getInt(classAddress + sizeFieldOffsetOffsetInClass);
+			}
+		}
+    	
+    }
+    
+    private static class Address32BitJvmUtil extends BaseJvmAwaretil {
+
+		@Override
+		public long addressOf(Object obj) {
+			if (obj == null) {
+	            return 0;
+	        }
+	        objArray[0] = obj;
+	        return unsafe.getInt(objArray, baseOffset);
+		}
+
+		@SuppressWarnings("deprecation")
+		@Override
+		public long addressOfClass(Object o) {
+			return normalize(unsafe.getInt(o, classDefPointerOffsetInObject));
+		}
+		
+		@Override
+		public long jvmAddressOf(Object obj) {
+			return addressOf(obj);
+		}
+
+		@Override
+		public long jvmAddressOfClass(Object o) {
+			return addressOfClass(o);
+		}
+
+		@Override
+		public long addressOfClassBase(Class<?> clazz) {
+			long addressOfClass = addressOf(clazz);
+	    	if (isJava_1_7()) {
+	    		return addressOfClass;
+	    	}
+	    	return normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass));
+		}
+
+		@Override
+		public long addressOfClassInternal(Class<?> clazz) {
+			long addressOfClass = addressOf(clazz);
+	    	return normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass));
+		}
+
+		@Override
+		public int getArrayLength(long arrayStartAddress, Class<?> elementType) {
+			long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+			return unsafe.getInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize());
+		}
+
+		@Override
+		public void setArrayLength(long arrayStartAddress, Class<?> elementType, int length) {
+			long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+			unsafe.putInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize(), length);
+		}
+
+    }
+    
+    private static abstract class Address64BitJvmUtil extends BaseJvmAwaretil {
+
+    	@Override
+    	public int getArrayLength(long arrayStartAddress, Class<?> elementType) {
+    		long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+    		return (int)unsafe.getLong(arrayIndexStartAddress - JvmUtil.arrayLengthSize());
+    	}
+    	
+    	@Override
+		public void setArrayLength(long arrayStartAddress, Class<?> elementType, int length) {
+			long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+			unsafe.putLong(arrayIndexStartAddress - JvmUtil.arrayLengthSize(), length);
+		}
+
+    }
+    
+    private static class Address64BitWithCompressedOopsJvmUtil extends Address64BitJvmUtil {
+
+		@Override
+		public long addressOf(Object obj) {
+			if (obj == null) {
+	            return 0;
+	        }
+	        objArray[0] = obj;
+	        return JvmUtil.toNativeAddress(normalize(unsafe.getInt(objArray, baseOffset)));
+		}
+
+		@SuppressWarnings("deprecation")
+		@Override
+		public long addressOfClass(Object o) {
+			return JvmUtil.toNativeAddress(normalize(unsafe.getInt(o, classDefPointerOffsetInObject)));
+		}
+		
+		@Override
+		public long jvmAddressOf(Object obj) {
+			if (obj == null) {
+	            return 0;
+	        }
+	        objArray[0] = obj;
+	        return normalize(unsafe.getInt(objArray, baseOffset));
+		}
+
+		@SuppressWarnings("deprecation")
+		@Override
+		public long jvmAddressOfClass(Object o) {
+			return normalize(unsafe.getInt(o, classDefPointerOffsetInObject));
+		}
+
+		@Override
+		public long addressOfClassBase(Class<?> clazz) {
+			long addressOfClass = addressOf(clazz);
+	    	if (isJava_1_7()) {
+	    		return addressOfClass;
+	    	}
+	    	return JvmUtil.toNativeAddress(normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass)));
+		}
+
+		@Override
+		public long addressOfClassInternal(Class<?> clazz) {
+			long addressOfClass = addressOf(clazz);
+			return JvmUtil.toNativeAddress(normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass)));
+		}
+
+    }
+    
+    private static class Address64BitWithoutCompressedOopsJvmUtil extends Address64BitJvmUtil {
+
+		@Override
+		public long addressOf(Object obj) {
+			if (obj == null) {
+	            return 0;
+	        }
+	        objArray[0] = obj;
+	        return unsafe.getLong(objArray, baseOffset);
+		}
+
+		@SuppressWarnings("deprecation")
+		@Override
+		public long addressOfClass(Object o) {
+			return unsafe.getLong(o, classDefPointerOffsetInObject); 
+		}
+		
+		@Override
+		public long jvmAddressOf(Object obj) {
+			return addressOf(obj);
+		}
+
+		@Override
+		public long jvmAddressOfClass(Object o) {
+			return addressOfClass(o);
+		}
+
+		@Override
+		public long addressOfClassBase(Class<?> clazz) {
+			long addressOfClass = addressOf(clazz);
+	    	if (isJava_1_7()) {
+	    		return addressOfClass;
+	    	}
+	    	return unsafe.getLong(addressOfClass + classDefPointerOffsetInClass); 
+		}
+
+		@Override
+		public long addressOfClassInternal(Class<?> clazz) {
+			long addressOfClass = addressOf(clazz);
+			return unsafe.getLong(addressOfClass + classDefPointerOffsetInClass); 
+		}
+
+    }
+    
     public synchronized static long addressOf(Object obj) {
-        if (obj == null) {
-            return 0;
-        }
-        
-        objArray[0] = obj;
-        long objectAddress = JvmUtil.INVALID_ADDRESS;
-        int indexScale = JvmUtil.getIndexScale();
-        
-        switch (indexScale) {
-            case JvmUtil.SIZE_32_BIT:
-            case JvmUtil.SIZE_64_BIT:
-            	int addressSize = JvmUtil.getAddressSize();
-                switch (addressSize) {
-                    case JvmUtil.SIZE_32_BIT:
-                        objectAddress = unsafe.getInt(objArray, JvmUtil.getBaseOffset());
-                        break;
-                    case JvmUtil.SIZE_64_BIT:
-                    	int referenceSize = JvmUtil.getReferenceSize();
-                    	switch (addressSize) {
-                         	case JvmUtil.ADDRESSING_4_BYTE:
-                         		objectAddress = normalize(unsafe.getInt(objArray, JvmUtil.getBaseOffset()));
-                         		break;
-                         	case JvmUtil.ADDRESSING_8_BYTE:
-                         		objectAddress = unsafe.getLong(objArray, JvmUtil.getBaseOffset());
-                         		break;
-                         	 default:    
-                                 throw new AssertionError("Unsupported reference size: " + referenceSize);
-                    	 }        
-                    	 break;    
-                    default:    
-                        throw new AssertionError("Unsupported address size: " + addressSize); 
-                }
-                break; 
-
-            default:
-                throw new AssertionError("Unsupported index scale: " + indexScale);
-        }       
-
-        if (objectAddress != JvmUtil.INVALID_ADDRESS) {
-        	objectAddress = JvmUtil.toNativeAddress(objectAddress);
-        }
-        
-        return objectAddress;
+    	return jvmAwareUtil.addressOf(obj);
+    }
+    
+    public synchronized static long jvmAddressOf(Object obj) {
+    	return jvmAwareUtil.jvmAddressOf(obj);
     }
   
-    public static long addressOfField(Object obj, String fieldName) throws SecurityException, NoSuchFieldException {
-        long baseAddress = 0; 
-        long fieldOffset = 0;
-        Field field = obj.getClass().getDeclaredField(fieldName);
-        if (Modifier.isStatic(field.getModifiers())) {
-        	baseAddress = addressOfClassBase(obj.getClass());
-        	fieldOffset = unsafe.staticFieldOffset(field);
-        }
-        else {
-        	baseAddress = addressOf(obj);
-        	fieldOffset = unsafe.objectFieldOffset(field);
-        }
-        return baseAddress + fieldOffset;
+    public static Field getField(Class<?> clazz, String fieldName) {
+    	Map<String, Field> fieldMap = classFieldCache.get(clazz);
+    	if (fieldMap == null) {
+    		fieldMap = new HashMap<String, Field>();
+    		classFieldCache.put(clazz, fieldMap);
+    	}
+    	Field field = fieldMap.get(fieldName);
+    	if (field == null) {
+    		field = ReflectionUtil.getField(clazz, fieldName);
+    		fieldMap.put(fieldName, field);
+    	}
+    	return field;
     }
     
-    public static long addressOfStaticField(Class<?> clazz, String fieldName) throws SecurityException, NoSuchFieldException {
-        long baseAddress = 0; 
+    public static long addressOfField(Object obj, String fieldName) {
+    	Class<?> clazz = obj.getClass();
+    	Field field = getField(clazz, fieldName);
+    	if (field == null) {
+    		throw new IllegalArgumentException("Field " + fieldName + " couldn't be found at class " + clazz.getName());
+    	}
+    	long baseAddress = 0; 
         long fieldOffset = 0;
-        Field field = clazz.getDeclaredField(fieldName);
         if (Modifier.isStatic(field.getModifiers())) {
-        	baseAddress = addressOfClassBase(clazz);
-        	fieldOffset = unsafe.staticFieldOffset(field);
+         	baseAddress = JvmUtil.addressOfClassBase(obj.getClass());
+         	fieldOffset = unsafe.staticFieldOffset(field);
         }
         else {
-        	throw new IllegalArgumentException("Field " + fieldName + " is not a static field");
+         	baseAddress = addressOf(obj);
+         	fieldOffset = unsafe.objectFieldOffset(field);
         }
-        return baseAddress + fieldOffset;
+        return baseAddress + fieldOffset; 
     }
     
-    @SuppressWarnings("deprecation")
+    @SuppressWarnings("unused")
+	private static long findInstanceFieldOffset(Class<?> clazz, Field field) {
+    	Map<Field, Long> fieldOffsetMap = classFieldOffsetCache.get(field);
+    	if (fieldOffsetMap == null) {
+    		fieldOffsetMap = new HashMap<Field, Long>();
+    		classFieldOffsetCache.put(clazz, fieldOffsetMap);
+    	}
+    	Long fieldOffset = fieldOffsetMap.get(field);
+    	if (fieldOffset == null) {
+    		fieldOffset = JvmUtil.getUnsafe().objectFieldOffset(field);
+    		fieldOffsetMap.put(field, fieldOffset);
+    	}
+    	return fieldOffset;
+    }
+    
+    @SuppressWarnings("unused")
+	private static long findClassFieldOffset(Class<?> clazz, Field field) {
+    	Map<Field, Long> fieldOffsetMap = classFieldOffsetCache.get(field);
+    	if (fieldOffsetMap == null) {
+    		fieldOffsetMap = new HashMap<Field, Long>();
+    		classFieldOffsetCache.put(clazz, fieldOffsetMap);
+    	}
+    	Long fieldOffset = fieldOffsetMap.get(field);
+    	if (fieldOffset == null) {
+    		fieldOffset = JvmUtil.getUnsafe().staticFieldOffset(field);
+    		fieldOffsetMap.put(field, fieldOffset);
+    	}
+    	return fieldOffset;
+    }
+    
 	public static long addressOfClass(Object o) {
-    	int addressSize = JvmUtil.getAddressSize();
-    	switch (addressSize) {
-	        case JvmUtil.SIZE_32_BIT:
-	            return JvmUtil.toNativeAddress(normalize(unsafe.getInt(o, JvmUtil.getClassDefPointerOffsetInObject())));
-	        case JvmUtil.SIZE_64_BIT:
-	        	int referenceSize = JvmUtil.getReferenceSize();
-            	switch (referenceSize) {
-                 	case JvmUtil.ADDRESSING_4_BYTE:
-                 		return JvmUtil.toNativeAddress(normalize(unsafe.getInt(o, JvmUtil.getClassDefPointerOffsetInObject())));
-                 	case JvmUtil.ADDRESSING_8_BYTE:
-                 		return JvmUtil.toNativeAddress(unsafe.getLong(o, JvmUtil.getClassDefPointerOffsetInObject())); 
-                 	default:    
-                        throw new AssertionError("Unsupported reference size: " + referenceSize);
-            	 }
-	        default: 	
-	        	throw new AssertionError("Unsupported address size: " + addressSize);	
-    	}	
+    	return jvmAwareUtil.addressOfClass(o);
+    }
+	
+	public static long jvmAddressOfClass(Object o) {
+    	return jvmAwareUtil.jvmAddressOfClass(o);
     }
     
     public static long addressOfClass(Class<?> clazz) {
@@ -416,51 +606,11 @@ public class JvmUtil {
     }
     
     private static long addressOfClassBase(Class<?> clazz) {
-    	long addressOfClass = addressOf(clazz);
-    	
-    	if (isJava_1_7()) {
-    		return addressOfClass;
-    	}
-    	
-    	int addressSize = JvmUtil.getAddressSize();
-    	switch (addressSize) {
-	        case JvmUtil.SIZE_32_BIT:
-	            return JvmUtil.toNativeAddress(normalize(unsafe.getInt(addressOfClass + JvmUtil.getClassDefPointerOffsetInClass())));
-	        case JvmUtil.SIZE_64_BIT:
-	        	int referenceSize = JvmUtil.getReferenceSize();
-            	switch (referenceSize) {
-                 	case JvmUtil.ADDRESSING_4_BYTE:
-                 		return JvmUtil.toNativeAddress(normalize(unsafe.getInt(addressOfClass + JvmUtil.getClassDefPointerOffsetInClass())));
-                 	case JvmUtil.ADDRESSING_8_BYTE:
-                 		return JvmUtil.toNativeAddress(unsafe.getLong(addressOfClass + JvmUtil.getClassDefPointerOffsetInClass())); 
-                 	default:    
-                        throw new AssertionError("Unsupported reference size: " + referenceSize);
-            	 }    
-	        default:    
-                throw new AssertionError("Unsupported address size: " + addressSize);     
-    	}
+    	return jvmAwareUtil.addressOfClassBase(clazz);
     }
     
     private static long addressOfClassInternal(Class<?> clazz) {
-    	long addressOfClass = addressOf(clazz);
-    	
-    	int addressSize = JvmUtil.getAddressSize();
-    	switch (addressSize) {
-	        case JvmUtil.SIZE_32_BIT:
-	            return JvmUtil.toNativeAddress(normalize(unsafe.getInt(addressOfClass + JvmUtil.getClassDefPointerOffsetInClass())));
-	        case JvmUtil.SIZE_64_BIT:
-	        	int referenceSize = JvmUtil.getReferenceSize();
-            	switch (referenceSize) {
-                 	case JvmUtil.ADDRESSING_4_BYTE:
-                 		return JvmUtil.toNativeAddress(normalize(unsafe.getInt(addressOfClass + JvmUtil.getClassDefPointerOffsetInClass())));
-                 	case JvmUtil.ADDRESSING_8_BYTE:
-                 		return JvmUtil.toNativeAddress(unsafe.getLong(addressOfClass + JvmUtil.getClassDefPointerOffsetInClass())); 
-                 	default:    
-                        throw new AssertionError("Unsupported reference size: " + referenceSize);
-            	 }    
-	        default:    
-                throw new AssertionError("Unsupported address size: " + addressSize);     
-    	}
+    	return jvmAwareUtil.addressOfClassInternal(clazz);
     }
     
     public static boolean isPrimitiveType(Class<?> type) {
@@ -562,21 +712,7 @@ public class JvmUtil {
     }
 
     public static long sizeOfWithUnsafe(Object obj) {
-        if (obj == null) {
-            return 0;
-        }    
-        else {
-        	long classAddress = JvmUtil.addressOfClassBase(obj.getClass());
-        	int addressSize = JvmUtil.getAddressSize();
-            switch (addressSize) {
-                case JvmUtil.SIZE_32_BIT:
-                    return unsafe.getInt(classAddress + JvmUtil.getSizeFieldOffsetOffsetInClass());  
-                case JvmUtil.SIZE_64_BIT:
-                    return unsafe.getInt(classAddress + JvmUtil.getSizeFieldOffsetOffsetInClass());  
-                default:
-                    throw new AssertionError("Unsupported address size: " + addressSize);    
-            }
-        }    
+    	return jvmAwareUtil.sizeOfWithUnsafe(obj);
     }  
     
     public static long sizeOfWithReflection(Class<?> objClass) {
@@ -694,31 +830,11 @@ public class JvmUtil {
 	}
 	
 	public static int getArrayLength(long arrayStartAddress, Class<?> elementType) {
-		long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
-		int referenceSize = JvmUtil.getReferenceSize();
-		switch (referenceSize) {
-			case JvmUtil.ADDRESSING_4_BYTE:
-				return unsafe.getInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize());
-			case JvmUtil.ADDRESSING_8_BYTE:
-				return (int)unsafe.getLong(arrayIndexStartAddress - JvmUtil.arrayLengthSize());
-			default:
-				throw new AssertionError("Unsupported reference size: " + referenceSize); 
-		}
+		return jvmAwareUtil.getArrayLength(arrayStartAddress, elementType);
 	}
 	
 	public static void setArrayLength(long arrayStartAddress, Class<?> elementType, int length) {
-		long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
-		int referenceSize = JvmUtil.getReferenceSize();
-		switch (referenceSize) {
-			case JvmUtil.ADDRESSING_4_BYTE:
-				unsafe.putInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize(), length);
-				break;
-			case JvmUtil.ADDRESSING_8_BYTE:
-				unsafe.putLong(arrayIndexStartAddress - JvmUtil.arrayLengthSize(), length);
-				break;
-			default:
-				throw new AssertionError("Unsupported reference size: " + referenceSize); 
-		}
+		jvmAwareUtil.setArrayLength(arrayStartAddress, elementType, length);
 	}
     
     public static long toNativeAddress(long address) {
@@ -1110,6 +1226,12 @@ public class JvmUtil {
 
         return processId.toString();
     }
+	
+	public static void runGC() {
+		for (int i = 0; i < 3; i++) {
+			System.gc();
+		}
+	}
     
     public static void info() {
         System.out.println("JVM Name                   : " + JVM_NAME);

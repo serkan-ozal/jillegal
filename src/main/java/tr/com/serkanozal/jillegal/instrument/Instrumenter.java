@@ -16,6 +16,8 @@ import tr.com.serkanozal.jillegal.instrument.interceptor.method.BeforeMethodInte
 
 public interface Instrumenter<T> {
 	
+	String argumentId(int argOrder);
+	
     Instrumenter<T> addAdditionalClass(Class<?> additionalClass) throws Exception; 
     
     Instrumenter<T> addConstructor(String code, Class<?> ... paramTypes) throws Exception; 

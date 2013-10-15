@@ -7,11 +7,6 @@
 
 package tr.com.serkanozal.jillegal.offheap.memory;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
-import java.util.LinkedList;
-import java.util.List;
-
 import org.apache.log4j.Logger;
 
 import sun.misc.Unsafe;
@@ -36,7 +31,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     
     private void initUnsafe() {
         unsafe = JvmUtil.getUnsafe();
-        objArray = new Object[1];
+        objArray = new Object[2];
     }
 
     @Override
@@ -70,46 +65,11 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     }
     
     public long sizeOfWithUnsafe(Object obj) {
-        if (obj == null) {
-            return 0;
-        }    
-        else {
-        	long classAddress = addressOfClass(obj.getClass());
-            switch (JvmUtil.getAddressSize()) {
-                case JvmUtil.SIZE_32_BIT:
-                    return unsafe.getInt(classAddress + JvmUtil.getSizeFieldOffsetOffsetInClass());  
-                case JvmUtil.SIZE_64_BIT:
-                    return unsafe.getInt(classAddress + JvmUtil.getSizeFieldOffsetOffsetInClass());  
-                default:
-                    throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());    
-            }
-        }    
+    	return JvmUtil.sizeOfWithUnsafe(obj); 
     }  
     
     public long sizeOfWithReflection(Class<?> objClass) {
-    	List<Field> instanceFields = new LinkedList<Field>();
-    	
-        do {
-            if (objClass == Object.class) {
-            	return JvmUtil.MIN_SIZE;
-            }
-            for (Field f : objClass.getDeclaredFields()) {
-                if ((f.getModifiers() & Modifier.STATIC) == 0) {
-                    instanceFields.add(f);
-                }    
-            }
-            
-            objClass = objClass.getSuperclass();
-        } while (instanceFields.isEmpty());
-
-        long maxOffset = 0;
-        for (Field f : instanceFields) {
-            long offset = unsafe.objectFieldOffset(f);
-            if (offset > maxOffset) {
-            	maxOffset = offset; 
-            }	
-        }
-        return (((long) maxOffset / JvmUtil.WORD) + 1) * JvmUtil.WORD; 
+    	return JvmUtil.sizeOfWithReflection(objClass);
     }
 
     @Override
@@ -119,65 +79,58 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     
     @Override
     public synchronized long addressOf(Object obj) {
-        if (obj == null) {
-            return 0;
-        }
-        
-        objArray[0] = obj;
-        long objectAddress = JvmUtil.INVALID_ADDRESS;
-        
-        switch (JvmUtil.getIndexScale()) {
-            case JvmUtil.SIZE_32_BIT:
-            case JvmUtil.SIZE_64_BIT:
-                switch (JvmUtil.getAddressSize()) {
-                    case JvmUtil.SIZE_32_BIT:
-                        objectAddress = unsafe.getInt(objArray, JvmUtil.getBaseOffset());
-                        break;
-                    case JvmUtil.SIZE_64_BIT:
-                        objectAddress = unsafe.getLong(objArray, JvmUtil.getBaseOffset());
-                        break;    
-                    default:    
-                        throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize()); 
-                }
-                break; 
-
-            default:
-                throw new AssertionError("Unsupported index scale: " + JvmUtil.getIndexScale());
-        }       
-
-        if (objectAddress != JvmUtil.INVALID_ADDRESS) {
-        	objectAddress = JvmUtil.toNativeAddress(objectAddress);
-        }
-        
-        return objectAddress;
+        return JvmUtil.addressOf(obj);
     }
   
     @Override
     public synchronized long addressOfField(Object obj, String fieldName) throws SecurityException, NoSuchFieldException {
-        long baseAddress = 0; 
-        long fieldOffset = 0;
-        Field field = obj.getClass().getDeclaredField(fieldName);
-        if (Modifier.isStatic(field.getModifiers())) {
-        	baseAddress = addressOfClass(obj.getClass());
-        	fieldOffset = unsafe.staticFieldOffset(field);
-        }
-        else {
-        	baseAddress = addressOf(obj);
-        	fieldOffset = unsafe.objectFieldOffset(field);
-        }
-        return baseAddress + fieldOffset;
+        return JvmUtil.addressOfField(obj, fieldName);
     }
     
     @Override
     public long addressOfClass(Class<?> clazz) {
-    	long addressOfClass = addressOf(clazz);
-    	switch (JvmUtil.getAddressSize()) {
-	        case JvmUtil.SIZE_32_BIT:
-	            return JvmUtil.toNativeAddress(unsafe.getInt(addressOfClass + JvmUtil.getClassDefPointerOffsetInClass()));
-	        case JvmUtil.SIZE_64_BIT:
-	        	return JvmUtil.toNativeAddress(unsafe.getLong(addressOfClass + JvmUtil.getClassDefPointerOffsetInClass()));   
-	        default:    
-                throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());     
+    	return JvmUtil.addressOfClass(clazz);
+    }
+    
+    @Override
+    public Object getObjectField(Object obj, String fieldName) {
+    	long fieldAddress = JvmUtil.addressOfField(obj, fieldName);
+    	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
+    		return getObject(fieldAddress);
+    	}
+    	else {
+    		return null;
+    	}
+    }
+    
+    @Override
+    public void setObjectField(Object rootObj, String fieldName, Object fieldObj) {
+    	long fieldAddress = JvmUtil.addressOfField(rootObj, fieldName);
+    	long fieldObjAddress = JvmUtil.addressOf(fieldObj);
+
+    	fieldObjAddress = JvmUtil.toJvmAddress(fieldObjAddress);
+
+    	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
+    		switch (JvmUtil.getAddressSize()) {
+	            case JvmUtil.SIZE_32_BIT:
+	            	putAsIntAddress(fieldAddress, fieldObjAddress);
+	                break;
+	            case JvmUtil.SIZE_64_BIT:
+	            	int referenceSize = JvmUtil.getReferenceSize();
+	            	switch (referenceSize) {
+	                 	case JvmUtil.ADDRESSING_4_BYTE:   
+	                 		putAsIntAddress(fieldAddress, fieldObjAddress);
+	                 		break;
+	                 	case JvmUtil.ADDRESSING_8_BYTE:
+	                 		unsafe.putLong(fieldAddress, fieldObjAddress);
+	                 		break;
+	                 	default:    
+	                        throw new AssertionError("Unsupported reference size: " + referenceSize);
+	            	}
+	            	break;    
+	            default:
+	                throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
+    		}      
     	}
     }
     
@@ -187,15 +140,25 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     	
     	switch (JvmUtil.getAddressSize()) {
             case JvmUtil.SIZE_32_BIT:
-                unsafe.putInt(objArray, JvmUtil.getBaseOffset(), (int)address);
+                putAsIntAddress(objArray, JvmUtil.getBaseOffset(), address);
                 break;
             case JvmUtil.SIZE_64_BIT:
-                unsafe.putLong(objArray, JvmUtil.getBaseOffset(), address);
-                break;    
+            	int referenceSize = JvmUtil.getReferenceSize();
+            	switch (referenceSize) {
+                 	case JvmUtil.ADDRESSING_4_BYTE:
+                 		putAsIntAddress(objArray, JvmUtil.getBaseOffset(), address);
+                 		break;
+                 	case JvmUtil.ADDRESSING_8_BYTE:
+                 		unsafe.putLong(objArray, JvmUtil.getBaseOffset(), address);
+                 		break;
+                 	default:    
+                        throw new AssertionError("Unsupported reference size: " + referenceSize);
+            	}
+            	break;    
             default:
-                throw new AssertionError("Unsupported index size: " + JvmUtil.getAddressSize());
+                throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
         }       
-    	
+
         return (T) objArray[0];
     }
     
@@ -207,7 +170,17 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
                     unsafe.putInt(address, 0);
                     break;
                 case JvmUtil.SIZE_64_BIT:
-                    unsafe.putLong(address, 0L);
+                	int referenceSize = JvmUtil.getReferenceSize();
+                	switch (referenceSize) {
+                     	case JvmUtil.ADDRESSING_4_BYTE:
+                     		unsafe.putInt(address, 0);
+                     		break;
+                     	case JvmUtil.ADDRESSING_8_BYTE:
+                     		unsafe.putLong(address, 0L);
+                     		break;
+                     	default:    
+                            throw new AssertionError("Unsupported reference size: " + referenceSize);
+                	}
                     break;    
                 default:
                     throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
@@ -241,10 +214,20 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
         
         switch (JvmUtil.getAddressSize()) {
 	        case JvmUtil.SIZE_32_BIT:
-	        	unsafe.putInt(array, JvmUtil.getBaseOffset(), (int)originalAddress);
+	        	putAsIntAddress(array, JvmUtil.getBaseOffset(), originalAddress);
 	            break;
 	        case JvmUtil.SIZE_64_BIT:
-	        	unsafe.putLong(array, JvmUtil.getBaseOffset(), originalAddress);
+	        	int referenceSize = JvmUtil.getReferenceSize();
+            	switch (referenceSize) {
+                 	case JvmUtil.ADDRESSING_4_BYTE:
+                 		putAsIntAddress(array, JvmUtil.getBaseOffset(), originalAddress);
+                 		break;
+                 	case JvmUtil.ADDRESSING_8_BYTE:
+                 		unsafe.putLong(array, JvmUtil.getBaseOffset(), originalAddress);
+                 		break;
+                 	default:    
+                        throw new AssertionError("Unsupported reference size: " + referenceSize);
+            	}
 	            break;    
 	        default:
 	            throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
@@ -421,6 +404,30 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     @Override
     public void putObject(Object o, long offset, Object x) {
     	unsafe.putObject(o, offset, x);
+    }
+    
+    @Override
+    public long getAsIntAddress(long address) {
+    	return JvmUtil.normalize(unsafe.getInt(address));
+    }
+    
+    @Override
+    public long getAsIntAddress(Object obj, long offset) {
+    	return JvmUtil.normalize(unsafe.getInt(obj, offset));
+    }
+    
+    @Override
+    public void putAsIntAddress(long address, long intAddress) {
+    	long l = unsafe.getLong(address + JvmUtil.INT_SIZE);
+ 		unsafe.putLong(address, intAddress);
+ 		unsafe.putLong(address + JvmUtil.INT_SIZE, l);
+    }
+    
+    @Override
+    public void putAsIntAddress(Object obj, long offset, long intAddress) {
+    	long l = unsafe.getLong(obj, offset + JvmUtil.INT_SIZE);
+ 		unsafe.putLong(obj, offset, intAddress);
+ 		unsafe.putLong(obj, offset + JvmUtil.INT_SIZE, l);
     }
 
 }
