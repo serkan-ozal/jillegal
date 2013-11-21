@@ -12,7 +12,7 @@ import tr.com.serkanozal.jillegal.offheap.domain.model.pool.BaseOffHeapPoolCreat
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ExtendableObjectOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolType;
-import tr.com.serkanozal.jillegal.offheap.domain.model.pool.SequentialObjectOffHeapPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
@@ -39,14 +39,14 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 		OffHeapPoolType offHeapPoolType = parameter.getOffHeapPoolType();
 		switch (offHeapPoolType) {
 			case SEQUENTIAL_OBJECT_POOL:
-				SequentialObjectOffHeapPoolCreateParameter<T> seqObjPoolParameter = (SequentialObjectOffHeapPoolCreateParameter<T>)parameter; 
+				ObjectOffHeapPoolCreateParameter<T> seqObjPoolParameter = (ObjectOffHeapPoolCreateParameter<T>)parameter; 
 				switch (seqObjPoolParameter.getReferenceType()) {
 					case LAZY_REFERENCED:
-						return (O) new LazyReferencedObjectOffHeapPool<T>((SequentialObjectOffHeapPoolCreateParameter<T>)parameter);
+						return (O) new LazyReferencedObjectOffHeapPool<T>((ObjectOffHeapPoolCreateParameter<T>)parameter);
 					case EAGER_REFERENCED:
-						return (O) new EagerReferencedObjectOffHeapPool<T>((SequentialObjectOffHeapPoolCreateParameter<T>)parameter);
+						return (O) new EagerReferencedObjectOffHeapPool<T>((ObjectOffHeapPoolCreateParameter<T>)parameter);
 					default:
-						return (O) new LazyReferencedObjectOffHeapPool<T>((SequentialObjectOffHeapPoolCreateParameter<T>)parameter);
+						return (O) new LazyReferencedObjectOffHeapPool<T>((ObjectOffHeapPoolCreateParameter<T>)parameter);
 				}
 			case ARRAY_POOL:
 				ArrayOffHeapPoolCreateParameter<T> arrayPoolParameter = (ArrayOffHeapPoolCreateParameter<T>)parameter; 

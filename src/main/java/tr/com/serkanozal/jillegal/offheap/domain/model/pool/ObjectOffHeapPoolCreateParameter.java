@@ -9,23 +9,27 @@ package tr.com.serkanozal.jillegal.offheap.domain.model.pool;
 
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 
-public class SequentialObjectOffHeapPoolCreateParameter<T> extends BaseOffHeapPoolCreateParameter<T> {
+public class ObjectOffHeapPoolCreateParameter<T> extends BaseOffHeapPoolCreateParameter<T> {
 
 	protected int objectCount;
 	protected ObjectPoolReferenceType referenceType;
+	protected boolean autoImplementNonPrimitiveFieldSetters = true;
 	
-	public SequentialObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
-			ObjectPoolReferenceType referenceType) {
+	public ObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
+			ObjectPoolReferenceType referenceType, boolean autoImplementNonPrimitiveFieldSetters) {
 		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType);
 		this.objectCount = objectCount;
 		this.referenceType = referenceType;
+		this.autoImplementNonPrimitiveFieldSetters = autoImplementNonPrimitiveFieldSetters;
 	}
 	
-	public SequentialObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
-			ObjectPoolReferenceType referenceType, DirectMemoryService offHeapMemoryService) {
+	public ObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
+			ObjectPoolReferenceType referenceType, boolean autoImplementNonPrimitiveFieldSetters, 
+			DirectMemoryService offHeapMemoryService) {
 		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType, offHeapMemoryService);
 		this.objectCount = objectCount;
 		this.referenceType = referenceType;
+		this.autoImplementNonPrimitiveFieldSetters = autoImplementNonPrimitiveFieldSetters;
 	}
 	
 	public int getObjectCount() {
@@ -42,6 +46,14 @@ public class SequentialObjectOffHeapPoolCreateParameter<T> extends BaseOffHeapPo
 	
 	public void setReferenceType(ObjectPoolReferenceType referenceType) {
 		this.referenceType = referenceType;
+	}
+	
+	public boolean isAutoImplementNonPrimitiveFieldSetters() {
+		return autoImplementNonPrimitiveFieldSetters;
+	}
+	
+	public void setAutoImplementNonPrimitiveFieldSetters(boolean autoImplementNonPrimitiveFieldSetters) {
+		this.autoImplementNonPrimitiveFieldSetters = autoImplementNonPrimitiveFieldSetters;
 	}
 	
 }

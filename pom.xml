@@ -3,7 +3,7 @@
   	<modelVersion>4.0.0</modelVersion>
   	<groupId>tr.com.serkanozal</groupId>
   	<artifactId>jillegal</artifactId>
-  	<version>1.0.5-RELEASE</version>
+  	<version>1.0.6-RELEASE</version>
     <name>Jillegal</name>
     <url>https://github.com/serkan-ozal/jillegal</url>
     
@@ -20,6 +20,7 @@
         <maven.deploy.plugin.version>2.6</maven.deploy.plugin.version>
         
         <jillegal.agent.version>1.0.4-RELEASE</jillegal.agent.version>
+        <jcommon.version>1.0.1-RELEASE</jcommon.version>
         <guava.version>13.0</guava.version>
         <commons.lang.version>2.6</commons.lang.version>
         <javassist.version>3.17.1-GA</javassist.version>
@@ -130,7 +131,12 @@
             <artifactId>jillegal-agent</artifactId>
             <version>${jillegal.agent.version}</version>
         </dependency>
-
+		<dependency>
+            <groupId>tr.com.serkanozal</groupId>
+            <artifactId>jcommon</artifactId>
+            <version>${jcommon.version}</version>
+        </dependency>
+        
 		<dependency>
             <groupId>cglib</groupId>
             <artifactId>cglib</artifactId>

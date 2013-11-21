@@ -409,6 +409,11 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     }
     
     @Override
+    public String argumentId(int argOrder) {
+    	return "$" + (argOrder + 1);
+    }
+    
+    @Override
     public DefaultInstrumenter<T> addAdditionalClass(Class<?> additionalClass) throws CannotCompileException {
         additionalClasses.add(additionalClass);
         cp.importPackage(additionalClass.getPackage().getName());
@@ -422,7 +427,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
         CtConstructor cc = new CtConstructor(ccParamTypes, clazz);
         cc.setBody(code);
         clazz.addConstructor(cc);
-        injectIntercepterCode(cc);
+        //injectIntercepterCode(cc);
         return this;
     }
     
@@ -432,7 +437,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
         CtConstructor targetConstructor = clazz.getDeclaredConstructor(ctParamTypes);
         if (targetConstructor != null) {
             targetConstructor.setBody(code);
-            injectIntercepterCode(targetConstructor);
+            //injectIntercepterCode(targetConstructor);
         }    
         return this;
     }
@@ -547,7 +552,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
         }    
         cm.setBody(code);
         clazz.addMethod(cm);
-        injectIntercepterCode(cm);
+        //injectIntercepterCode(cm);
         return this;
     }
     
@@ -619,7 +624,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
         CtMethod targetMethod = findMethod(clazz, methodName, ctParamTypes);
         if (targetMethod != null) {
             targetMethod.setBody(code);
-            injectIntercepterCode(targetMethod);
+            //injectIntercepterCode(targetMethod);
         }    
         return this;
     }
