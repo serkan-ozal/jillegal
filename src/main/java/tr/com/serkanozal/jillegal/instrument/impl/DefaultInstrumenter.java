@@ -211,7 +211,7 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     	String beforeIntercepterCode = InterceptorServiceFactory.class.getName() + 
     										".getInterceptorService().notifyBeforeConstructorInterceptors((Object)$0, $signature, $params);\n";
         String afterIntercepterCode = InterceptorServiceFactory.class.getName() + 
-        									"InterceptorServiceFactory.getInterceptorService().notifyAfterConstructorInterceptors((Object)$0, $signature, $params);\n";
+        									".getInterceptorService().notifyAfterConstructorInterceptors((Object)$0, $signature, $params);\n";
         String signature = generateSignatureExpression(cc);
 
         beforeIntercepterCode = beforeIntercepterCode.replace("$signature", signature);
