@@ -14,23 +14,21 @@ public class DefaultForkableObjectOffHeapPool<T> extends LazyReferencedObjectOff
 
 	public static final int DEFAULT_OBJECT_COUNT = 1000;
 	
-	public DefaultForkableObjectOffHeapPool(Class<T> elementType, DirectMemoryService directMemoryService) {
-		super(elementType, DEFAULT_OBJECT_COUNT, true, directMemoryService);
-	}
-	
 	public DefaultForkableObjectOffHeapPool(Class<T> elementType) {
-		super(elementType, DEFAULT_OBJECT_COUNT, true, 
-				DirectMemoryServiceFactory.getDirectMemoryService());
-	}
-
-	public DefaultForkableObjectOffHeapPool(Class<T> elementType, 
-			boolean autoImplementNonPrimitiveFieldSetters, DirectMemoryService directMemoryService) {
-		super(elementType, DEFAULT_OBJECT_COUNT, autoImplementNonPrimitiveFieldSetters, directMemoryService);
+		super(elementType, DEFAULT_OBJECT_COUNT, DirectMemoryServiceFactory.getDirectMemoryService());
 	}
 	
-	public DefaultForkableObjectOffHeapPool(Class<T> elementType, boolean autoImplementNonPrimitiveFieldSetters) {
-		super(elementType, DEFAULT_OBJECT_COUNT, autoImplementNonPrimitiveFieldSetters, 
-				DirectMemoryServiceFactory.getDirectMemoryService());
+	public DefaultForkableObjectOffHeapPool(Class<T> elementType, int objectCount) {
+		super(elementType, objectCount, DirectMemoryServiceFactory.getDirectMemoryService());
+	}
+	
+	public DefaultForkableObjectOffHeapPool(Class<T> elementType, DirectMemoryService directMemoryService) {
+		super(elementType, DEFAULT_OBJECT_COUNT, directMemoryService);
+	}
+	
+	public DefaultForkableObjectOffHeapPool(Class<T> elementType, int objectCount, 
+			DirectMemoryService directMemoryService) {
+		super(elementType, objectCount, directMemoryService);
 	}
 
 }

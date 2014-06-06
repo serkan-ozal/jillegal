@@ -72,4 +72,6 @@ public interface OffHeapService {
 	
 	<T, O extends OffHeapPool<T, ?>> O createOffHeapPool(OffHeapPoolCreateParameter<T> parameter);
 	
+	<T> void makeOffHeapable(Class<T> elementType);
+	
 }

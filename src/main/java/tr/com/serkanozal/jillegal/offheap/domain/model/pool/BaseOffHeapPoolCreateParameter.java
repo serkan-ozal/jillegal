@@ -14,6 +14,7 @@ public abstract class BaseOffHeapPoolCreateParameter<T> implements OffHeapPoolCr
 	protected OffHeapPoolType offHeapPoolType;
 	protected Class<T> elementType;
 	protected DirectMemoryService directMemoryService;
+	protected boolean makeOffHeapableAsAuto = true;
 	
 	public BaseOffHeapPoolCreateParameter(OffHeapPoolType offHeapPoolType, Class<T> elementType) {
 		this.offHeapPoolType = offHeapPoolType;
@@ -25,6 +26,21 @@ public abstract class BaseOffHeapPoolCreateParameter<T> implements OffHeapPoolCr
 		this.offHeapPoolType = offHeapPoolType;
 		this.elementType = elementType;
 		this.directMemoryService = directMemoryService;
+	}
+	
+	public BaseOffHeapPoolCreateParameter(OffHeapPoolType offHeapPoolType, Class<T> elementType, 
+			boolean makeOffHeapableAsAuto) {
+		this.offHeapPoolType = offHeapPoolType;
+		this.elementType = elementType;
+		this.makeOffHeapableAsAuto = makeOffHeapableAsAuto;
+	}
+	
+	public BaseOffHeapPoolCreateParameter(OffHeapPoolType offHeapPoolType, Class<T> elementType, 
+			DirectMemoryService directMemoryService, boolean makeOffHeapableAsAuto) {
+		this.offHeapPoolType = offHeapPoolType;
+		this.elementType = elementType;
+		this.directMemoryService = directMemoryService;
+		this.makeOffHeapableAsAuto = makeOffHeapableAsAuto;
 	}
 	
 	@Override
@@ -44,5 +60,15 @@ public abstract class BaseOffHeapPoolCreateParameter<T> implements OffHeapPoolCr
 	public void setDirectMemoryService(DirectMemoryService directMemoryService) {
 		this.directMemoryService = directMemoryService;
 	}
+	
+	@Override
+	public boolean isMakeOffHeapableAsAuto() {
+		return makeOffHeapableAsAuto;
+	}
+	
+	public void setMakeOffHeapableAsAuto(boolean makeOffHeapableAsAuto) {
+		this.makeOffHeapableAsAuto = makeOffHeapableAsAuto;
+	}
+	
 
 }

@@ -8,19 +8,9 @@
 package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-import java.util.List;
 
-import tr.com.serkanozal.jcommon.util.ReflectionUtil;
-import tr.com.serkanozal.jillegal.Jillegal;
-import tr.com.serkanozal.jillegal.instrument.Instrumenter;
-import tr.com.serkanozal.jillegal.instrument.domain.model.GeneratedClass;
-import tr.com.serkanozal.jillegal.instrument.service.InstrumenterService;
-import tr.com.serkanozal.jillegal.instrument.service.InstrumenterServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
-import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> extends BaseOffHeapPool<T, P> {
@@ -35,24 +25,14 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected long classPointerOffset;
 	protected long classPointerSize;
 	protected long addressLimit;
-	protected boolean autoImplementNonPrimitiveFieldSetters;
 	protected JvmAwareClassPointerUpdater jvmAwareClassPointerUpdater;
 	
-	public BaseObjectOffHeapPool(Class<T> elementType, boolean autoImplementNonPrimitiveFieldSetters) {
+	public BaseObjectOffHeapPool(Class<T> elementType) {
 		super(elementType);
-		this.autoImplementNonPrimitiveFieldSetters = autoImplementNonPrimitiveFieldSetters;
-		if (autoImplementNonPrimitiveFieldSetters) {
-			implementNonPrimitiveFieldSetters();
-		}
 	}
 	
-	public BaseObjectOffHeapPool(Class<T> elementType, boolean autoImplementNonPrimitiveFieldSetters, 
-			DirectMemoryService directMemoryService) {
+	public BaseObjectOffHeapPool(Class<T> elementType, DirectMemoryService directMemoryService) {
 		super(elementType, directMemoryService);
-		this.autoImplementNonPrimitiveFieldSetters = autoImplementNonPrimitiveFieldSetters;
-		if (autoImplementNonPrimitiveFieldSetters) {
-			implementNonPrimitiveFieldSetters();
-		}
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -173,55 +153,6 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	 */
 	protected long updateClassPointerOfObject(long address) {
 		return jvmAwareClassPointerUpdater.updateClassPointerOfObject(address);
-	}
-	
-	protected void implementNonPrimitiveFieldSetters() {
-		try {
-			Jillegal.init();
-			
-			InstrumenterService instrumenterService = InstrumenterServiceFactory.getInstrumenterService();
-	        Instrumenter<T> instrumenter = instrumenterService.getInstrumenter(elementType).
-	        									addAdditionalClass(DirectMemoryServiceFactory.class).
-	        									addAdditionalClass(DirectMemoryService.class);
-
-			List<Field> fields = ReflectionUtil.getAllFields(elementType);
-			if (fields != null) {
-				for (Field field : fields) {
-					if (ReflectionUtil.isNonPrimitiveType(field.getType())) {
-						String fieldName = field.getName();
-						String setterMethodName = "set" + Character.toUpperCase(fieldName.charAt(0)) + 
-														  fieldName.substring(1);
-						Method setterMethod = 
-								ReflectionUtil.getMethod(elementType, setterMethodName, 
-														 new Class<?>[] {field.getType()});
-						if (setterMethod != null) {
-							String setterImplCode = "DirectMemoryServiceFactory.getDirectMemoryService().setObjectField" + 
-													"("  + 
-														"this" + ", " + "\"" + field.getName() + "\"" + ", " + "$1" + 
-													");";
-							try {
-								instrumenter = 
-									instrumenter.updateMethod(
-										setterMethodName, 
-										setterImplCode, 
-						        		setterMethod.getParameterTypes());
-							}
-							catch (Throwable t) {
-								logger.error("Unable to instrument method " + setterMethod.toString() + 
-											 " with implementation code " + "\"" + setterImplCode + "\"", t);
-							}
-						}
-					}
-				}
-			}
-			
-			GeneratedClass<T> instrumentedClass = instrumenter.build();
-			instrumenterService.redefineClass(instrumentedClass);
-		}
-		catch (Throwable t) {
-			logger.error("Error occured while implementing non-primitive field setters for class " + 
-							elementType.getName(), t);
-		}
 	}
 	
 }

@@ -21,6 +21,14 @@ public class ArrayOffHeapPoolCreateParameter<T> extends BaseOffHeapPoolCreatePar
 		this.initializeElements = initializeElements;
 	}
 	
+	public ArrayOffHeapPoolCreateParameter(Class<T> elementType, int length, boolean usePrimitiveTypes, 
+			boolean initializeElements, boolean makeOffHeapableAsAuto) {
+		super(OffHeapPoolType.ARRAY_POOL, elementType, makeOffHeapableAsAuto);
+		this.length = length;
+		this.usePrimitiveTypes = usePrimitiveTypes;
+		this.initializeElements = initializeElements;
+	}
+	
 	public int getLength() {
 		return length;
 	}

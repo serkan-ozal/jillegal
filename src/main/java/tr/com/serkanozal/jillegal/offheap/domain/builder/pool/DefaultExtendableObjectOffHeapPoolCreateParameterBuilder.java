@@ -14,14 +14,24 @@ import tr.com.serkanozal.jillegal.offheap.pool.impl.DefaultForkableObjectOffHeap
 public class DefaultExtendableObjectOffHeapPoolCreateParameterBuilder<T> implements Builder<ExtendableObjectOffHeapPoolCreateParameter<T>> {
 
 	private Class<T> elementType;
+	private boolean makeOffHeapableAsAuto = true;
 	
 	@Override
 	public ExtendableObjectOffHeapPoolCreateParameter<T> build() {
-		return new ExtendableObjectOffHeapPoolCreateParameter<T>(new DefaultForkableObjectOffHeapPool<T>(elementType));
+		return 
+			new ExtendableObjectOffHeapPoolCreateParameter<T>(
+						new DefaultForkableObjectOffHeapPool<T>(elementType),
+						makeOffHeapableAsAuto);
 	}
 	
 	public DefaultExtendableObjectOffHeapPoolCreateParameterBuilder<T> elementType(Class<T> elementType) {
 		this.elementType = elementType;
+		return this;
+	}
+	
+	public DefaultExtendableObjectOffHeapPoolCreateParameterBuilder<T> makeOffHeapableAsAuto(
+			boolean makeOffHeapableAsAuto) {
+		this.makeOffHeapableAsAuto = makeOffHeapableAsAuto;
 		return this;
 	}
 

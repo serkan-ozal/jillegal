@@ -16,10 +16,17 @@ public class ArrayOffHeapPoolCreateParameterBuilder<T> implements Builder<ArrayO
 	private int length;
 	private boolean usePrimitiveTypes;
 	private boolean initializeElements;
+	private boolean makeOffHeapableAsAuto = true;
 	
 	@Override
 	public ArrayOffHeapPoolCreateParameter<T> build() {
-		return new ArrayOffHeapPoolCreateParameter<T>(type, length, usePrimitiveTypes, initializeElements);
+		return 
+			new ArrayOffHeapPoolCreateParameter<T>(
+						type, 
+						length, 
+						usePrimitiveTypes, 
+						initializeElements,
+						makeOffHeapableAsAuto);
 	}
 	
 	public ArrayOffHeapPoolCreateParameterBuilder<T> type(Class<T> type) {
@@ -39,6 +46,11 @@ public class ArrayOffHeapPoolCreateParameterBuilder<T> implements Builder<ArrayO
 	
 	public ArrayOffHeapPoolCreateParameterBuilder<T> initializeElements(boolean initializeElements) {
 		this.initializeElements = initializeElements;
+		return this;
+	}
+	
+	public ArrayOffHeapPoolCreateParameterBuilder<T> makeOffHeapableAsAuto(boolean makeOffHeapableAsAuto) {
+		this.makeOffHeapableAsAuto = makeOffHeapableAsAuto;
 		return this;
 	}
 

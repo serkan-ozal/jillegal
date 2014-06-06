@@ -30,13 +30,12 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	protected long objStartAddress;
 	
 	public EagerReferencedObjectOffHeapPool(ObjectOffHeapPoolCreateParameter<T> parameter) {
-		this(parameter.getElementType(), parameter.getObjectCount(), 
-				parameter.isAutoImplementNonPrimitiveFieldSetters(), parameter.getDirectMemoryService());
+		this(parameter.getElementType(), parameter.getObjectCount(), parameter.getDirectMemoryService());
 	}
 	
 	public EagerReferencedObjectOffHeapPool(Class<T> elementType, int objectCount, 
-			boolean autoImplementNonPrimitiveFieldSetters, DirectMemoryService directMemoryService) {
-		super(elementType, autoImplementNonPrimitiveFieldSetters, directMemoryService);
+			DirectMemoryService directMemoryService) {
+		super(elementType, directMemoryService);
 		if (objectCount <= 0) {
 			throw new IllegalArgumentException("\"objectCount\" must be positive !");
 		}
@@ -147,8 +146,11 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	
 	@Override
 	public DeeplyForkableObjectOffHeapPool<T, ObjectOffHeapPoolCreateParameter<T>> fork() {
-		return new EagerReferencedObjectOffHeapPool<T>(getElementType(), (int)getElementCount(), 
-						autoImplementNonPrimitiveFieldSetters, getDirectMemoryService());
+		return 
+			new EagerReferencedObjectOffHeapPool<T>(
+						getElementType(), 
+						(int)getElementCount(), 
+						getDirectMemoryService());
 	}
 	
 }

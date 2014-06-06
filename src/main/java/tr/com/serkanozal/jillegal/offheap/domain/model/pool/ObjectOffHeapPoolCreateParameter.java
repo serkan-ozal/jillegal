@@ -13,23 +13,34 @@ public class ObjectOffHeapPoolCreateParameter<T> extends BaseOffHeapPoolCreatePa
 
 	protected int objectCount;
 	protected ObjectPoolReferenceType referenceType;
-	protected boolean autoImplementNonPrimitiveFieldSetters = true;
 	
 	public ObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
-			ObjectPoolReferenceType referenceType, boolean autoImplementNonPrimitiveFieldSetters) {
+			ObjectPoolReferenceType referenceType) {
 		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType);
 		this.objectCount = objectCount;
 		this.referenceType = referenceType;
-		this.autoImplementNonPrimitiveFieldSetters = autoImplementNonPrimitiveFieldSetters;
 	}
 	
 	public ObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
-			ObjectPoolReferenceType referenceType, boolean autoImplementNonPrimitiveFieldSetters, 
-			DirectMemoryService offHeapMemoryService) {
+			ObjectPoolReferenceType referenceType, DirectMemoryService offHeapMemoryService) {
 		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType, offHeapMemoryService);
 		this.objectCount = objectCount;
 		this.referenceType = referenceType;
-		this.autoImplementNonPrimitiveFieldSetters = autoImplementNonPrimitiveFieldSetters;
+	}
+	
+	public ObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
+			ObjectPoolReferenceType referenceType, boolean makeOffHeapableAsAuto) {
+		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType, makeOffHeapableAsAuto);
+		this.objectCount = objectCount;
+		this.referenceType = referenceType;
+	}
+	
+	public ObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
+			ObjectPoolReferenceType referenceType, boolean makeOffHeapableAsAuto, 
+			DirectMemoryService offHeapMemoryService) {
+		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType, offHeapMemoryService, makeOffHeapableAsAuto);
+		this.objectCount = objectCount;
+		this.referenceType = referenceType;
 	}
 	
 	public int getObjectCount() {
@@ -46,14 +57,6 @@ public class ObjectOffHeapPoolCreateParameter<T> extends BaseOffHeapPoolCreatePa
 	
 	public void setReferenceType(ObjectPoolReferenceType referenceType) {
 		this.referenceType = referenceType;
-	}
-	
-	public boolean isAutoImplementNonPrimitiveFieldSetters() {
-		return autoImplementNonPrimitiveFieldSetters;
-	}
-	
-	public void setAutoImplementNonPrimitiveFieldSetters(boolean autoImplementNonPrimitiveFieldSetters) {
-		this.autoImplementNonPrimitiveFieldSetters = autoImplementNonPrimitiveFieldSetters;
 	}
 	
 }

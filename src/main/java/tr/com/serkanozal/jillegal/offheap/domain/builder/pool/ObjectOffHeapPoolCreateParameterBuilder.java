@@ -16,12 +16,16 @@ public class ObjectOffHeapPoolCreateParameterBuilder<T> implements Builder<Objec
 	private Class<T> type;
 	private int objectCount;
 	private ObjectPoolReferenceType referenceType = ObjectPoolReferenceType.LAZY_REFERENCED;
-	private boolean autoImplementNonPrimitiveFieldSetters = true;
+	private boolean makeOffHeapableAsAuto = true;
 	
 	@Override
 	public ObjectOffHeapPoolCreateParameter<T> build() {
-		return new ObjectOffHeapPoolCreateParameter<T>(type, objectCount, referenceType, 
-						autoImplementNonPrimitiveFieldSetters);
+		return 
+			new ObjectOffHeapPoolCreateParameter<T>(
+					type, 
+					objectCount, 
+					referenceType, 
+					makeOffHeapableAsAuto);
 	}
 	
 	public ObjectOffHeapPoolCreateParameterBuilder<T> type(Class<T> type) {
@@ -39,9 +43,9 @@ public class ObjectOffHeapPoolCreateParameterBuilder<T> implements Builder<Objec
 		return this;
 	}
 	
-	public ObjectOffHeapPoolCreateParameterBuilder<T> autoImplementNonPrimitiveFieldSetters(
-			boolean autoImplementNonPrimitiveFieldSetters) {
-		this.autoImplementNonPrimitiveFieldSetters = autoImplementNonPrimitiveFieldSetters;
+	public ObjectOffHeapPoolCreateParameterBuilder<T> makeOffHeapableAsAuto(
+			boolean makeOffHeapableAsAuto) {
+		this.makeOffHeapableAsAuto = makeOffHeapableAsAuto;
 		return this;
 	}
 

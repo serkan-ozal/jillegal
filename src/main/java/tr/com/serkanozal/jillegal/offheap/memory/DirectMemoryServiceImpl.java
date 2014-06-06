@@ -124,12 +124,16 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
 	                 	case JvmUtil.ADDRESSING_8_BYTE:
 	                 		unsafe.putLong(fieldAddress, fieldObjAddress);
 	                 		break;
+	                 	/*		
 	                 	default:    
 	                        throw new AssertionError("Unsupported reference size: " + referenceSize);
+	                    */
 	            	}
-	            	break;    
+	            	break; 
+	            /*	
 	            default:
 	                throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
+	            */
     		}      
     	}
     }
@@ -137,7 +141,6 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     @Override
     public synchronized <T> T getObject(long address) {
     	address = JvmUtil.toJvmAddress(address);
-    	
     	switch (JvmUtil.getAddressSize()) {
             case JvmUtil.SIZE_32_BIT:
                 putAsIntAddress(objArray, JvmUtil.getBaseOffset(), address);
@@ -151,14 +154,17 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
                  	case JvmUtil.ADDRESSING_8_BYTE:
                  		unsafe.putLong(objArray, JvmUtil.getBaseOffset(), address);
                  		break;
+                 	/*
                  	default:    
                         throw new AssertionError("Unsupported reference size: " + referenceSize);
+                    */
             	}
-            	break;    
+            	break; 
+            /*	
             default:
                 throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
+            */   
         }       
-
         return (T) objArray[0];
     }
     
@@ -178,12 +184,16 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
                      	case JvmUtil.ADDRESSING_8_BYTE:
                      		unsafe.putLong(address, 0L);
                      		break;
+                     	/*	
                      	default:    
                             throw new AssertionError("Unsupported reference size: " + referenceSize);
+                        */
                 	}
-                    break;    
+                    break;
+                /*	    
                 default:
                     throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
+                */
             }
         }
         else {
@@ -225,12 +235,16 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
                  	case JvmUtil.ADDRESSING_8_BYTE:
                  		unsafe.putLong(array, JvmUtil.getBaseOffset(), originalAddress);
                  		break;
+                 	/*
                  	default:    
                         throw new AssertionError("Unsupported reference size: " + referenceSize);
+                    */
             	}
-	            break;    
+	            break;  
+	        /*
 	        default:
 	            throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
+	        */
         }
 
         return (T) array[0];

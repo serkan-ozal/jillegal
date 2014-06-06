@@ -22,13 +22,12 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 					DeeplyForkableObjectOffHeapPool<T, ObjectOffHeapPoolCreateParameter<T>> {
 
 	public LazyReferencedObjectOffHeapPool(ObjectOffHeapPoolCreateParameter<T> parameter) {
-		this(parameter.getElementType(), parameter.getObjectCount(), 
-				parameter.isAutoImplementNonPrimitiveFieldSetters(), parameter.getDirectMemoryService());
+		this(parameter.getElementType(), parameter.getObjectCount(), parameter.getDirectMemoryService());
 	}
 	
 	public LazyReferencedObjectOffHeapPool(Class<T> elementType, int objectCount, 
-			boolean autoImplementNonPrimitiveFieldSetters, DirectMemoryService directMemoryService) {
-		super(elementType, autoImplementNonPrimitiveFieldSetters, directMemoryService);
+			DirectMemoryService directMemoryService) {
+		super(elementType, directMemoryService);
 		if (objectCount <= 0) {
 			throw new IllegalArgumentException("\"objectCount\" must be positive !");
 		}
@@ -103,8 +102,11 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 
 	@Override
 	public DeeplyForkableObjectOffHeapPool<T, ObjectOffHeapPoolCreateParameter<T>> fork() {
-		return new LazyReferencedObjectOffHeapPool<T>(getElementType(), (int)getElementCount(), 
-						autoImplementNonPrimitiveFieldSetters, getDirectMemoryService());
+		return 
+			new LazyReferencedObjectOffHeapPool<T>(
+						getElementType(), 
+						(int)getElementCount(), 
+						getDirectMemoryService());
 	}
 	
 }

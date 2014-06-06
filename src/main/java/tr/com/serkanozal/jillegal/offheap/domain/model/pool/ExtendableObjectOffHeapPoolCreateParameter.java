@@ -19,6 +19,13 @@ public class ExtendableObjectOffHeapPoolCreateParameter<T> extends BaseOffHeapPo
 		this.forkableObjectOffHeapPool = forkableObjectOffHeapPool;
 	}
 	
+	public ExtendableObjectOffHeapPoolCreateParameter( 
+			DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableObjectOffHeapPool,
+			boolean makeOffHeapableAsAuto) {
+		super(OffHeapPoolType.EXTENDABLE_OBJECT_POOL, forkableObjectOffHeapPool.getElementType(), makeOffHeapableAsAuto);
+		this.forkableObjectOffHeapPool = forkableObjectOffHeapPool;
+	}
+	
 	public DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> getForkableObjectOffHeapPool() {
 		return forkableObjectOffHeapPool;
 	}

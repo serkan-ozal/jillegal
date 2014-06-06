@@ -11,5 +11,6 @@ public interface OffHeapPoolCreateParameter<T> {
 
 	OffHeapPoolType getOffHeapPoolType();
 	Class<T> getElementType();
+	boolean isMakeOffHeapableAsAuto();
 	
 }
