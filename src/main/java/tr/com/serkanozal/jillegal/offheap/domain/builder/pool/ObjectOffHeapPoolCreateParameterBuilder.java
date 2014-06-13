@@ -8,6 +8,7 @@
 package tr.com.serkanozal.jillegal.offheap.domain.builder.pool;
 
 import tr.com.serkanozal.jillegal.domain.builder.Builder;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAllocationConfigType;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectPoolReferenceType;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectOffHeapPoolCreateParameter;
 
@@ -17,6 +18,8 @@ public class ObjectOffHeapPoolCreateParameterBuilder<T> implements Builder<Objec
 	private int objectCount;
 	private ObjectPoolReferenceType referenceType = ObjectPoolReferenceType.LAZY_REFERENCED;
 	private boolean makeOffHeapableAsAuto = true;
+	private NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType = 
+				NonPrimitiveFieldAllocationConfigType.ONLY_CONFIGURED_NON_PRIMITIVE_FIELDS;
 	
 	@Override
 	public ObjectOffHeapPoolCreateParameter<T> build() {
@@ -25,6 +28,7 @@ public class ObjectOffHeapPoolCreateParameterBuilder<T> implements Builder<Objec
 					type, 
 					objectCount, 
 					referenceType, 
+					allocateNonPrimitiveFieldsAtOffHeapConfigType,
 					makeOffHeapableAsAuto);
 	}
 	
@@ -46,6 +50,12 @@ public class ObjectOffHeapPoolCreateParameterBuilder<T> implements Builder<Objec
 	public ObjectOffHeapPoolCreateParameterBuilder<T> makeOffHeapableAsAuto(
 			boolean makeOffHeapableAsAuto) {
 		this.makeOffHeapableAsAuto = makeOffHeapableAsAuto;
+		return this;
+	}
+	
+	public ObjectOffHeapPoolCreateParameterBuilder<T> allocateNonPrimitiveFieldsAtOffHeapConfigType(
+			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType) {
+		this.allocateNonPrimitiveFieldsAtOffHeapConfigType = allocateNonPrimitiveFieldsAtOffHeapConfigType;
 		return this;
 	}
 

@@ -9,6 +9,7 @@ package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
 import java.lang.reflect.Array;
 
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAllocationConfigType;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.pool.DeeplyForkableObjectOffHeapPool;
@@ -30,16 +31,19 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	protected long objStartAddress;
 	
 	public EagerReferencedObjectOffHeapPool(ObjectOffHeapPoolCreateParameter<T> parameter) {
-		this(parameter.getElementType(), parameter.getObjectCount(), parameter.getDirectMemoryService());
+		this(parameter.getElementType(), parameter.getObjectCount(), 
+				parameter.getAllocateNonPrimitiveFieldsAtOffHeapConfigType(), 
+				parameter.getDirectMemoryService());
 	}
 	
 	public EagerReferencedObjectOffHeapPool(Class<T> elementType, int objectCount, 
+			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
 			DirectMemoryService directMemoryService) {
 		super(elementType, directMemoryService);
 		if (objectCount <= 0) {
 			throw new IllegalArgumentException("\"objectCount\" must be positive !");
 		}
-		init(elementType, objectCount, directMemoryService);
+		init(elementType, objectCount, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -91,7 +95,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 		}
 		// Address of class could be changed by GC at "Compact" phase.
 		//updateClassPointerOfObject(objStartAddress + (currentIndex * objectSize));
-		return objectArray[currentIndex++];
+		return processObject(objectArray[currentIndex++]);
 	}
 	
 	@Override
@@ -101,7 +105,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 		}	
 		// Address of class could be changed by GC at "Compact" phase.
 		//updateClassPointerOfObject(objStartAddress + (index * objectSize));
-		return objectArray[index];
+		return processObject(objectArray[index]);
 	}
 	
 	public T[] getObjectArray() {
@@ -130,12 +134,16 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 
 	@Override
 	public void init(ObjectOffHeapPoolCreateParameter<T> parameter) {
-		init(parameter.getElementType(), parameter.getObjectCount(), parameter.getDirectMemoryService());
+		init(parameter.getElementType(), parameter.getObjectCount(), 
+				parameter.getAllocateNonPrimitiveFieldsAtOffHeapConfigType(), 
+				parameter.getDirectMemoryService());
 	}
 	
 	@SuppressWarnings("unchecked")
-	protected void init(Class<T> elementType, int objectCount, DirectMemoryService directMemoryService) {
-		super.init(elementType, objectCount, directMemoryService);
+	protected void init(Class<T> elementType, int objectCount, 
+			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
+			DirectMemoryService directMemoryService) {
+		super.init(elementType, objectCount, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
 		this.arraySize = JvmUtil.sizeOfArray(elementType, objectCount);
 		this.allocatedAddress = 
 				directMemoryService.allocateMemory(arraySize + (objectCount * objectSize) + 
@@ -150,6 +158,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 			new EagerReferencedObjectOffHeapPool<T>(
 						getElementType(), 
 						(int)getElementCount(), 
+						allocateNonPrimitiveFieldsAtOffHeapConfigType,
 						getDirectMemoryService());
 	}
 	

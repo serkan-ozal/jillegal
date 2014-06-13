@@ -69,6 +69,5 @@ public abstract class BaseOffHeapPoolCreateParameter<T> implements OffHeapPoolCr
 	public void setMakeOffHeapableAsAuto(boolean makeOffHeapableAsAuto) {
 		this.makeOffHeapableAsAuto = makeOffHeapableAsAuto;
 	}
-	
 
 }

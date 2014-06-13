@@ -8,7 +8,13 @@
 package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 
+import tr.com.serkanozal.jcommon.util.ReflectionUtil;
+import tr.com.serkanozal.jillegal.offheap.domain.model.config.AllocateAtOffHeap;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAllocationConfigType;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
@@ -25,6 +31,8 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected long classPointerOffset;
 	protected long classPointerSize;
 	protected long addressLimit;
+	protected NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType;
+	protected List<NonPrimitiveFieldInitializer> nonPrimitiveFieldInitializers;
 	protected JvmAwareClassPointerUpdater jvmAwareClassPointerUpdater;
 	
 	public BaseObjectOffHeapPool(Class<T> elementType) {
@@ -36,7 +44,9 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	}
 	
 	@SuppressWarnings("unchecked")
-	protected void init(Class<T> elementType, int objectCount, DirectMemoryService directMemoryService) {
+	protected void init(Class<T> elementType, int objectCount, 
+			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
+			DirectMemoryService directMemoryService) {
 		if (elementType.isAnnotation()) {
 			throw new IllegalArgumentException("Annotation class " + "(" + elementType.getName() + ")" + 
 											   " is not supported !");
@@ -73,6 +83,21 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		this.classPointerAddress = JvmUtil.jvmAddressOfClass(sampleObject);
 		this.classPointerOffset = JvmUtil.getClassDefPointerOffsetInObject();
 		this.classPointerSize = JvmUtil.getReferenceSize();
+		this.allocateNonPrimitiveFieldsAtOffHeapConfigType = allocateNonPrimitiveFieldsAtOffHeapConfigType;
+		if (allocateNonPrimitiveFieldsAtOffHeapConfigType != null) {
+			switch (allocateNonPrimitiveFieldsAtOffHeapConfigType) {
+				case NONE:
+					break;
+					
+				case ONLY_CONFIGURED_NON_PRIMITIVE_FIELDS:
+					findNonPrimitiveFieldInitializersForOnlyConfiguredNonPrimitiveFields();
+					break;
+					
+				case ALL_NON_PRIMITIVE_FIELDS:
+					findNonPrimitiveFieldInitializersForAllNonPrimitiveFields();
+					break;
+			}
+		}	
 		switch (JvmUtil.getAddressSize()) {
 	        case JvmUtil.SIZE_32_BIT:
 	        	jvmAwareClassPointerUpdater = new Address32BitJvmClassPointerUpdater();
@@ -104,6 +129,49 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		else {
 			return false;
 		}
+	}
+	
+	protected void findNonPrimitiveFieldInitializersForAllNonPrimitiveFields() {
+		nonPrimitiveFieldInitializers = new ArrayList<NonPrimitiveFieldInitializer>();
+		List<Field> fields = ReflectionUtil.getAllFields(elementType);
+		for (Field f : fields) {
+			nonPrimitiveFieldInitializers.add(new NonPrimitiveFieldInitializer(f));
+		}
+	}
+	
+	protected void findNonPrimitiveFieldInitializersForOnlyConfiguredNonPrimitiveFields() {
+		nonPrimitiveFieldInitializers = new ArrayList<NonPrimitiveFieldInitializer>();
+		List<Field> fields = ReflectionUtil.getAllFields(elementType, AllocateAtOffHeap.class);
+		for (Field f : fields) {
+			nonPrimitiveFieldInitializers.add(new NonPrimitiveFieldInitializer(f));
+		}
+	}
+	
+	protected T processObject(T obj) {
+		if (nonPrimitiveFieldInitializers != null) {
+			for (NonPrimitiveFieldInitializer fieldInitializer : nonPrimitiveFieldInitializers) {
+				fieldInitializer.initializeField(obj);
+			}
+		}
+		return obj;
+	}
+	
+	@SuppressWarnings("restriction")
+	protected class NonPrimitiveFieldInitializer {
+		
+		protected final sun.misc.Unsafe unsafe = JvmUtil.getUnsafe();
+		protected final Field field;
+		protected final long fieldOffset;
+		
+		protected NonPrimitiveFieldInitializer(Field field) {
+			this.field = field;
+			this.fieldOffset = unsafe.objectFieldOffset(field);
+		}
+		
+		protected void initializeField(T obj) {
+			
+		}
+		
 	}
 	
 	protected interface JvmAwareClassPointerUpdater {

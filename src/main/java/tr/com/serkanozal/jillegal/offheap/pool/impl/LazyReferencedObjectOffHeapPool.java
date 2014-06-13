@@ -7,6 +7,7 @@
 
 package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAllocationConfigType;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.pool.DeeplyForkableObjectOffHeapPool;
@@ -22,16 +23,19 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 					DeeplyForkableObjectOffHeapPool<T, ObjectOffHeapPoolCreateParameter<T>> {
 
 	public LazyReferencedObjectOffHeapPool(ObjectOffHeapPoolCreateParameter<T> parameter) {
-		this(parameter.getElementType(), parameter.getObjectCount(), parameter.getDirectMemoryService());
+		this(parameter.getElementType(), parameter.getObjectCount(), 
+				parameter.getAllocateNonPrimitiveFieldsAtOffHeapConfigType(), 
+				parameter.getDirectMemoryService());
 	}
 	
 	public LazyReferencedObjectOffHeapPool(Class<T> elementType, int objectCount, 
+			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
 			DirectMemoryService directMemoryService) {
 		super(elementType, directMemoryService);
 		if (objectCount <= 0) {
 			throw new IllegalArgumentException("\"objectCount\" must be positive !");
 		}
-		init(elementType, objectCount, directMemoryService);
+		init(elementType, objectCount, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
 	}
 	
 	protected synchronized void init() {
@@ -47,6 +51,7 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		return objectCount;
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	public synchronized T get() {
 		if (currentAddress >= addressLimit) {
@@ -54,9 +59,10 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		}
 		// Address of class could be changed by GC at "Compact" phase.
 		//return directMemoryService.getObject(updateClassPointerOfObject((currentAddress += objectSize)));
-		return directMemoryService.getObject(currentAddress += objectSize);
+		return processObject((T) directMemoryService.getObject(currentAddress += objectSize));
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	public T getAt(int index) {
 		if (index < 0 || index >= objectCount) {
@@ -64,7 +70,7 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		}
 		// Address of class could be changed by GC at "Compact" phase.
 		//return directMemoryService.getObject(updateClassPointerOfObject((allocatedAddress + (index * objectSize))));
-		return directMemoryService.getObject(allocatedAddress + (index * objectSize));
+		return processObject((T) directMemoryService.getObject(allocatedAddress + (index * objectSize)));
 	}
 	
 	@Override
@@ -89,11 +95,15 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 
 	@Override
 	public void init(ObjectOffHeapPoolCreateParameter<T> parameter) {
-		init(parameter.getElementType(), parameter.getObjectCount(), parameter.getDirectMemoryService());
+		init(parameter.getElementType(), parameter.getObjectCount(), 
+				parameter.getAllocateNonPrimitiveFieldsAtOffHeapConfigType(), 
+				parameter.getDirectMemoryService());
 	}
 	
-	protected void init(Class<T> elementType, int objectCount, DirectMemoryService directMemoryService) {
-		super.init(elementType, objectCount, directMemoryService);
+	protected void init(Class<T> elementType, int objectCount, 
+			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
+			DirectMemoryService directMemoryService) {
+		super.init(elementType, objectCount, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
 		this.allocatedAddress = directMemoryService.allocateMemory(objectSize * objectCount + 
 									JvmUtil.getAddressSize()); // Extra memory for possible aligning);
 		this.addressLimit = allocatedAddress + (objectCount * objectSize) - objectSize;
@@ -106,6 +116,7 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 			new LazyReferencedObjectOffHeapPool<T>(
 						getElementType(), 
 						(int)getElementCount(), 
+						allocateNonPrimitiveFieldsAtOffHeapConfigType, 
 						getDirectMemoryService());
 	}
 	

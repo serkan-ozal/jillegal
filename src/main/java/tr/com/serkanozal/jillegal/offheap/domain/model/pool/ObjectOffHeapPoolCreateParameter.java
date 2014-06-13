@@ -13,6 +13,8 @@ public class ObjectOffHeapPoolCreateParameter<T> extends BaseOffHeapPoolCreatePa
 
 	protected int objectCount;
 	protected ObjectPoolReferenceType referenceType;
+	protected NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType = 
+					NonPrimitiveFieldAllocationConfigType.ONLY_CONFIGURED_NON_PRIMITIVE_FIELDS;
 	
 	public ObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
 			ObjectPoolReferenceType referenceType) {
@@ -43,6 +45,26 @@ public class ObjectOffHeapPoolCreateParameter<T> extends BaseOffHeapPoolCreatePa
 		this.referenceType = referenceType;
 	}
 	
+	public ObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
+			ObjectPoolReferenceType referenceType, 
+			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
+			boolean makeOffHeapableAsAuto) {
+		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType, makeOffHeapableAsAuto);
+		this.objectCount = objectCount;
+		this.referenceType = referenceType;
+		this.allocateNonPrimitiveFieldsAtOffHeapConfigType = allocateNonPrimitiveFieldsAtOffHeapConfigType;
+	}
+	
+	public ObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
+			ObjectPoolReferenceType referenceType, 
+			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
+			boolean makeOffHeapableAsAuto, DirectMemoryService offHeapMemoryService) {
+		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType, offHeapMemoryService, makeOffHeapableAsAuto);
+		this.objectCount = objectCount;
+		this.referenceType = referenceType;
+		this.allocateNonPrimitiveFieldsAtOffHeapConfigType = allocateNonPrimitiveFieldsAtOffHeapConfigType;
+	}
+	
 	public int getObjectCount() {
 		return objectCount;
 	}
@@ -57,6 +79,15 @@ public class ObjectOffHeapPoolCreateParameter<T> extends BaseOffHeapPoolCreatePa
 	
 	public void setReferenceType(ObjectPoolReferenceType referenceType) {
 		this.referenceType = referenceType;
+	}
+	
+	public NonPrimitiveFieldAllocationConfigType getAllocateNonPrimitiveFieldsAtOffHeapConfigType() {
+		return allocateNonPrimitiveFieldsAtOffHeapConfigType;
+	}
+	
+	public void setAllocateNonPrimitiveFieldsAtOffHeapConfigType(
+			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType) {
+		this.allocateNonPrimitiveFieldsAtOffHeapConfigType = allocateNonPrimitiveFieldsAtOffHeapConfigType;
 	}
 	
 }
