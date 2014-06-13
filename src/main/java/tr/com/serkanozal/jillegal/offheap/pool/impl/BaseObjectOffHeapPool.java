@@ -135,7 +135,9 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		nonPrimitiveFieldInitializers = new ArrayList<NonPrimitiveFieldInitializer>();
 		List<Field> fields = ReflectionUtil.getAllFields(elementType);
 		for (Field f : fields) {
-			nonPrimitiveFieldInitializers.add(new NonPrimitiveFieldInitializer(f));
+			if (!f.getType().isPrimitive()) {
+				nonPrimitiveFieldInitializers.add(new NonPrimitiveFieldInitializer(f));
+			}	
 		}
 	}
 	
@@ -143,7 +145,9 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		nonPrimitiveFieldInitializers = new ArrayList<NonPrimitiveFieldInitializer>();
 		List<Field> fields = ReflectionUtil.getAllFields(elementType, AllocateAtOffHeap.class);
 		for (Field f : fields) {
-			nonPrimitiveFieldInitializers.add(new NonPrimitiveFieldInitializer(f));
+			if (!f.getType().isPrimitive()) {
+				nonPrimitiveFieldInitializers.add(new NonPrimitiveFieldInitializer(f));
+			}	
 		}
 	}
 	

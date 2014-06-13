@@ -36,7 +36,6 @@ public class DefaultForkableObjectOffHeapPool<T> extends LazyReferencedObjectOff
 				DirectMemoryServiceFactory.getDirectMemoryService());
 	}
 	
-	
 	public DefaultForkableObjectOffHeapPool(Class<T> elementType, DirectMemoryService directMemoryService) {
 		super(elementType, DEFAULT_OBJECT_COUNT, 
 				DEFAULT_NON_PRIMITIVE_FIELD_ALLOCATION_CONFIG_TYPE, directMemoryService);

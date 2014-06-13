@@ -11,11 +11,11 @@ import java.lang.reflect.Array;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ArrayOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
-import tr.com.serkanozal.jillegal.offheap.pool.ArrayOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.DeeplyForkableArrayOffHeapPool;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 public class ComplexTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOffHeapPoolCreateParameter<T>> 
-		implements ArrayOffHeapPool<T, ArrayOffHeapPoolCreateParameter<T>> {
+		implements DeeplyForkableArrayOffHeapPool<T, ArrayOffHeapPoolCreateParameter<T>> {
 
 	protected int length;
 	protected boolean initializeElements;
@@ -163,6 +163,15 @@ public class ComplexTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOffH
 		this.sampleObjectAddress = directMemoryService.addressOf(sampleObject);
 		
 		init();
+	}
+	
+	@Override
+	public DeeplyForkableArrayOffHeapPool<T, ArrayOffHeapPoolCreateParameter<T>> fork() {
+		return 
+				new ComplexTypeArrayOffHeapPool<T>(
+							getElementType(), 
+							length, 
+							getDirectMemoryService());
 	}
 
 }

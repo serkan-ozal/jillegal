@@ -51,7 +51,7 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 			case ARRAY_POOL:
 				ArrayOffHeapPoolCreateParameter<T> arrayPoolParameter = (ArrayOffHeapPoolCreateParameter<T>)parameter; 
 				if (arrayPoolParameter.isUsePrimitiveTypes()) {
-					return (O) new PrimitiveTypeArrayOffHeapPool<T, T[]>(arrayPoolParameter);
+					return (O) new PrimitiveTypeArrayOffHeapPool<T>(arrayPoolParameter);
 				}
 				else {
 					return (O) new ComplexTypeArrayOffHeapPool<T>(arrayPoolParameter);
