@@ -14,8 +14,8 @@ import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.pool.DeeplyForkableArrayOffHeapPool;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
-public class ComplexTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOffHeapPoolCreateParameter<T>> 
-		implements DeeplyForkableArrayOffHeapPool<T, ArrayOffHeapPoolCreateParameter<T>> {
+public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayOffHeapPoolCreateParameter<T>> 
+		implements DeeplyForkableArrayOffHeapPool<T, A, ArrayOffHeapPoolCreateParameter<T>> {
 
 	protected int length;
 	protected boolean initializeElements;
@@ -23,8 +23,8 @@ public class ComplexTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOffH
 	protected long arraySize;
 	protected long allocatedAddress;
 	protected T sampleObject;
-	protected T[] sampleArray;
-	protected T[] objectArray;
+	protected A sampleArray;
+	protected A objectArray;
 	protected long sampleObjectAddress;
 	protected long objStartAddress;
 	protected long arrayIndexStartAddress;
@@ -88,7 +88,7 @@ public class ComplexTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOffH
 			}
 		}
 		
-		this.objectArray = (T[]) directMemoryService.getObject(allocatedAddress);
+		this.objectArray = (A) directMemoryService.getObject(allocatedAddress);
 	}
 	
 	public boolean isInitializeElements() {
@@ -100,12 +100,13 @@ public class ComplexTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOffH
 		return length;
 	}
 	
+	@SuppressWarnings("unchecked")
 	@Override
 	public T getAt(int index) {
 		if (index < 0 || index > length) {
 			throw new IllegalArgumentException("Invalid index: " + index);
 		}	
-		return objectArray[index];
+		return ((T[])(objectArray))[index];
 	}
 	
 	@Override
@@ -121,7 +122,7 @@ public class ComplexTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOffH
 	}
 	
 	@Override
-	public T[] getArray() {
+	public A getArray() {
 		return objectArray;
 	}
 	
@@ -159,16 +160,16 @@ public class ComplexTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOffH
 			e.printStackTrace();
 			this.sampleObject = (T) directMemoryService.allocateInstance(elementType);
 		} 
-		this.sampleArray = (T[]) Array.newInstance(elementType, 0);
+		this.sampleArray = (A) Array.newInstance(elementType, 0);
 		this.sampleObjectAddress = directMemoryService.addressOf(sampleObject);
 		
 		init();
 	}
 	
 	@Override
-	public DeeplyForkableArrayOffHeapPool<T, ArrayOffHeapPoolCreateParameter<T>> fork() {
+	public DeeplyForkableArrayOffHeapPool<T, A, ArrayOffHeapPoolCreateParameter<T>> fork() {
 		return 
-				new ComplexTypeArrayOffHeapPool<T>(
+				new ComplexTypeArrayOffHeapPool<T, A>(
 							getElementType(), 
 							length, 
 							getDirectMemoryService());

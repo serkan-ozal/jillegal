@@ -26,7 +26,7 @@ public class ArrayOffHeapPoolTest {
 	
 	@Test
 	public void complexTypeArrayOffHeapPoolSuccessfullyCreatedWithNoInitializationAndUsed() {
-		ComplexTypeArrayOffHeapPool<SampleOffHeapPoolTestClass> complexTypeArrayPool = 
+		ComplexTypeArrayOffHeapPool<SampleOffHeapPoolTestClass, SampleOffHeapPoolTestClass[]> complexTypeArrayPool = 
 				offHeapService.createOffHeapPool(
 						new ArrayOffHeapPoolCreateParameterBuilder<SampleOffHeapPoolTestClass>().
 								type(SampleOffHeapPoolTestClass.class).
@@ -50,7 +50,7 @@ public class ArrayOffHeapPoolTest {
 	
 	@Test
 	public void complexTypeArrayOffHeapPoolSuccessfullyCreatedWithInitializationAndUsed() {
-		ComplexTypeArrayOffHeapPool<SampleOffHeapPoolTestClass> complexTypeArrayPool = 
+		ComplexTypeArrayOffHeapPool<SampleOffHeapPoolTestClass, SampleOffHeapPoolTestClass[]> complexTypeArrayPool = 
 				offHeapService.createOffHeapPool(
 						new ArrayOffHeapPoolCreateParameterBuilder<SampleOffHeapPoolTestClass>().
 								type(SampleOffHeapPoolTestClass.class).

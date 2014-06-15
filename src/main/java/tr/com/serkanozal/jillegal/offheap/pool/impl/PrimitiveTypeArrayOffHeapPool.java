@@ -14,8 +14,8 @@ import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.pool.DeeplyForkableArrayOffHeapPool;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
-public class PrimitiveTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOffHeapPoolCreateParameter<T>> 
-		implements DeeplyForkableArrayOffHeapPool<T, ArrayOffHeapPoolCreateParameter<T>> {
+public class PrimitiveTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayOffHeapPoolCreateParameter<T>> 
+		implements DeeplyForkableArrayOffHeapPool<T, A, ArrayOffHeapPoolCreateParameter<T>> {
 
 	protected int length;
 	protected int elementSize;
@@ -23,8 +23,8 @@ public class PrimitiveTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOf
 	protected long allocatedAddress;
 	protected long arrayIndexStartAddress;
 	protected int arrayIndexScale;
-	protected T[] sampleArray;
-	protected T[] primitiveArray;
+	protected A sampleArray;
+	protected A primitiveArray;
 	
 	public PrimitiveTypeArrayOffHeapPool(ArrayOffHeapPoolCreateParameter<T> parameter) {
 		this(parameter.getElementType(), parameter.getLength(), parameter.getDirectMemoryService());
@@ -52,7 +52,7 @@ public class PrimitiveTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOf
 		// Set length of array object pool array
 		JvmUtil.setArrayLength(allocatedAddress, elementType, length);
 
-		this.primitiveArray = (T[]) directMemoryService.getObject(allocatedAddress);
+		this.primitiveArray = (A) directMemoryService.getObject(allocatedAddress);
 	}
 	
 	@Override
@@ -60,12 +60,13 @@ public class PrimitiveTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOf
 		return length;
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public T getAt(int index) {
 		if (index < 0 || index > length) {
 			return null;
 		}	
-		return primitiveArray[index];
+		return ((T[])(primitiveArray))[index];
 	}
 	
 	@Override
@@ -106,7 +107,7 @@ public class PrimitiveTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOf
 	}
 	
 	@Override
-	public T[] getArray() {
+	public A getArray() {
 		return primitiveArray;
 	}
 	
@@ -135,15 +136,15 @@ public class PrimitiveTypeArrayOffHeapPool<T> extends BaseOffHeapPool<T, ArrayOf
 		this.allocatedAddress = 
 				directMemoryService.allocateMemory(arraySize + (length * elementSize) + 
 						JvmUtil.getAddressSize()); // Extra memory for possible aligning
-		this.sampleArray = (T[]) Array.newInstance(JvmUtil.primitiveTypeOf(elementType), 0);
+		this.sampleArray = (A) Array.newInstance(JvmUtil.primitiveTypeOf(elementType), 0);
 		
 		init();
 	}
 
 	@Override
-	public DeeplyForkableArrayOffHeapPool<T, ArrayOffHeapPoolCreateParameter<T>> fork() {
+	public DeeplyForkableArrayOffHeapPool<T, A, ArrayOffHeapPoolCreateParameter<T>> fork() {
 		return 
-				new PrimitiveTypeArrayOffHeapPool<T>(
+				new PrimitiveTypeArrayOffHeapPool<T, A>(
 							getElementType(), 
 							length, 
 							getDirectMemoryService());

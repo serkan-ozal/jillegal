@@ -9,7 +9,7 @@ package tr.com.serkanozal.jillegal.offheap.pool;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 
-public interface ArrayOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> 
-		extends ExplicitArrayOffHeapPool<T, T[], P> {
+public interface ArrayOffHeapPool<T, A, P extends OffHeapPoolCreateParameter<T>> 
+		extends ExplicitArrayOffHeapPool<T, A, P> {
 	
 }

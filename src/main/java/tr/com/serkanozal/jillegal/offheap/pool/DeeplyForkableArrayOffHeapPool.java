@@ -9,9 +9,9 @@ package tr.com.serkanozal.jillegal.offheap.pool;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 
-public interface DeeplyForkableArrayOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>>
-		extends DeeplyForkableOffHeapPool<T, P>, ArrayOffHeapPool<T, P> {
+public interface DeeplyForkableArrayOffHeapPool<T, A, P extends OffHeapPoolCreateParameter<T>>
+		extends DeeplyForkableOffHeapPool<T, P>, ArrayOffHeapPool<T, A, P> {
 
-	DeeplyForkableArrayOffHeapPool<T, P> fork();
+	DeeplyForkableArrayOffHeapPool<T, A, P> fork();
 	
 }
