@@ -15,9 +15,13 @@ import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolType;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
+import tr.com.serkanozal.jillegal.offheap.pool.ArrayOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.impl.ComplexTypeArrayOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.impl.DefaultForkableObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.impl.EagerReferencedObjectOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.impl.ExtendableArrayOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.impl.ExtendableObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.impl.LazyReferencedObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.impl.PrimitiveTypeArrayOffHeapPool;
@@ -69,6 +73,41 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 			if (baseParameter.getDirectMemoryService() == null) {
 				baseParameter.setDirectMemoryService(directMemoryService);
 			}
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T, O extends ObjectOffHeapPool<T, ?>> O createObjectOffHeapPool(
+			Class<T> objectType, int objectCount) {
+		return 
+			(O) new ExtendableObjectOffHeapPool<T>(
+					objectType, 
+					new DefaultForkableObjectOffHeapPool<T>(objectType, objectCount), 
+					directMemoryService);
+	}
+
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@Override
+	public <T, A, O extends ArrayOffHeapPool<T, A, ?>> O createArrayOffHeapPool(
+			Class<A> arrayType, int arrayLength) {
+		if (!arrayType.isArray()) {
+			throw new IllegalArgumentException(arrayType.getClass().getName() + " is not array type");
+		}
+		Class elementType = arrayType.getComponentType();
+		if (elementType.isPrimitive()) {
+			return 
+				(O) new ExtendableArrayOffHeapPool<T, A>(
+							elementType, 
+							new PrimitiveTypeArrayOffHeapPool<T, A>(elementType, arrayLength, directMemoryService), 
+							directMemoryService);
+		}
+		else {
+			return 
+				(O) new ExtendableArrayOffHeapPool<T, A>(
+							elementType, 
+							new ComplexTypeArrayOffHeapPool<T, A>(elementType, arrayLength, directMemoryService), 
+							directMemoryService);
 		}
 	}
 

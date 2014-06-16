@@ -20,10 +20,12 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 		implements ArrayOffHeapPool<T, A, ExtendableArrayOffHeapPoolCreateParameter<T, A>> {
 
 	protected DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> rootForkableOffHeapPool;
-	protected List<DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>>> previousForkableOffHeapPoolList = 
+	protected List<DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>>> forkableOffHeapPoolList = 
 					new ArrayList<DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>>>();
 	protected DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> currentForkableOffHeapPool;
-			
+	protected long totalLength;	
+	protected int length;
+	
 	public ExtendableArrayOffHeapPool(ExtendableArrayOffHeapPoolCreateParameter<T, A> parameter) {
 		this(parameter.getElementType(), parameter.getForkableArrayOffHeapPool(), parameter.getDirectMemoryService());
 	}
@@ -37,6 +39,8 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	
 	protected synchronized void init() {
 		currentForkableOffHeapPool = rootForkableOffHeapPool;
+		length = rootForkableOffHeapPool.getLength();
+		totalLength = rootForkableOffHeapPool.getLength();
 	}
 
 	@Override
@@ -51,19 +55,27 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	
 	@Override
 	public T getAt(int index) {
-		// TODO Expand if index is out of limits
-		return currentForkableOffHeapPool.getAt(index);
+		if (index < 0 || index > getLength()) {
+			return null;
+		}
+		extendUntil(index);
+		return 
+			getArrayOffHeapPoolAt(index).
+				getAt(index - (index / rootForkableOffHeapPool.getLength()));
 	}
 
 	@Override
 	public void setAt(T element, int index) {
-		// TODO Expand if index is out of limits
-		currentForkableOffHeapPool.setAt(element, index);
+		if (index > 0 && index < getLength()) {
+			extendUntil(index);
+			getArrayOffHeapPoolAt(index).
+				setAt(element, index - (index / rootForkableOffHeapPool.getLength()));
+		}
 	}
 	
 	@Override
 	public void reset() {
-		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : previousForkableOffHeapPoolList) {
+		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
 			if (forkableOffHeapPool != rootForkableOffHeapPool) {
 				forkableOffHeapPool.free();
 			}	
@@ -76,7 +88,7 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	
 	@Override
 	public void free() {
-		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : previousForkableOffHeapPoolList) {
+		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
 			forkableOffHeapPool.free();
 		}
 		if (currentForkableOffHeapPool != null) {
@@ -94,12 +106,24 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 		init();
 	}
 	
+	protected ArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> getArrayOffHeapPoolAt(int index) {
+		extendUntil(index);
+		return forkableOffHeapPoolList.get(index / rootForkableOffHeapPool.getLength());
+	}
+	
+	protected void extendUntil(int index) {
+		while (totalLength <= index) {
+			extend();
+		}
+	}
+	
 	protected void extend() {
 		DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> newForkableOffHeapPool = 
 				currentForkableOffHeapPool.fork();
-		previousForkableOffHeapPoolList.add(currentForkableOffHeapPool);
+		forkableOffHeapPoolList.add(currentForkableOffHeapPool);
 		currentForkableOffHeapPool = 
 				(DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>>) newForkableOffHeapPool;
+		totalLength += currentForkableOffHeapPool.getLength();
 	}
 
 }

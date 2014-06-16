@@ -27,6 +27,8 @@ import tr.com.serkanozal.jillegal.instrument.service.InstrumenterServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
+import tr.com.serkanozal.jillegal.offheap.pool.ArrayOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.factory.DefaultOffHeapPoolFactory;
 import tr.com.serkanozal.jillegal.offheap.pool.factory.OffHeapPoolFactory;
@@ -39,6 +41,10 @@ public class OffHeapServiceImpl implements OffHeapService {
 	protected Map<Class<? extends OffHeapPoolCreateParameter<?>>, OffHeapPoolFactory> offHeapPoolFactoryMap = 
 			new ConcurrentHashMap<Class<? extends OffHeapPoolCreateParameter<?>>, OffHeapPoolFactory>();
 	protected Set<Class<?>> offHeapableClasses = Collections.synchronizedSet(new HashSet<Class<?>>());
+	@SuppressWarnings("rawtypes")
+	protected Map<Class<?>, ObjectOffHeapPool> objectOffHeapPoolMap = new ConcurrentHashMap<Class<?>, ObjectOffHeapPool>();
+	@SuppressWarnings("rawtypes")
+	protected Map<Class<?>, ArrayOffHeapPool> arrayOffHeapPoolMap = new ConcurrentHashMap<Class<?>, ArrayOffHeapPool>();
 	
 	public OffHeapServiceImpl() {
 		init();
@@ -148,6 +154,26 @@ public class OffHeapServiceImpl implements OffHeapService {
 			logger.error("Error occured while implementing non-primitive field setters for class " + 
 							elementType.getName(), t);
 		}
+	}
+
+	@Override
+	public <T> T newObject(Class<T> objectType) {
+		return null;
+	}
+
+	@Override
+	public <T> void freeObject(T obj) {
+		throw new UnsupportedOperationException("\"void freeObject(T obj)\" is not supported right now !");
+	}
+
+	@Override
+	public <T> T newArray(Class<T> arrayType, int length) {
+		return null;
+	}
+
+	@Override
+	public <T> void freeArray(T array) {
+		throw new UnsupportedOperationException("\"void freeArray(T array)\" is not supported right now !");
 	}
 	
 }
