@@ -29,6 +29,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	protected long objStartAddress;
 	protected long arrayIndexStartAddress;
 	protected int arrayIndexScale;
+	protected JvmAwareArrayElementAddressFinder jvmAwareArrayElementAddressFinder;
 	
 	public ComplexTypeArrayOffHeapPool(ArrayOffHeapPoolCreateParameter<T> parameter) {
 		this(parameter.getElementType(), parameter.getLength(), parameter.isInitializeElements(), 
@@ -89,6 +90,27 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 		}
 		
 		this.objectArray = (A) directMemoryService.getObject(allocatedAddress);
+		
+		switch (JvmUtil.getAddressSize()) {
+	        case JvmUtil.SIZE_32_BIT:
+	        	jvmAwareArrayElementAddressFinder = new Address32BitJvmAwareArrayElementAddressFinder();
+	            break;
+	        case JvmUtil.SIZE_64_BIT:
+	        	int referenceSize = JvmUtil.getReferenceSize();
+	        	switch (referenceSize) {
+	             	case JvmUtil.ADDRESSING_4_BYTE:   
+	             		jvmAwareArrayElementAddressFinder = new Address64BitWithCompressedOopsJvmAwareArrayElementAddressFinder();
+	             		break;
+	             	case JvmUtil.ADDRESSING_8_BYTE:
+	             		jvmAwareArrayElementAddressFinder = new Address64BitWithCompressedOopsJvmAwareArrayElementAddressFinder();
+	             		break;
+	             	default:    
+	                    throw new AssertionError("Unsupported reference size: " + referenceSize);
+	        	}
+	        	break;    
+	        default:
+	            throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
+		} 
 	}
 	
 	public boolean isInitializeElements() {
@@ -106,6 +128,9 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 		if (index < 0 || index > length) {
 			throw new IllegalArgumentException("Invalid index: " + index);
 		}	
+		processObject(
+				jvmAwareArrayElementAddressFinder.findAddress(
+						arrayIndexStartAddress, arrayIndexScale, index));
 		return ((T[])(objectArray))[index];
 	}
 	
@@ -128,8 +153,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	
 	@Override
 	public synchronized long getArrayAsAddress() {
-		// TODO Implement
-		return 0;
+		return allocatedAddress;
 	}
 	
 	@Override
@@ -179,6 +203,39 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 							getElementType(), 
 							length, 
 							getDirectMemoryService());
+	}
+	
+	protected interface JvmAwareArrayElementAddressFinder {
+		
+		long findAddress(long arrayIndexStartAddress, int arrayIndexScale, int index);
+	
+	}
+	
+	protected class Address32BitJvmAwareArrayElementAddressFinder implements JvmAwareArrayElementAddressFinder {
+
+		@Override
+		public long findAddress(long arrayIndexStartAddress, int arrayIndexScale, int index) {
+			return directMemoryService.getAsIntAddress(arrayIndexStartAddress + (arrayIndexScale * index));
+		}
+		
+	}
+	
+	protected class Address64BitWithoutCompressedOopsJvmAwareArrayElementAddressFinder implements JvmAwareArrayElementAddressFinder {
+
+		@Override
+		public long findAddress(long arrayIndexStartAddress, int arrayIndexScale, int index) {
+			return directMemoryService.getLong(arrayIndexStartAddress + (arrayIndexScale * index));
+		}
+		
+	}
+	
+	protected class Address64BitWithCompressedOopsJvmAwareArrayElementAddressFinder implements JvmAwareArrayElementAddressFinder {
+
+		@Override
+		public long findAddress(long arrayIndexStartAddress, int arrayIndexScale, int index) {
+			return directMemoryService.getAsIntAddress(arrayIndexStartAddress + (arrayIndexScale * index));
+		}
+		
 	}
 
 }

@@ -60,13 +60,18 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		long address = (currentAddress += objectSize);
 		// Address of class could be changed by GC at "Compact" phase.
 		//return directMemoryService.getObject(updateClassPointerOfObject(address));
-		return processObject((T) directMemoryService.getObject(address), address);
+		return processObject((T) directMemoryService.getObject(address));
 	}
 	
 	@Override
 	public synchronized long getAsAddress() {
-		// TODO Implement
-		return 0;
+		if (currentAddress >= addressLimit) {
+			return 0;
+		}
+		long address = (currentAddress += objectSize);
+		// Address of class could be changed by GC at "Compact" phase.
+		//return directMemoryService.getObject(updateClassPointerOfObject(address));
+		return processObject(address);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -78,7 +83,7 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		long address = allocatedAddress + (index * objectSize);
 		// Address of class could be changed by GC at "Compact" phase.
 		//return directMemoryService.getObject(updateClassPointerOfObject(allocatedAddress));
-		return processObject((T) directMemoryService.getObject(address), address);
+		return processObject((T) directMemoryService.getObject(address));
 	}
 	
 	@Override

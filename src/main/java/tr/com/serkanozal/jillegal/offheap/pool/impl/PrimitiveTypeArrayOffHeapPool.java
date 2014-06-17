@@ -113,8 +113,7 @@ public class PrimitiveTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Arra
 	
 	@Override
 	public synchronized long getArrayAsAddress() {
-		// TODO Implement
-		return 0;
+		return allocatedAddress;
 	}
 	
 	@Override
