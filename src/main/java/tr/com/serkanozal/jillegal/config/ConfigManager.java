@@ -7,10 +7,10 @@
 
 package tr.com.serkanozal.jillegal.config;
 
-import tr.com.serkanozal.jillegal.instrument.config.service.InstrumentConfigService;
-import tr.com.serkanozal.jillegal.instrument.config.service.InstrumentConfigServiceFactory;
-import tr.com.serkanozal.jillegal.offheap.config.service.OffHeapConfigService;
-import tr.com.serkanozal.jillegal.offheap.config.service.OffHeapConfigServiceFactory;
+import tr.com.serkanozal.jillegal.instrument.config.InstrumentConfigService;
+import tr.com.serkanozal.jillegal.instrument.config.InstrumentConfigServiceFactory;
+import tr.com.serkanozal.jillegal.offheap.config.OffHeapConfigService;
+import tr.com.serkanozal.jillegal.offheap.config.OffHeapConfigServiceFactory;
 
 public class ConfigManager {
 

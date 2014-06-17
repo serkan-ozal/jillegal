@@ -5,13 +5,11 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.instrument.config.service;
-
-import tr.com.serkanozal.jillegal.instrument.config.service.annotation.AnnotationBasedInstrumentConfigService;
+package tr.com.serkanozal.jillegal.instrument.config;
 
 public class InstrumentConfigServiceFactory {
 
-	private static InstrumentConfigService instrumentConfigService = new AnnotationBasedInstrumentConfigService();
+	private static InstrumentConfigService instrumentConfigService = new InstrumentConfigServiceImpl();
 	
 	private InstrumentConfigServiceFactory() {
 		

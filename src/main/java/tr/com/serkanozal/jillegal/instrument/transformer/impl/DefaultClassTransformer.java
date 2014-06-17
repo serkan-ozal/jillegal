@@ -14,10 +14,8 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
-import tr.com.serkanozal.jillegal.instrument.config.model.Monitorable;
 import tr.com.serkanozal.jillegal.instrument.domain.model.ClassInfo;
 import tr.com.serkanozal.jillegal.instrument.filter.ClassTransformerFilter;
-import tr.com.serkanozal.jillegal.instrument.filter.impl.AnnotatedClassTransformerFilter;
 import tr.com.serkanozal.jillegal.instrument.transformer.ClassTransformer;
 
 public class DefaultClassTransformer implements ClassTransformer {
@@ -28,11 +26,7 @@ public class DefaultClassTransformer implements ClassTransformer {
 	protected List<ClassTransformerFilter> transformerFilters = new ArrayList<ClassTransformerFilter>();
     
     public DefaultClassTransformer() {
-        init();
-    }
-    
-    protected void init() {
-    	transformerFilters.add(new AnnotatedClassTransformerFilter(Monitorable.class, new ObjectMonitoringClassTransformer()));
+ 
     }
     
     public DefaultClassTransformer(List<ClassTransformerFilter> transformerFilters) {

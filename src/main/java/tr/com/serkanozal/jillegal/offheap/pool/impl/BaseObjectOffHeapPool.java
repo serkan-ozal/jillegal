@@ -7,16 +7,24 @@
 
 package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 
 import tr.com.serkanozal.jcommon.util.ReflectionUtil;
-import tr.com.serkanozal.jillegal.offheap.domain.model.config.AllocateAtOffHeap;
+import tr.com.serkanozal.jillegal.config.ConfigManager;
+import tr.com.serkanozal.jillegal.offheap.config.OffHeapConfigService;
+import tr.com.serkanozal.jillegal.offheap.domain.model.config.OffHeapArrayFieldConfig;
+import tr.com.serkanozal.jillegal.offheap.domain.model.config.OffHeapClassConfig;
+import tr.com.serkanozal.jillegal.offheap.domain.model.config.OffHeapFieldConfig;
+import tr.com.serkanozal.jillegal.offheap.domain.model.config.OffHeapObjectFieldConfig;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAllocationConfigType;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
+import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
+import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> extends BaseOffHeapPool<T, P> {
@@ -32,15 +40,17 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected long classPointerSize;
 	protected long addressLimit;
 	protected NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType;
-	protected List<NonPrimitiveFieldInitializer> nonPrimitiveFieldInitializers;
+	protected List<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> nonPrimitiveFieldInitializers;
 	protected JvmAwareClassPointerUpdater jvmAwareClassPointerUpdater;
+	protected OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
+	protected OffHeapConfigService offHeapConfigService = ConfigManager.getOffHeapConfigService();
 	
-	public BaseObjectOffHeapPool(Class<T> elementType) {
-		super(elementType);
+	public BaseObjectOffHeapPool(Class<T> objectType) {
+		super(objectType);
 	}
 	
-	public BaseObjectOffHeapPool(Class<T> elementType, DirectMemoryService directMemoryService) {
-		super(elementType, directMemoryService);
+	public BaseObjectOffHeapPool(Class<T> objectType, DirectMemoryService directMemoryService) {
+		super(objectType, directMemoryService);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -132,28 +142,40 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	}
 	
 	protected void findNonPrimitiveFieldInitializersForAllNonPrimitiveFields() {
-		nonPrimitiveFieldInitializers = new ArrayList<NonPrimitiveFieldInitializer>();
+		nonPrimitiveFieldInitializers = new ArrayList<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>>();
 		List<Field> fields = ReflectionUtil.getAllFields(elementType);
 		for (Field f : fields) {
-			if (!f.getType().isPrimitive()) {
-				nonPrimitiveFieldInitializers.add(new NonPrimitiveFieldInitializer(f));
-			}	
+			if (f.getType().isArray()) {
+				nonPrimitiveFieldInitializers.add(new ArrayTypedFieldInitializer(f));
+			}
+			else if (!f.getType().isPrimitive()) {
+				nonPrimitiveFieldInitializers.add(new ComplexTypedFieldInitializer(f));
+			}		
 		}
 	}
 	
 	protected void findNonPrimitiveFieldInitializersForOnlyConfiguredNonPrimitiveFields() {
-		nonPrimitiveFieldInitializers = new ArrayList<NonPrimitiveFieldInitializer>();
-		List<Field> fields = ReflectionUtil.getAllFields(elementType, AllocateAtOffHeap.class);
-		for (Field f : fields) {
-			if (!f.getType().isPrimitive()) {
-				nonPrimitiveFieldInitializers.add(new NonPrimitiveFieldInitializer(f));
-			}	
+		nonPrimitiveFieldInitializers = new ArrayList<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>>();
+		OffHeapClassConfig classConfig = offHeapConfigService.getOffHeapClassConfig(getElementType());
+		if (classConfig != null) {
+			List<OffHeapObjectFieldConfig> objectFieldConfigs = classConfig.getObjectFieldConfigs();
+			if (objectFieldConfigs != null) {
+				for (OffHeapObjectFieldConfig objectFieldConfig : objectFieldConfigs) {
+					nonPrimitiveFieldInitializers.add(new ComplexTypedFieldInitializer(objectFieldConfig));
+				}
+			}
+			List<OffHeapArrayFieldConfig> arrayFieldConfigs = classConfig.getArrayFieldConfigs();
+			if (arrayFieldConfigs != null) {
+				for (OffHeapArrayFieldConfig arrayFieldConfig : arrayFieldConfigs) {
+					nonPrimitiveFieldInitializers.add(new ArrayTypedFieldInitializer(arrayFieldConfig));
+				}
+			}
 		}
 	}
 	
 	protected T processObject(T obj) {
 		if (nonPrimitiveFieldInitializers != null) {
-			for (NonPrimitiveFieldInitializer fieldInitializer : nonPrimitiveFieldInitializers) {
+			for (NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig> fieldInitializer : nonPrimitiveFieldInitializers) {
 				fieldInitializer.initializeField(obj);
 			}
 		}
@@ -161,9 +183,10 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	}
 	
 	@SuppressWarnings("restriction")
-	protected class NonPrimitiveFieldInitializer {
+	protected abstract class NonPrimitiveFieldInitializer<C extends OffHeapFieldConfig> {
 		
 		protected final sun.misc.Unsafe unsafe = JvmUtil.getUnsafe();
+		protected C fieldConfig;
 		protected final Field field;
 		protected final long fieldOffset;
 		
@@ -172,8 +195,65 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 			this.fieldOffset = unsafe.objectFieldOffset(field);
 		}
 		
+		protected NonPrimitiveFieldInitializer(C fieldConfig) {
+			this.fieldConfig = fieldConfig;
+			this.field = fieldConfig.getField();
+			this.fieldOffset = unsafe.objectFieldOffset(field);
+		}
+		
+		abstract protected void initializeField(T obj);
+		
+	}
+	
+	protected class ComplexTypedFieldInitializer extends NonPrimitiveFieldInitializer<OffHeapObjectFieldConfig> {
+		
+		protected Class<?> fieldType;
+		
+		protected ComplexTypedFieldInitializer(Field field) {
+			super(field);
+			this.fieldType = field.getType();
+		}
+		
+		protected ComplexTypedFieldInitializer(OffHeapObjectFieldConfig fieldConfig) {
+			super(fieldConfig);
+			this.fieldType = 
+					(fieldConfig.getFieldType() == null || fieldConfig.getFieldType().equals(Object.class)) ? 
+							fieldConfig.getField().getType() : 
+							fieldConfig.getFieldType();
+		}
+		
+		@SuppressWarnings({ "restriction" })
 		protected void initializeField(T obj) {
-			
+			unsafe.putObject(obj, fieldOffset, offHeapService.newObject(fieldType));
+		}
+		
+	}
+	
+	protected class ArrayTypedFieldInitializer extends NonPrimitiveFieldInitializer<OffHeapArrayFieldConfig> {
+		
+		protected Class<?> elementType;
+		protected Class<?> arrayType;
+		protected int length;
+		
+		protected ArrayTypedFieldInitializer(Field field) {
+			super(field);
+			this.elementType = field.getType().getComponentType();
+			this.arrayType = field.getType();
+		}
+		
+		protected ArrayTypedFieldInitializer(OffHeapArrayFieldConfig fieldConfig) {
+			super(fieldConfig);
+			this.elementType = 
+					(fieldConfig.getElementType() == null || fieldConfig.getElementType().equals(Object.class)) ? 
+							fieldConfig.getField().getType().getComponentType() : 
+							fieldConfig.getElementType();
+			this.arrayType = Array.newInstance(elementType, 0).getClass();
+			this.length = fieldConfig.getLength();
+		}
+		
+		@SuppressWarnings("restriction")
+		protected void initializeField(T obj) {
+			unsafe.putObject(obj, fieldOffset, offHeapService.newArray(arrayType, length));
 		}
 		
 	}

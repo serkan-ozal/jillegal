@@ -156,9 +156,17 @@ public class OffHeapServiceImpl implements OffHeapService {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public <T> T newObject(Class<T> objectType) {
-		return null;
+	public synchronized <T> T newObject(Class<T> objectType) {
+		ObjectOffHeapPool<T, ?> objectOffHeapPool = objectOffHeapPoolMap.get(objectType);
+		if (objectOffHeapPool == null) {
+			objectOffHeapPool = 
+					defaultOffHeapPoolFactory.createObjectOffHeapPool(
+							objectType, OffHeapConstants.DEFAULT_OBJECT_COUNT);
+			objectOffHeapPoolMap.put(objectType, objectOffHeapPool);
+		}
+		return objectOffHeapPool.get();
 	}
 
 	@Override
@@ -166,13 +174,21 @@ public class OffHeapServiceImpl implements OffHeapService {
 		throw new UnsupportedOperationException("\"void freeObject(T obj)\" is not supported right now !");
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public <T> T newArray(Class<T> arrayType, int length) {
-		return null;
+	public synchronized <A> A newArray(Class<A> arrayType, int length) {
+		ArrayOffHeapPool<?, A, ?> arrayOffHeapPool = arrayOffHeapPoolMap.get(arrayType);
+		if (arrayOffHeapPool == null) {
+			arrayOffHeapPool = 
+					defaultOffHeapPoolFactory.createArrayOffHeapPool(
+							arrayType, OffHeapConstants.DEFAULT_OBJECT_COUNT);
+			arrayOffHeapPoolMap.put(arrayType, arrayOffHeapPool);
+		}
+		return arrayOffHeapPool.getArray();
 	}
 
 	@Override
-	public <T> void freeArray(T array) {
+	public <A> void freeArray(A array) {
 		throw new UnsupportedOperationException("\"void freeArray(T array)\" is not supported right now !");
 	}
 	

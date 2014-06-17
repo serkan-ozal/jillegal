@@ -77,7 +77,7 @@ public interface OffHeapService {
 	<T> T newObject(Class<T> objectType);
 	<T> void freeObject(T obj);
 	
-	<T> T newArray(Class<T> arrayType, int length);
-	<T> void freeArray(T array);
+	<A> A newArray(Class<A> arrayType, int length);
+	<A> void freeArray(A array);
 	
 }

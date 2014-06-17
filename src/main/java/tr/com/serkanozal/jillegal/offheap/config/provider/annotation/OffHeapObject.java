@@ -5,20 +5,17 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.instrument.config.model;
+package tr.com.serkanozal.jillegal.offheap.config.provider.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import tr.com.serkanozal.jillegal.instrument.interceptor.clazz.ClassInterceptor;
-
-@Target({ElementType.TYPE})
+@Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
-@SuppressWarnings("rawtypes")
-public @interface Monitorable {
+public @interface OffHeapObject {
 	
-	Class<? extends ClassInterceptor> classInterceptor() default ClassInterceptor.class;
+	Class<?> fieldType() default Object.class;
 	
 }
