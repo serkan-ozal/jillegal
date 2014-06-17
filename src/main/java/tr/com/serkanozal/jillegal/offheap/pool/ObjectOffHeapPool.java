@@ -12,5 +12,6 @@ import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreatePar
 public interface ObjectOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> extends OffHeapPool<T, P> {
 
 	T get();
+	long getAsAddress();
 	
 }

@@ -52,6 +52,11 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	}
 	
 	@Override
+	public synchronized long getAsAddress() {
+		return currentForkableOffHeapPool.getAsAddress();
+	}
+	
+	@Override
 	public void reset() {
 		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : previousForkableOffHeapPoolList) {
 			if (forkableOffHeapPool != rootForkableOffHeapPool) {

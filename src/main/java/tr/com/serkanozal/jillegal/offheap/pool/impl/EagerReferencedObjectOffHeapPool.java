@@ -100,6 +100,12 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	}
 	
 	@Override
+	public synchronized long getAsAddress() {
+		// TODO Implement
+		return 0;
+	}
+	
+	@Override
 	public T getAt(int index) {
 		if (index < 0 || index >= objectCount) {
 			throw new IllegalArgumentException("Invalid index: " + index);

@@ -240,6 +240,8 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		
 		protected void initializeField(T obj, long objAddress) {
 			jvmAwareObjectFieldInjecter.injectField(objAddress, offHeapService.newObject(fieldType));
+			// TODO or implement as
+			// jvmAwareObjectFieldInjecter.injectField(objAddress, offHeapService.newObjectAsAddress(arrayType, length));
 			// unsafe.putObject(obj, fieldOffset, offHeapService.newObject(fieldType));
 		}
 		
@@ -269,6 +271,8 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		
 		protected void initializeField(T obj, long objAddress) {
 			jvmAwareObjectFieldInjecter.injectField(objAddress, offHeapService.newArray(arrayType, length));
+			// TODO or implement as
+			// jvmAwareObjectFieldInjecter.injectField(objAddress, offHeapService.newArrayAsAddress(arrayType, length));
 			//unsafe.putObject(obj, fieldOffset, offHeapService.newArray(arrayType, length));
 		}
 		

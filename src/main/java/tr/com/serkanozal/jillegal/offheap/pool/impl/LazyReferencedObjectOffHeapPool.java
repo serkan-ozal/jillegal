@@ -63,6 +63,12 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		return processObject((T) directMemoryService.getObject(address), address);
 	}
 	
+	@Override
+	public synchronized long getAsAddress() {
+		// TODO Implement
+		return 0;
+	}
+	
 	@SuppressWarnings("unchecked")
 	@Override
 	public T getAt(int index) {

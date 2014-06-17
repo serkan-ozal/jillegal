@@ -27,7 +27,6 @@ import tr.com.serkanozal.jillegal.instrument.service.InstrumenterServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
-import tr.com.serkanozal.jillegal.offheap.pool.ArrayOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.factory.DefaultOffHeapPoolFactory;
@@ -43,8 +42,6 @@ public class OffHeapServiceImpl implements OffHeapService {
 	protected Set<Class<?>> offHeapableClasses = Collections.synchronizedSet(new HashSet<Class<?>>());
 	@SuppressWarnings("rawtypes")
 	protected Map<Class<?>, ObjectOffHeapPool> objectOffHeapPoolMap = new ConcurrentHashMap<Class<?>, ObjectOffHeapPool>();
-	@SuppressWarnings("rawtypes")
-	protected Map<Class<?>, ArrayOffHeapPool> arrayOffHeapPoolMap = new ConcurrentHashMap<Class<?>, ArrayOffHeapPool>();
 	
 	public OffHeapServiceImpl() {
 		init();
@@ -168,28 +165,55 @@ public class OffHeapServiceImpl implements OffHeapService {
 		}
 		return objectOffHeapPool.get();
 	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public synchronized <T> long newObjectAsAddress(Class<T> objectType) {
+		ObjectOffHeapPool<T, ?> objectOffHeapPool = objectOffHeapPoolMap.get(objectType);
+		if (objectOffHeapPool == null) {
+			objectOffHeapPool = 
+					defaultOffHeapPoolFactory.createObjectOffHeapPool(
+							objectType, OffHeapConstants.DEFAULT_OBJECT_COUNT);
+			objectOffHeapPoolMap.put(objectType, objectOffHeapPool);
+		}
+		return objectOffHeapPool.getAsAddress();
+	}
 
 	@Override
 	public <T> void freeObject(T obj) {
 		throw new UnsupportedOperationException("\"void freeObject(T obj)\" is not supported right now !");
 	}
+	
+	@Override
+	public void freeObjectWithAddress(long address) {
+		throw new UnsupportedOperationException("\"void freeObjectWithAddress(long address)\" is not supported right now !");
+	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public synchronized <A> A newArray(Class<A> arrayType, int length) {
-		ArrayOffHeapPool<?, A, ?> arrayOffHeapPool = arrayOffHeapPoolMap.get(arrayType);
-		if (arrayOffHeapPool == null) {
-			arrayOffHeapPool = 
-					defaultOffHeapPoolFactory.createArrayOffHeapPool(
-							arrayType, OffHeapConstants.DEFAULT_OBJECT_COUNT);
-			arrayOffHeapPoolMap.put(arrayType, arrayOffHeapPool);
-		}
-		return arrayOffHeapPool.getArray();
+		return
+			(A) defaultOffHeapPoolFactory.createArrayOffHeapPool(
+					arrayType, OffHeapConstants.DEFAULT_OBJECT_COUNT).
+						getArray();
+	}
+	
+	@Override
+	public synchronized <A> long newArrayAsAddress(Class<A> arrayType, int length) {
+		return
+			defaultOffHeapPoolFactory.createArrayOffHeapPool(
+					arrayType, OffHeapConstants.DEFAULT_OBJECT_COUNT).
+						getArrayAsAddress();
 	}
 
 	@Override
 	public <A> void freeArray(A array) {
 		throw new UnsupportedOperationException("\"void freeArray(T array)\" is not supported right now !");
+	}
+	
+	@Override
+	public void freeArrayWithAddress(long address) {
+		throw new UnsupportedOperationException("\"void freeArrayWithAddress(long address)\" is not supported right now !");
 	}
 	
 }

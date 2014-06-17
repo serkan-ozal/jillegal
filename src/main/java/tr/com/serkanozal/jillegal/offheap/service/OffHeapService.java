@@ -75,9 +75,13 @@ public interface OffHeapService {
 	<T> void makeOffHeapable(Class<T> elementType);
 	
 	<T> T newObject(Class<T> objectType);
+	<T> long newObjectAsAddress(Class<T> objectType);
 	<T> void freeObject(T obj);
+	void freeObjectWithAddress(long address);
 	
 	<A> A newArray(Class<A> arrayType, int length);
+	<A> long newArrayAsAddress(Class<A> arrayType, int length);
 	<A> void freeArray(A array);
+	void freeArrayWithAddress(long address);
 	
 }

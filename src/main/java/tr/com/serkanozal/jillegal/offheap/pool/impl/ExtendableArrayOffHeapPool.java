@@ -54,6 +54,11 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	}
 	
 	@Override
+	public synchronized long getArrayAsAddress() {
+		return currentForkableOffHeapPool.getArrayAsAddress();
+	}
+	
+	@Override
 	public T getAt(int index) {
 		if (index < 0 || index > getLength()) {
 			return null;

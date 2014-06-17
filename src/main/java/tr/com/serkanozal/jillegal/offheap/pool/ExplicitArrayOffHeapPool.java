@@ -13,6 +13,7 @@ public interface ExplicitArrayOffHeapPool<T, A, P extends OffHeapPoolCreateParam
 		extends RandomlyReadableOffHeapPool<T, P>, RandomlyWritableOffHeapPool<T, P> {
 
 	A getArray();
+	long getArrayAsAddress();
 	int getLength();
 
 }

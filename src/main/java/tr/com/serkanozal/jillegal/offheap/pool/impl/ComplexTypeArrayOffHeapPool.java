@@ -127,6 +127,12 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	}
 	
 	@Override
+	public synchronized long getArrayAsAddress() {
+		// TODO Implement
+		return 0;
+	}
+	
+	@Override
 	public void reset() {
 		init();
 	}

@@ -1,7 +1,0 @@
-Manifest-Version: 1.0
-Agent-Class: tr.com.serkanozal.jillegal.agent.JillegalAgent
-Premain-Class: tr.com.serkanozal.jillegal.agent.JillegalAgent
-Main-Class: tr.com.serkanozal.jillegal.agent.JillegalAgent
-Boot-Class-Path: jillegal-${version}.jar
-Can-Retransform-Classes: true
-Can-Redefine-Classes: true
