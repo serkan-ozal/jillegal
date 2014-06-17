@@ -10,9 +10,13 @@ package tr.com.serkanozal.jillegal.config;
 import java.util.HashSet;
 import java.util.Set;
 
-public class BaseConfigService<P extends ConfigProvider> implements ConfigService<P> {
+public abstract class BaseConfigService<P extends ConfigProvider> implements ConfigService<P> {
 
 	protected Set<P> configProviders = new HashSet<P>();
+	
+	protected BaseConfigService() {
+		init();
+	}
 	
 	protected void init() {
 		

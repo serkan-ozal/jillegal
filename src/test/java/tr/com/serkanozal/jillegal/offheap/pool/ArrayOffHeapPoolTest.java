@@ -26,47 +26,47 @@ public class ArrayOffHeapPoolTest {
 	
 	@Test
 	public void complexTypeArrayOffHeapPoolSuccessfullyCreatedWithNoInitializationAndUsed() {
-		ComplexTypeArrayOffHeapPool<SampleOffHeapPoolTestClass, SampleOffHeapPoolTestClass[]> complexTypeArrayPool = 
+		ComplexTypeArrayOffHeapPool<SampleOffHeapClass, SampleOffHeapClass[]> complexTypeArrayPool = 
 				offHeapService.createOffHeapPool(
-						new ArrayOffHeapPoolCreateParameterBuilder<SampleOffHeapPoolTestClass>().
-								type(SampleOffHeapPoolTestClass.class).
+						new ArrayOffHeapPoolCreateParameterBuilder<SampleOffHeapClass>().
+								type(SampleOffHeapClass.class).
 								length(ELEMENT_COUNT).
 								initializeElements(false).
 							build());
 		
-		SampleOffHeapPoolTestClass[] array = complexTypeArrayPool.getArray();
+		SampleOffHeapClass[] array = complexTypeArrayPool.getArray();
 		
     	for (int i = 0; i < ELEMENT_COUNT; i++) {
-    		SampleOffHeapPoolTestClass obj = new SampleOffHeapPoolTestClass();
+    		SampleOffHeapClass obj = new SampleOffHeapClass();
     		obj.setOrder(i);
     		complexTypeArrayPool.setAt(obj, i); // Note that "array[i] = obj" is not valid, because JVM doesn't know array created at off-heap
     	}
     	
     	for (int i = 0; i < ELEMENT_COUNT; i++) {
-    		SampleOffHeapPoolTestClass obj = array[i];
+    		SampleOffHeapClass obj = array[i];
     		Assert.assertEquals(i, obj.getOrder());
     	}
 	}
 	
 	@Test
 	public void complexTypeArrayOffHeapPoolSuccessfullyCreatedWithInitializationAndUsed() {
-		ComplexTypeArrayOffHeapPool<SampleOffHeapPoolTestClass, SampleOffHeapPoolTestClass[]> complexTypeArrayPool = 
+		ComplexTypeArrayOffHeapPool<SampleOffHeapClass, SampleOffHeapClass[]> complexTypeArrayPool = 
 				offHeapService.createOffHeapPool(
-						new ArrayOffHeapPoolCreateParameterBuilder<SampleOffHeapPoolTestClass>().
-								type(SampleOffHeapPoolTestClass.class).
+						new ArrayOffHeapPoolCreateParameterBuilder<SampleOffHeapClass>().
+								type(SampleOffHeapClass.class).
 								length(ELEMENT_COUNT).
 								initializeElements(true).
 							build());
 		
-		SampleOffHeapPoolTestClass[] array = complexTypeArrayPool.getArray();
+		SampleOffHeapClass[] array = complexTypeArrayPool.getArray();
 		
     	for (int i = 0; i < ELEMENT_COUNT; i++) {
-    		SampleOffHeapPoolTestClass obj = array[i];
+    		SampleOffHeapClass obj = array[i];
     		obj.setOrder(i);
     	}
     	
     	for (int i = 0; i < ELEMENT_COUNT; i++) {
-    		SampleOffHeapPoolTestClass obj = array[i];
+    		SampleOffHeapClass obj = array[i];
     		Assert.assertEquals(i, obj.getOrder());
     	}
 	}

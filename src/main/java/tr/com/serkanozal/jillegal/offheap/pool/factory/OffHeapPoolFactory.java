@@ -14,8 +14,11 @@ import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 
 public interface OffHeapPoolFactory {
 
-	<T, O extends OffHeapPool<T, ?>> O createOffHeapPool(OffHeapPoolCreateParameter<T> parameter);
-	<T, O extends ObjectOffHeapPool<T, ?>> O createObjectOffHeapPool(Class<T> objectType, int objectCount);
-	<T, A, O extends ArrayOffHeapPool<T, A, ?>> O createArrayOffHeapPool(Class<A> arrayType, int arrayLength);
+	@SuppressWarnings("rawtypes")
+	<T, O extends OffHeapPool> O createOffHeapPool(OffHeapPoolCreateParameter<T> parameter);
+	@SuppressWarnings("rawtypes")
+	<T, O extends ObjectOffHeapPool> O createObjectOffHeapPool(Class<T> objectType, int objectCount);
+	@SuppressWarnings("rawtypes")
+	<T, A, O extends ArrayOffHeapPool> O createArrayOffHeapPool(Class<A> arrayType, int arrayLength);
 	
 }

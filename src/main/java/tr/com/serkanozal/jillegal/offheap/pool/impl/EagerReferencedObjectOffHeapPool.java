@@ -93,9 +93,10 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 		if (currentIndex >= objectCount) {
 			return null;
 		}
+		long address = objStartAddress + (currentIndex * objectSize);
 		// Address of class could be changed by GC at "Compact" phase.
-		//updateClassPointerOfObject(objStartAddress + (currentIndex * objectSize));
-		return processObject(objectArray[currentIndex++]);
+		//updateClassPointerOfObject(address);
+		return processObject(objectArray[currentIndex++], address);
 	}
 	
 	@Override
@@ -103,9 +104,10 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 		if (index < 0 || index >= objectCount) {
 			throw new IllegalArgumentException("Invalid index: " + index);
 		}	
+		long address = objStartAddress + (index * objectSize);
 		// Address of class could be changed by GC at "Compact" phase.
-		//updateClassPointerOfObject(objStartAddress + (index * objectSize));
-		return processObject(objectArray[index]);
+		//updateClassPointerOfObject(address);
+		return processObject(objectArray[index], address);
 	}
 	
 	public T[] getObjectArray() {

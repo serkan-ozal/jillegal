@@ -34,82 +34,82 @@ public class ExtendableObjectOffHeapPoolTest {
 	
 	@Test
 	public void objectRetrievedSuccessfullyFromExtendableObjectOffHeapPoolWithLazyReferencedSequentialObjectPoolOffHeap() {
-		LazyReferencedObjectOffHeapPool<SampleOffHeapPoolTestClass> sequentialObjectPool = 
+		LazyReferencedObjectOffHeapPool<SampleOffHeapClass> sequentialObjectPool = 
 				offHeapService.createOffHeapPool(
-						new ObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapPoolTestClass>().
-								type(SampleOffHeapPoolTestClass.class).
+						new ObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapClass>().
+								type(SampleOffHeapClass.class).
 								objectCount(ELEMENT_COUNT).
 								referenceType(ObjectPoolReferenceType.LAZY_REFERENCED).
 							build());
    
-		ExtendableObjectOffHeapPool<SampleOffHeapPoolTestClass> extendableObjectPool =
+		ExtendableObjectOffHeapPool<SampleOffHeapClass> extendableObjectPool =
 				offHeapService.createOffHeapPool(
-						new ExtendableObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapPoolTestClass>().
+						new ExtendableObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapClass>().
 								forkableObjectOffHeapPool(sequentialObjectPool).
 							build());
 		
-		List<SampleOffHeapPoolTestClass> objList = new ArrayList<SampleOffHeapPoolTestClass>();
+		List<SampleOffHeapClass> objList = new ArrayList<SampleOffHeapClass>();
 		
     	for (int i = 0; i < TOTAL_ELEMENT_COUNT; i++) {
-    		SampleOffHeapPoolTestClass obj = extendableObjectPool.get();
+    		SampleOffHeapClass obj = extendableObjectPool.get();
     		obj.setOrder(i);
     		objList.add(obj);
     	}
     	
     	for (int i = 0; i < TOTAL_ELEMENT_COUNT; i++) {
-    		SampleOffHeapPoolTestClass obj = objList.get(i);
+    		SampleOffHeapClass obj = objList.get(i);
     		Assert.assertEquals(i, obj.getOrder());
     	}
 	}
 	
 	@Test
 	public void objectRetrievedSuccessfullyFromExtendableObjectOffHeapPoolWithEagerReferencedSequentialObjectPoolOffHeap() {
-		EagerReferencedObjectOffHeapPool<SampleOffHeapPoolTestClass> sequentialObjectPool = 
+		EagerReferencedObjectOffHeapPool<SampleOffHeapClass> sequentialObjectPool = 
 				offHeapService.createOffHeapPool(
-						new ObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapPoolTestClass>().
-								type(SampleOffHeapPoolTestClass.class).
+						new ObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapClass>().
+								type(SampleOffHeapClass.class).
 								objectCount(ELEMENT_COUNT).
 								referenceType(ObjectPoolReferenceType.EAGER_REFERENCED).
 							build());
    
-		ExtendableObjectOffHeapPool<SampleOffHeapPoolTestClass> extendableObjectPool =
+		ExtendableObjectOffHeapPool<SampleOffHeapClass> extendableObjectPool =
 				offHeapService.createOffHeapPool(
-						new ExtendableObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapPoolTestClass>().
+						new ExtendableObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapClass>().
 								forkableObjectOffHeapPool(sequentialObjectPool).
 							build());
 		
-		List<SampleOffHeapPoolTestClass> objList = new ArrayList<SampleOffHeapPoolTestClass>();
+		List<SampleOffHeapClass> objList = new ArrayList<SampleOffHeapClass>();
 		
     	for (int i = 0; i < TOTAL_ELEMENT_COUNT; i++) {
-    		SampleOffHeapPoolTestClass obj = extendableObjectPool.get();
+    		SampleOffHeapClass obj = extendableObjectPool.get();
     		obj.setOrder(i);
     		objList.add(obj);
     	}
     	
     	for (int i = 0; i < TOTAL_ELEMENT_COUNT; i++) {
-    		SampleOffHeapPoolTestClass obj = objList.get(i);
+    		SampleOffHeapClass obj = objList.get(i);
     		Assert.assertEquals(i, obj.getOrder());
     	}
 	}
 	
 	@Test
 	public void objectRetrievedSuccessfullyFromExtendableObjectOffHeapPoolWithDefaultObjectOffHeapPool() {
-		ExtendableObjectOffHeapPool<SampleOffHeapPoolTestClass> extendableObjectPool =
+		ExtendableObjectOffHeapPool<SampleOffHeapClass> extendableObjectPool =
 				offHeapService.createOffHeapPool(
-						new DefaultExtendableObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapPoolTestClass>().
-								elementType(SampleOffHeapPoolTestClass.class).
+						new DefaultExtendableObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapClass>().
+								elementType(SampleOffHeapClass.class).
 							build());
 		
-		List<SampleOffHeapPoolTestClass> objList = new ArrayList<SampleOffHeapPoolTestClass>();
+		List<SampleOffHeapClass> objList = new ArrayList<SampleOffHeapClass>();
 		
     	for (int i = 0; i < TOTAL_ELEMENT_COUNT; i++) {
-    		SampleOffHeapPoolTestClass obj = extendableObjectPool.get();
+    		SampleOffHeapClass obj = extendableObjectPool.get();
     		obj.setOrder(i);
     		objList.add(obj);
     	}
     	
     	for (int i = 0; i < TOTAL_ELEMENT_COUNT; i++) {
-    		SampleOffHeapPoolTestClass obj = objList.get(i);
+    		SampleOffHeapClass obj = objList.get(i);
     		Assert.assertEquals(i, obj.getOrder());
     	}
 	}

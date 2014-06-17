@@ -43,6 +43,7 @@ public class AnnotationBasedOffHeapConfigProvider implements OffHeapConfigProvid
 				new OffHeapClassConfigBuilder().
 						clazz(clazz);
 		for (Field f : fields) {
+			boolean processed = false;
 			OffHeapObject offHeapObject = f.getAnnotation(OffHeapObject.class);
 			if (offHeapObject != null) {
 				if (!f.getType().isArray()) {
@@ -51,16 +52,21 @@ public class AnnotationBasedOffHeapConfigProvider implements OffHeapConfigProvid
 									field(f).
 									fieldType(offHeapObject.fieldType()).
 								build());
+					processed = true;
 				}
 				else {
-					logger.error("@OffHeapObject is not for array typed fields !");
+					logger.error(
+						"@OffHeapObject is not for array typed fields ! " + 
+						"[" + f.getName() + " field in class " + clazz.getName() + "]");
 				}
 			}
 			OffHeapArray offHeapArray = f.getAnnotation(OffHeapArray.class);
 			if (offHeapArray != null) {
 				if (f.getType().isArray()) {
 					if (offHeapArray.length() <= 0) {
-						logger.error("\"length\" attribute of @OffHeapArray is must be positive number !");
+						logger.error(
+							"\"length\" attribute of @OffHeapArray is must be positive number ! " + 
+							"[" + f.getName() + " field in class " + clazz.getName() + "]");
 					}
 					else {
 						classConfigBuilder.addArrayFieldConfig(
@@ -69,10 +75,26 @@ public class AnnotationBasedOffHeapConfigProvider implements OffHeapConfigProvid
 										elementType(offHeapArray.elementType()).
 										length(offHeapArray.length()).
 									build());
+						processed = true;
 					}	
 				}
 				else {
-					logger.error("@OffHeapArray is only for array typed fields !");
+					logger.error(
+						"@OffHeapArray is only for array typed fields ! " + 
+						"[" + f.getName() + " field in class " + clazz.getName() + "]");
+				}
+			}
+			if (!processed) {
+				if (f.getType().isArray()) {
+					logger.error(
+						"Array typed fields must be configured ! " + 
+						"[" + f.getName() + " field in class " + clazz.getName() + "]");
+				}
+				else {
+					classConfigBuilder.addObjectFieldConfig(
+							new OffHeapObjectFieldConfigBuilder().
+									field(f).
+								build());
 				}
 			}
 		}

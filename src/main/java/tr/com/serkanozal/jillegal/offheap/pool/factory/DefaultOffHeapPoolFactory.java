@@ -30,9 +30,9 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 
 	private DirectMemoryService directMemoryService = DirectMemoryServiceFactory.getDirectMemoryService();
 	
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
-	public <T, O extends OffHeapPool<T, ?>> O  createOffHeapPool(OffHeapPoolCreateParameter<T> parameter) {
+	public <T, O extends OffHeapPool> O  createOffHeapPool(OffHeapPoolCreateParameter<T> parameter) {
 		Class<?> elementType = parameter.getElementType();
 		if (elementType.equals(String.class) || elementType.equals(String[].class)) {
 			throw new IllegalArgumentException("\"String\" and \"String[]\" types are not supported yet !");
@@ -76,9 +76,9 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 		}
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
-	public <T, O extends ObjectOffHeapPool<T, ?>> O createObjectOffHeapPool(
+	public <T, O extends ObjectOffHeapPool> O createObjectOffHeapPool(
 			Class<T> objectType, int objectCount) {
 		return 
 			(O) new ExtendableObjectOffHeapPool<T>(
@@ -89,7 +89,7 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
-	public <T, A, O extends ArrayOffHeapPool<T, A, ?>> O createArrayOffHeapPool(
+	public <T, A, O extends ArrayOffHeapPool> O createArrayOffHeapPool(
 			Class<A> arrayType, int arrayLength) {
 		if (!arrayType.isArray()) {
 			throw new IllegalArgumentException(arrayType.getClass().getName() + " is not array type");

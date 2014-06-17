@@ -57,9 +57,10 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		if (currentAddress >= addressLimit) {
 			return null;
 		}
+		long address = (currentAddress += objectSize);
 		// Address of class could be changed by GC at "Compact" phase.
-		//return directMemoryService.getObject(updateClassPointerOfObject((currentAddress += objectSize)));
-		return processObject((T) directMemoryService.getObject(currentAddress += objectSize));
+		//return directMemoryService.getObject(updateClassPointerOfObject(address));
+		return processObject((T) directMemoryService.getObject(address), address);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -68,9 +69,10 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		if (index < 0 || index >= objectCount) {
 			throw new IllegalArgumentException("Invalid index: " + index);
 		}
+		long address = allocatedAddress + (index * objectSize);
 		// Address of class could be changed by GC at "Compact" phase.
-		//return directMemoryService.getObject(updateClassPointerOfObject((allocatedAddress + (index * objectSize))));
-		return processObject((T) directMemoryService.getObject(allocatedAddress + (index * objectSize)));
+		//return directMemoryService.getObject(updateClassPointerOfObject(allocatedAddress));
+		return processObject((T) directMemoryService.getObject(address), address);
 	}
 	
 	@Override

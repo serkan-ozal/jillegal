@@ -42,6 +42,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType;
 	protected List<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> nonPrimitiveFieldInitializers;
 	protected JvmAwareClassPointerUpdater jvmAwareClassPointerUpdater;
+	protected JvmAwareObjectFieldInjecter jvmAwareObjectFieldInjecter;
 	protected OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
 	protected OffHeapConfigService offHeapConfigService = ConfigManager.getOffHeapConfigService();
 	
@@ -111,15 +112,18 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		switch (JvmUtil.getAddressSize()) {
 	        case JvmUtil.SIZE_32_BIT:
 	        	jvmAwareClassPointerUpdater = new Address32BitJvmClassPointerUpdater();
+	        	jvmAwareObjectFieldInjecter = new Address32BitJvmAwareObjectFieldInjecter();
 	            break;
 	        case JvmUtil.SIZE_64_BIT:
 	        	int referenceSize = JvmUtil.getReferenceSize();
 	        	switch (referenceSize) {
 	             	case JvmUtil.ADDRESSING_4_BYTE:   
 	             		jvmAwareClassPointerUpdater = new Address64BitWithCompressedOopsJvmClassPointerUpdater();
+	             		jvmAwareObjectFieldInjecter = new Address64BitWithCompressedOopsJvmAwareObjectFieldInjecter();
 	             		break;
 	             	case JvmUtil.ADDRESSING_8_BYTE:
 	             		jvmAwareClassPointerUpdater = new Address64BitWithoutCompressedOopsJvmClassPointerUpdater();
+	             		jvmAwareObjectFieldInjecter = new Address64BitWithCompressedOopsJvmAwareObjectFieldInjecter();
 	             		break;
 	             	default:    
 	                    throw new AssertionError("Unsupported reference size: " + referenceSize);
@@ -162,21 +166,33 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 			if (objectFieldConfigs != null) {
 				for (OffHeapObjectFieldConfig objectFieldConfig : objectFieldConfigs) {
 					nonPrimitiveFieldInitializers.add(new ComplexTypedFieldInitializer(objectFieldConfig));
+					if (logger.isInfoEnabled()) {
+						logger.info(
+							"Created \"ComplexTypedFieldInitializer\" for field " + 
+							objectFieldConfig.getField().getName() + 
+							" in class " + getElementType().getName());
+					}
 				}
 			}
 			List<OffHeapArrayFieldConfig> arrayFieldConfigs = classConfig.getArrayFieldConfigs();
 			if (arrayFieldConfigs != null) {
 				for (OffHeapArrayFieldConfig arrayFieldConfig : arrayFieldConfigs) {
 					nonPrimitiveFieldInitializers.add(new ArrayTypedFieldInitializer(arrayFieldConfig));
+					if (logger.isInfoEnabled()) {
+						logger.info(
+							"Created \"ArrayTypedFieldInitializer\" for field " + 
+									arrayFieldConfig.getField().getName() + 
+							" in class " + getElementType().getName());
+					}
 				}
 			}
 		}
 	}
 	
-	protected T processObject(T obj) {
+	protected T processObject(T obj, long objAddress) {
 		if (nonPrimitiveFieldInitializers != null) {
 			for (NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig> fieldInitializer : nonPrimitiveFieldInitializers) {
-				fieldInitializer.initializeField(obj);
+				fieldInitializer.initializeField(obj, objAddress);
 			}
 		}
 		return obj;
@@ -201,7 +217,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 			this.fieldOffset = unsafe.objectFieldOffset(field);
 		}
 		
-		abstract protected void initializeField(T obj);
+		abstract protected void initializeField(T obj, long objAddress);
 		
 	}
 	
@@ -222,9 +238,9 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 							fieldConfig.getFieldType();
 		}
 		
-		@SuppressWarnings({ "restriction" })
-		protected void initializeField(T obj) {
-			unsafe.putObject(obj, fieldOffset, offHeapService.newObject(fieldType));
+		protected void initializeField(T obj, long objAddress) {
+			jvmAwareObjectFieldInjecter.injectField(objAddress, offHeapService.newObject(fieldType));
+			// unsafe.putObject(obj, fieldOffset, offHeapService.newObject(fieldType));
 		}
 		
 	}
@@ -251,9 +267,42 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 			this.length = fieldConfig.getLength();
 		}
 		
-		@SuppressWarnings("restriction")
-		protected void initializeField(T obj) {
-			unsafe.putObject(obj, fieldOffset, offHeapService.newArray(arrayType, length));
+		protected void initializeField(T obj, long objAddress) {
+			jvmAwareObjectFieldInjecter.injectField(objAddress, offHeapService.newArray(arrayType, length));
+			//unsafe.putObject(obj, fieldOffset, offHeapService.newArray(arrayType, length));
+		}
+		
+	}
+	
+	protected interface JvmAwareObjectFieldInjecter {
+		
+		void injectField(long address, Object fieldObj);
+	
+	}
+	
+	protected class Address32BitJvmAwareObjectFieldInjecter implements JvmAwareObjectFieldInjecter {
+
+		@Override
+		public void injectField(long address, Object fieldObj) {
+			directMemoryService.putAsIntAddress(address, JvmUtil.addressOf(fieldObj));
+		}
+		
+	}
+	
+	protected class Address64BitWithoutCompressedOopsJvmAwareObjectFieldInjecter implements JvmAwareObjectFieldInjecter {
+
+		@Override
+		public void injectField(long address, Object fieldObj) {
+			directMemoryService.putLong(address, JvmUtil.addressOf(fieldObj));
+		}
+		
+	}
+	
+	protected class Address64BitWithCompressedOopsJvmAwareObjectFieldInjecter implements JvmAwareObjectFieldInjecter {
+
+		@Override
+		public void injectField(long address, Object fieldObj) {
+			directMemoryService.putAsIntAddress(address, JvmUtil.addressOf(fieldObj));
 		}
 		
 	}
