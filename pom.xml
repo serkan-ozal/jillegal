@@ -25,6 +25,7 @@
         <commons.lang.version>2.6</commons.lang.version>
         <javassist.version>3.17.1-GA</javassist.version>
         <cglib.version>2.2</cglib.version>
+        <reflections.version>0.9.9-RC1</reflections.version>
         <log4j.version>1.2.16</log4j.version>
         <junit.version>4.11</junit.version>
         <mockito.version>1.9.0</mockito.version>
@@ -125,7 +126,6 @@
     </build>
     
    	<dependencies>
-   	    
    	    <dependency>
             <groupId>tr.com.serkanozal</groupId>
             <artifactId>jillegal-agent</artifactId>
@@ -136,7 +136,6 @@
             <artifactId>jcommon</artifactId>
             <version>${jcommon.version}</version>
         </dependency>
-        
 		<dependency>
             <groupId>cglib</groupId>
             <artifactId>cglib</artifactId>
@@ -147,13 +146,21 @@
 			<artifactId>javassist</artifactId>
 			<version>${javassist.version}</version>
 		</dependency>
-		
+		<dependency>
+   			<groupId>org.reflections</groupId>
+    		<artifactId>reflections</artifactId>
+    		<version>${reflections.version}</version>
+		</dependency>
 		<dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
             <version>${guava.version}</version>
         </dependency>
-        
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>${log4j.version}</version>
+        </dependency>
         <!-- test -->
         <dependency>
             <groupId>junit</groupId>
@@ -166,14 +173,6 @@
             <artifactId>commons-lang</artifactId>
             <version>${commons.lang.version}</version>
         </dependency>
-       
-        <!-- logging -->
-        <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>${log4j.version}</version>
-        </dependency>
-       
 	</dependencies>
 	
    	<distributionManagement>

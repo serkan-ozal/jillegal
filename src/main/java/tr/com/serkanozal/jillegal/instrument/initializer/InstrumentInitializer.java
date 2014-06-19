@@ -5,7 +5,7 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.initializer;
+package tr.com.serkanozal.jillegal.instrument.initializer;
 
 import tr.com.serkanozal.jillegal.agent.JillegalAgent;
 import tr.com.serkanozal.jillegal.instrument.transformer.impl.DefaultClassTransformer;

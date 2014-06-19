@@ -8,13 +8,14 @@
 package tr.com.serkanozal.jillegal;
 
 import tr.com.serkanozal.jillegal.initializer.AgentInitializer;
-import tr.com.serkanozal.jillegal.initializer.InstrumentInitializer;
+import tr.com.serkanozal.jillegal.instrument.initializer.InstrumentInitializer;
+import tr.com.serkanozal.jillegal.offheap.initializer.OffHeapInitializer;
 
 public class Jillegal {
 
 	public static final String GROUP_ID = "tr.com.serkanozal";
 	public static final String ARTIFACT_ID = "jillegal";
-	public static String VERSION = "1.0.5-RELEASE";
+	public static String VERSION = "1.0.6-RELEASE";
 	
 	private static boolean initialized = false;
 	
@@ -26,10 +27,11 @@ public class Jillegal {
 		
 	}
 	
-	public static void init() {
+	public synchronized static void init() {
 		if (initialized == false) {
 			AgentInitializer.init();
 			InstrumentInitializer.init();
+			OffHeapInitializer.init();
 			initialized = true;
 		}	
 	}

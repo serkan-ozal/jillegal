@@ -7,6 +7,8 @@
 
 package tr.com.serkanozal.jillegal.config;
 
+import tr.com.serkanozal.jillegal.config.common.CommonConfigService;
+import tr.com.serkanozal.jillegal.config.common.CommonConfigServiceFactory;
 import tr.com.serkanozal.jillegal.instrument.config.InstrumentConfigService;
 import tr.com.serkanozal.jillegal.instrument.config.InstrumentConfigServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.config.OffHeapConfigService;
@@ -16,6 +18,10 @@ public class ConfigManager {
 
 	private ConfigManager() {
 		
+	}
+	
+	public static CommonConfigService getCommonConfigService() {
+		return CommonConfigServiceFactory.getCommonConfigService();
 	}
 	
 	public static InstrumentConfigService getInstrumentConfigService() {

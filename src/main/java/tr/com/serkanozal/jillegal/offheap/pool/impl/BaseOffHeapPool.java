@@ -10,7 +10,9 @@ package tr.com.serkanozal.jillegal.offheap.pool.impl;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
@@ -33,6 +35,8 @@ import tr.com.serkanozal.jillegal.util.JvmUtil;
 public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> implements OffHeapPool<T, P> {
 
 	protected final Logger logger = Logger.getLogger(getClass());
+	
+	protected static final ThreadLocal<Set<Class<?>>> classesInProcessStore = new ThreadLocal<Set<Class<?>>>();
 	
 	protected Class<T> elementType;
 	protected DirectMemoryService directMemoryService;
@@ -88,7 +92,7 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 	             		jvmAwareObjectFieldInjecter = new Address64BitWithCompressedOopsJvmAwareObjectFieldInjecter();
 	             		break;
 	             	case JvmUtil.ADDRESSING_8_BYTE:
-	             		jvmAwareObjectFieldInjecter = new Address64BitWithCompressedOopsJvmAwareObjectFieldInjecter();
+	             		jvmAwareObjectFieldInjecter = new Address64BitWithoutCompressedOopsJvmAwareObjectFieldInjecter();
 	             		break;
 	             	default:    
 	                    throw new AssertionError("Unsupported reference size: " + referenceSize);
@@ -153,18 +157,48 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 	}
 	
 	protected T processObject(T obj) {
-		if (nonPrimitiveFieldInitializers != null) {
-			for (NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig> fieldInitializer : nonPrimitiveFieldInitializers) {
-				fieldInitializer.initializeField(obj);
+		if (nonPrimitiveFieldInitializers != null && !nonPrimitiveFieldInitializers.isEmpty()) {
+			Set<Class<?>> classesInProcess = classesInProcessStore.get();
+			if (classesInProcessStore == null) {
+				classesInProcessStore.set(classesInProcess = new HashSet<Class<?>>());
+			}
+			try {
+				classesInProcess.add(elementType);
+				for (NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig> fieldInitializer : nonPrimitiveFieldInitializers) {
+					if (!classesInProcess.contains(fieldInitializer.fieldType)) {
+						fieldInitializer.initializeField(obj);
+					}	
+				}
+			}
+			finally {
+				classesInProcess.remove(elementType);
+				if (classesInProcess.isEmpty()) {
+					classesInProcessStore.remove();
+				}
 			}
 		}
 		return obj;
 	}
 	
 	protected long processObject(long objAddress) {
-		if (nonPrimitiveFieldInitializers != null) {
-			for (NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig> fieldInitializer : nonPrimitiveFieldInitializers) {
-				fieldInitializer.initializeField( objAddress);
+		if (nonPrimitiveFieldInitializers != null && !nonPrimitiveFieldInitializers.isEmpty()) {
+			Set<Class<?>> classesInProcess = classesInProcessStore.get();
+			if (classesInProcessStore == null) {
+				classesInProcessStore.set(classesInProcess = new HashSet<Class<?>>());
+			}
+			try {
+				classesInProcess.add(elementType);
+				for (NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig> fieldInitializer : nonPrimitiveFieldInitializers) {
+					if (!classesInProcess.contains(fieldInitializer.fieldType)) {
+						fieldInitializer.initializeField(objAddress);
+					}	
+				}
+			}
+			finally {
+				classesInProcess.remove(elementType);
+				if (classesInProcess.isEmpty()) {
+					classesInProcessStore.remove();
+				}
 			}
 		}
 		return objAddress;
@@ -177,16 +211,19 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 		protected C fieldConfig;
 		protected final Field field;
 		protected final long fieldOffset;
+		protected Class<?> fieldType;
 		
 		protected NonPrimitiveFieldInitializer(Field field) {
 			this.field = field;
 			this.fieldOffset = unsafe.objectFieldOffset(field);
+			this.fieldType = field.getType();
 		}
 		
 		protected NonPrimitiveFieldInitializer(C fieldConfig) {
 			this.fieldConfig = fieldConfig;
 			this.field = fieldConfig.getField();
 			this.fieldOffset = unsafe.objectFieldOffset(field);
+			this.fieldType = field.getType();
 		}
 		
 		abstract protected void initializeField(T obj);
@@ -196,11 +233,8 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 	
 	protected class ComplexTypedFieldInitializer extends NonPrimitiveFieldInitializer<OffHeapObjectFieldConfig> {
 		
-		protected Class<?> fieldType;
-		
 		protected ComplexTypedFieldInitializer(Field field) {
 			super(field);
-			this.fieldType = field.getType();
 		}
 		
 		protected ComplexTypedFieldInitializer(OffHeapObjectFieldConfig fieldConfig) {
