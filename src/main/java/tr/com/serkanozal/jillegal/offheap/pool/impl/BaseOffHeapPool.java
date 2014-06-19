@@ -118,9 +118,20 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 		for (Field f : fields) {
 			if (f.getType().isArray()) {
 				nonPrimitiveFieldInitializers.add(new ArrayTypedFieldInitializer(f));
+				if (logger.isInfoEnabled()) {
+					logger.info(
+						"Created \"ArrayTypedFieldInitializer\" for field " + f.getName() + 
+						" in class " + getElementType().getName());
+				}
 			}
 			else if (!f.getType().isPrimitive()) {
 				nonPrimitiveFieldInitializers.add(new ComplexTypedFieldInitializer(f));
+				if (logger.isInfoEnabled()) {
+					logger.info(
+						"Created \"ComplexTypedFieldInitializer\" for field " + 
+						f.getName() + 
+						" in class " + getElementType().getName());
+				}
 			}		
 		}
 	}
@@ -148,7 +159,7 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 					if (logger.isInfoEnabled()) {
 						logger.info(
 							"Created \"ArrayTypedFieldInitializer\" for field " + 
-									arrayFieldConfig.getField().getName() + 
+							arrayFieldConfig.getField().getName() + 
 							" in class " + getElementType().getName());
 					}
 				}

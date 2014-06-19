@@ -17,6 +17,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import tr.com.serkanozal.jcommon.util.ReflectionUtil;
 import tr.com.serkanozal.jillegal.offheap.config.OffHeapConfigService;
 import tr.com.serkanozal.jillegal.offheap.config.OffHeapConfigServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.domain.model.config.OffHeapArrayFieldConfig;
@@ -74,7 +75,7 @@ public class OffHeapUtil {
 	}
 	
 	@SuppressWarnings("rawtypes")
-	public static <T> void injectOffHeapFields(T obj) {
+	public static <T> T injectOffHeapFields(T obj) {
 		if (obj != null) {
 			Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> nonPrimitiveFieldInitializers = 
 					findNonPrimitiveFieldInitializers(obj.getClass());
@@ -84,6 +85,19 @@ public class OffHeapUtil {
 				}
 			}
 		}	
+		return obj;
+	}
+	
+	@SuppressWarnings("rawtypes")
+	public static <T> long injectOffHeapFields(long objAddress, Class<T> clazz) {
+		Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> nonPrimitiveFieldInitializers = 
+				findNonPrimitiveFieldInitializers(clazz);
+		if (nonPrimitiveFieldInitializers != null) {
+			for (NonPrimitiveFieldInitializer fieldInitializer : nonPrimitiveFieldInitializers) {
+				fieldInitializer.initializeField(objAddress);
+			}
+		}
+		return objAddress;
 	}
 	
 	private static <T> Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> findNonPrimitiveFieldInitializers(Class<T> clazz) {
@@ -91,38 +105,71 @@ public class OffHeapUtil {
 			Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> nonPrimitiveFieldInitializers = 
 					nonPrimitiveFieldInitializerMap.get(clazz);
 			if (nonPrimitiveFieldInitializers == null) {
-				nonPrimitiveFieldInitializers = new HashSet<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>>();
-				OffHeapClassConfig classConfig = offHeapConfigService.getOffHeapClassConfig(clazz);
-				if (classConfig != null) {
-					List<OffHeapObjectFieldConfig> objectFieldConfigs = classConfig.getObjectFieldConfigs();
-					if (objectFieldConfigs != null) {
-						for (OffHeapObjectFieldConfig objectFieldConfig : objectFieldConfigs) {
-							nonPrimitiveFieldInitializers.add(new ComplexTypedFieldInitializer(objectFieldConfig));
-							if (logger.isInfoEnabled()) {
-								logger.info(
-									"Created \"ComplexTypedFieldInitializer\" for field " + 
-									objectFieldConfig.getField().getName() + 
-									" in class " + clazz.getName());
-							}
-						}
-					}
-					List<OffHeapArrayFieldConfig> arrayFieldConfigs = classConfig.getArrayFieldConfigs();
-					if (arrayFieldConfigs != null) {
-						for (OffHeapArrayFieldConfig arrayFieldConfig : arrayFieldConfigs) {
-							nonPrimitiveFieldInitializers.add(new ArrayTypedFieldInitializer(arrayFieldConfig));
-							if (logger.isInfoEnabled()) {
-								logger.info(
-									"Created \"ArrayTypedFieldInitializer\" for field " + 
-											arrayFieldConfig.getField().getName() + 
-									" in class " + clazz.getName());
-							}
-						}
-					}
-				}
+				nonPrimitiveFieldInitializers = findNonPrimitiveFieldInitializersForOnlyConfiguredNonPrimitiveFields(clazz);
 				nonPrimitiveFieldInitializerMap.put(clazz, nonPrimitiveFieldInitializers);
 			}
 			return nonPrimitiveFieldInitializers;
 		}
+	}
+	
+	private static <T> Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> 
+			findNonPrimitiveFieldInitializersForAllNonPrimitiveFields(Class<T> clazz) {
+		Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> nonPrimitiveFieldInitializers =  
+				new HashSet<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>>();
+		List<Field> fields = ReflectionUtil.getAllFields(clazz);
+		for (Field f : fields) {
+			if (f.getType().isArray()) {
+				nonPrimitiveFieldInitializers.add(new ArrayTypedFieldInitializer(f));
+				if (logger.isInfoEnabled()) {
+					logger.info(
+						"Created \"ArrayTypedFieldInitializer\" for field " + f.getName() + 
+						" in class " + clazz.getName());
+				}
+			}
+			else if (!f.getType().isPrimitive()) {
+				nonPrimitiveFieldInitializers.add(new ComplexTypedFieldInitializer(f));
+				if (logger.isInfoEnabled()) {
+					logger.info(
+						"Created \"ComplexTypedFieldInitializer\" for field " + f.getName() + 
+						" in class " + clazz.getName());
+				}
+			}		
+		}
+		return nonPrimitiveFieldInitializers;
+	}
+	
+	private static <T> Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> 
+			findNonPrimitiveFieldInitializersForOnlyConfiguredNonPrimitiveFields(Class<T> clazz) {
+		Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> nonPrimitiveFieldInitializers = 
+				new HashSet<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>>();
+		OffHeapClassConfig classConfig = offHeapConfigService.getOffHeapClassConfig(clazz);
+		if (classConfig != null) {
+			List<OffHeapObjectFieldConfig> objectFieldConfigs = classConfig.getObjectFieldConfigs();
+			if (objectFieldConfigs != null) {
+				for (OffHeapObjectFieldConfig objectFieldConfig : objectFieldConfigs) {
+					nonPrimitiveFieldInitializers.add(new ComplexTypedFieldInitializer(objectFieldConfig));
+					if (logger.isInfoEnabled()) {
+						logger.info(
+							"Created \"ComplexTypedFieldInitializer\" for field " + 
+							objectFieldConfig.getField().getName() + 
+							" in class " + clazz.getName());
+					}
+				}
+			}
+			List<OffHeapArrayFieldConfig> arrayFieldConfigs = classConfig.getArrayFieldConfigs();
+			if (arrayFieldConfigs != null) {
+				for (OffHeapArrayFieldConfig arrayFieldConfig : arrayFieldConfigs) {
+					nonPrimitiveFieldInitializers.add(new ArrayTypedFieldInitializer(arrayFieldConfig));
+					if (logger.isInfoEnabled()) {
+						logger.info(
+							"Created \"ArrayTypedFieldInitializer\" for field " + 
+							arrayFieldConfig.getField().getName() + 
+							" in class " + clazz.getName());
+					}
+				}
+			}
+		}
+		return nonPrimitiveFieldInitializers;
 	}
 	
 	private static abstract class NonPrimitiveFieldInitializer<C extends OffHeapFieldConfig> {
