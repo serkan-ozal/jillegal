@@ -10,6 +10,7 @@ package tr.com.serkanozal.jillegal;
 import tr.com.serkanozal.jillegal.initializer.AgentInitializer;
 import tr.com.serkanozal.jillegal.instrument.initializer.InstrumentInitializer;
 import tr.com.serkanozal.jillegal.offheap.initializer.OffHeapInitializer;
+import tr.com.serkanozal.jillegal.util.JillegalAwarer;
 
 public class Jillegal {
 
@@ -32,6 +33,7 @@ public class Jillegal {
 			AgentInitializer.init();
 			InstrumentInitializer.init();
 			OffHeapInitializer.init();
+			JillegalAwarer.makeJillegalAware();
 			initialized = true;
 		}	
 	}

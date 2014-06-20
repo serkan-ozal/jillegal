@@ -5,8 +5,12 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.domain.model.config;
+package tr.com.serkanozal.jillegal.util;
 
-public interface JillegalConfig {
+public abstract class JillegalAware {
 	
+	static {
+		JillegalAwarer.makeJillegalAware();
+	}
+    
 }

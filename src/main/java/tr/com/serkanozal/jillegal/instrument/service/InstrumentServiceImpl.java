@@ -18,14 +18,14 @@ import tr.com.serkanozal.jillegal.instrument.domain.model.GeneratedClass;
 import tr.com.serkanozal.jillegal.instrument.factory.DefaultInstrumenterFactory;
 import tr.com.serkanozal.jillegal.instrument.factory.InstrumenterFactory;
 
-public class InstrumenterServiceImpl implements InstrumenterService {
+public class InstrumentServiceImpl implements InstrumentService {
 
 	private final Logger logger = Logger.getLogger(getClass());
 	
 	private InstrumenterFactory defaultInstrumenterFactory = new DefaultInstrumenterFactory();
 	private Map<Class<?>, InstrumenterFactory> instrumenterFactoryMap = new HashMap<Class<?>, InstrumenterFactory>();
 	
-	public InstrumenterServiceImpl() {
+	public InstrumentServiceImpl() {
 		init();
 	}
 	

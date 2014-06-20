@@ -14,12 +14,13 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
-import tr.com.serkanozal.jcommon.util.ReflectionUtil;
 import tr.com.serkanozal.jillegal.offheap.config.provider.OffHeapConfigProvider;
 import tr.com.serkanozal.jillegal.offheap.domain.builder.config.OffHeapArrayFieldConfigBuilder;
 import tr.com.serkanozal.jillegal.offheap.domain.builder.config.OffHeapClassConfigBuilder;
 import tr.com.serkanozal.jillegal.offheap.domain.builder.config.OffHeapObjectFieldConfigBuilder;
 import tr.com.serkanozal.jillegal.offheap.domain.model.config.OffHeapClassConfig;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAllocationConfigType;
+import tr.com.serkanozal.jillegal.util.ReflectionUtil;
 
 public class AnnotationBasedOffHeapConfigProvider implements OffHeapConfigProvider {
 
@@ -37,11 +38,17 @@ public class AnnotationBasedOffHeapConfigProvider implements OffHeapConfigProvid
 		return classConfig;
 	}
 	
+	@SuppressWarnings("unchecked")
 	protected OffHeapClassConfig findOffHeapClassConfig(Class<?> clazz) {
-		List<Field> fields = ReflectionUtil.getAllFields(clazz, AllocateAtOffHeap.class);
+		OffHeapAware offHeapAware = clazz.getAnnotation(OffHeapAware.class);
+		List<Field> fields = ReflectionUtil.getAllFields(clazz, OffHeapObject.class, OffHeapArray.class);
 		OffHeapClassConfigBuilder classConfigBuilder = 
 				new OffHeapClassConfigBuilder().
-						clazz(clazz);
+						clazz(clazz).
+						nonPrimitiveFieldAllocationConfigType(
+								offHeapAware != null ? 
+										offHeapAware.nonPrimitiveFieldAllocationConfigType() : 
+										NonPrimitiveFieldAllocationConfigType.getDefault());
 		for (Field f : fields) {
 			boolean processed = false;
 			OffHeapObject offHeapObject = f.getAnnotation(OffHeapObject.class);

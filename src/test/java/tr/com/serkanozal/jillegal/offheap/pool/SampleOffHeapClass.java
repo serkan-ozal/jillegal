@@ -7,14 +7,14 @@
 
 package tr.com.serkanozal.jillegal.offheap.pool;
 
-import tr.com.serkanozal.jillegal.offheap.config.provider.annotation.AllocateAtOffHeap;
+import tr.com.serkanozal.jillegal.offheap.config.provider.annotation.OffHeapObject;
 
 public class SampleOffHeapClass {
 
 	private int i;
 	private long l;
 	private int order;
-	@AllocateAtOffHeap
+	@OffHeapObject
 	private SampleOffHeapAggregatedClass sampleOffHeapAggregatedClass;
 	
 	public int getI() {

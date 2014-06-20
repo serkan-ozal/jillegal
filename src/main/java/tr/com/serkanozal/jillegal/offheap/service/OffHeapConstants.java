@@ -13,6 +13,6 @@ public interface OffHeapConstants {
 
 	int DEFAULT_OBJECT_COUNT = 1000;
 	NonPrimitiveFieldAllocationConfigType DEFAULT_NON_PRIMITIVE_FIELD_ALLOCATION_CONFIG_TYPE = 
-			NonPrimitiveFieldAllocationConfigType.ONLY_CONFIGURED_NON_PRIMITIVE_FIELDS;
+			NonPrimitiveFieldAllocationConfigType.getDefault();
 	
 }

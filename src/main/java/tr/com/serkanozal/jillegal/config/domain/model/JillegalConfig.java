@@ -5,10 +5,8 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.offheap.domain.model.config;
+package tr.com.serkanozal.jillegal.config.domain.model;
 
-import tr.com.serkanozal.jillegal.config.domain.model.JillegalConfig;
-
-public interface OffHeapConfig extends JillegalConfig {
+public interface JillegalConfig {
 	
 }

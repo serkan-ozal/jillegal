@@ -11,7 +11,7 @@ import tr.com.serkanozal.jillegal.instrument.Instrumenter;
 import tr.com.serkanozal.jillegal.instrument.domain.model.GeneratedClass;
 import tr.com.serkanozal.jillegal.instrument.factory.InstrumenterFactory;
 
-public interface InstrumenterService {
+public interface InstrumentService {
 
 	InstrumenterFactory getDefaultInstrumenterFactory();
 	void setDefaultInstrumenterFactory(InstrumenterFactory instrumenterFactory);

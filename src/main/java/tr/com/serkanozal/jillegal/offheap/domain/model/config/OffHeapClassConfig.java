@@ -10,10 +10,12 @@ package tr.com.serkanozal.jillegal.offheap.domain.model.config;
 import java.util.List;
 
 import tr.com.serkanozal.jillegal.domain.model.Mergeable;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAllocationConfigType;
 
 public class OffHeapClassConfig implements OffHeapConfig, Mergeable<OffHeapClassConfig> {
 	
 	protected Class<?> clazz;
+	protected NonPrimitiveFieldAllocationConfigType nonPrimitiveFieldAllocationConfigType;
 	protected List<OffHeapObjectFieldConfig> objectFieldConfigs;
 	protected List<OffHeapArrayFieldConfig> arrayFieldConfigs;
 	
@@ -23,6 +25,15 @@ public class OffHeapClassConfig implements OffHeapConfig, Mergeable<OffHeapClass
 	
 	public void setClazz(Class<?> clazz) {
 		this.clazz = clazz;
+	}
+	
+	public NonPrimitiveFieldAllocationConfigType getNonPrimitiveFieldAllocationConfigType() {
+		return nonPrimitiveFieldAllocationConfigType;
+	}
+	
+	public void setNonPrimitiveFieldAllocationConfigType(
+			NonPrimitiveFieldAllocationConfigType nonPrimitiveFieldAllocationConfigType) {
+		this.nonPrimitiveFieldAllocationConfigType = nonPrimitiveFieldAllocationConfigType;
 	}
 	
 	public List<OffHeapObjectFieldConfig> getObjectFieldConfigs() {

@@ -18,12 +18,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.log4j.Logger;
 
-import tr.com.serkanozal.jcommon.util.ReflectionUtil;
 import tr.com.serkanozal.jillegal.Jillegal;
 import tr.com.serkanozal.jillegal.instrument.Instrumenter;
 import tr.com.serkanozal.jillegal.instrument.domain.model.GeneratedClass;
-import tr.com.serkanozal.jillegal.instrument.service.InstrumenterService;
-import tr.com.serkanozal.jillegal.instrument.service.InstrumenterServiceFactory;
+import tr.com.serkanozal.jillegal.instrument.service.InstrumentService;
+import tr.com.serkanozal.jillegal.instrument.service.InstrumentServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
@@ -31,6 +30,7 @@ import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.factory.DefaultOffHeapPoolFactory;
 import tr.com.serkanozal.jillegal.offheap.pool.factory.OffHeapPoolFactory;
+import tr.com.serkanozal.jillegal.util.ReflectionUtil;
 
 public class OffHeapServiceImpl implements OffHeapService {
 
@@ -108,7 +108,7 @@ public class OffHeapServiceImpl implements OffHeapService {
 		try {
 			Jillegal.init();
 			
-			InstrumenterService instrumenterService = InstrumenterServiceFactory.getInstrumenterService();
+			InstrumentService instrumenterService = InstrumentServiceFactory.getInstrumentService();
 	        Instrumenter<T> instrumenter = instrumenterService.getInstrumenter(elementType).
 	        									addAdditionalClass(DirectMemoryServiceFactory.class).
 	        									addAdditionalClass(DirectMemoryService.class);

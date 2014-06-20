@@ -10,8 +10,12 @@ package tr.com.serkanozal.jillegal.config;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
 public abstract class BaseConfigService<P extends ConfigProvider> implements ConfigService<P> {
 
+	protected final Logger logger = Logger.getLogger(getClass());
+	
 	protected Set<P> configProviders = new HashSet<P>();
 	
 	protected BaseConfigService() {

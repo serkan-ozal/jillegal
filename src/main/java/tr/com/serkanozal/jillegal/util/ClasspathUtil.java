@@ -26,6 +26,7 @@ public class ClasspathUtil {
 	private static final Logger logger = Logger.getLogger(ClasspathUtil.class);
 	
 	private static Set<URL> classpathUrls;
+	private static String fullClasspath;
 	
 	static {
 		init();
@@ -39,9 +40,20 @@ public class ClasspathUtil {
 		return classpathUrls;
 	}
 	
+	public static String getFullClasspath() {
+		return fullClasspath;
+	}
+	
 	private static void init() {
 		classpathUrls = findClasspathUrls();
 		logger.info("Found classpath URL list: " + classpathUrls);
+		StringBuilder classpathBuilder = new StringBuilder();
+		if (classpathUrls != null) {
+			for (URL url : classpathUrls) {
+				classpathBuilder.append(url.getPath()).append(File.pathSeparator);
+			}
+		}
+		fullClasspath = classpathBuilder.toString();
 	}
 	
 	private static Set<URL> findClasspathUrls() {

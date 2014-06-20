@@ -14,15 +14,23 @@ import tr.com.serkanozal.jillegal.domain.builder.Builder;
 import tr.com.serkanozal.jillegal.offheap.domain.model.config.OffHeapArrayFieldConfig;
 import tr.com.serkanozal.jillegal.offheap.domain.model.config.OffHeapClassConfig;
 import tr.com.serkanozal.jillegal.offheap.domain.model.config.OffHeapObjectFieldConfig;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAllocationConfigType;
 
 public class OffHeapClassConfigBuilder implements Builder<OffHeapClassConfig> {
 
 	private Class<?> clazz;
+	private NonPrimitiveFieldAllocationConfigType nonPrimitiveFieldAllocationConfigType;
 	private List<OffHeapObjectFieldConfig> objectFieldConfigs;
 	private List<OffHeapArrayFieldConfig> arrayFieldConfigs;
 	
 	public OffHeapClassConfigBuilder clazz(Class<?> clazz) {
 		this.clazz = clazz;
+		return this;
+	}
+	
+	public OffHeapClassConfigBuilder nonPrimitiveFieldAllocationConfigType(
+			NonPrimitiveFieldAllocationConfigType nonPrimitiveFieldAllocationConfigType) {
+		this.nonPrimitiveFieldAllocationConfigType = nonPrimitiveFieldAllocationConfigType;
 		return this;
 	}
 	
@@ -56,6 +64,7 @@ public class OffHeapClassConfigBuilder implements Builder<OffHeapClassConfig> {
 	public OffHeapClassConfig build() {
 		OffHeapClassConfig config = new OffHeapClassConfig();
 		config.setClazz(clazz);
+		config.setNonPrimitiveFieldAllocationConfigType(nonPrimitiveFieldAllocationConfigType);
 		config.setObjectFieldConfigs(objectFieldConfigs);
 		config.setArrayFieldConfigs(arrayFieldConfigs);
 		return config;

@@ -1,17 +1,8 @@
-/*
- * Copyright 2002-2013 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+/**
+ * @author SERKAN OZAL
+ *         
+ *         E-Mail: <a href="mailto:serkanozal86@hotmail.com">serkanozal86@hotmail.com</a>
+ *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
 package tr.com.serkanozal.jillegal.util;
@@ -26,13 +17,10 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-/**
- * @author Serkan ÖZAL
- */
 public class ReflectionUtil {
 
 	private static final Logger logger = Logger.getLogger(ReflectionUtil.class);
-	
+
 	private ReflectionUtil() {
 		
 	}
@@ -47,7 +35,7 @@ public class ReflectionUtil {
 				logger.error("Unable to get field " + fieldName + " from class " + cls.getName(), e);
 			} 
 			catch (NoSuchFieldException e) {
-				logger.warn("Unable to get field " + fieldName + " from class " + cls.getName() + ". " + 
+				logger.debug("Unable to get field " + fieldName + " from class " + cls.getName() + ". " + 
 							 "If there is any super class for class " + cls.getName() + ", it will be tried for getting field ...");
 			}
 			if (field != null) {
@@ -59,35 +47,39 @@ public class ReflectionUtil {
 		return null;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public static List<Field> getAllFields(Class<?> cls) {
 		List<Field> fields = new ArrayList<Field>();
-		createFields(cls, fields, null);
+		createFields(cls, fields);
 		return fields;
 	}
 
-	public static List<Field> getAllFields(Class<?> cls, Class<? extends Annotation> annotationFilter) {
+	public static List<Field> getAllFields(Class<?> cls, Class<? extends Annotation> ... annotationFilters) {
 		List<Field> fields = new ArrayList<Field>();
-		createFields(cls, fields, annotationFilter);
+		createFields(cls, fields, annotationFilters);
 		return fields;
 	}
 	
 	private static void createFields(Class<?> cls, List<Field> fields, 
-			Class<? extends Annotation> annotationFilter) {
+			Class<? extends Annotation> ... annotationFilters) {
 		if (cls == null || cls.equals(Object.class)) {
 			return;
 		}
 		
 		Class<?> superCls = cls.getSuperclass();
-		createFields(superCls, fields, annotationFilter);
+		createFields(superCls, fields, annotationFilters);
 		
 		for (Field f : cls.getDeclaredFields()) {
 			f.setAccessible(true);
-			if (annotationFilter == null) {
+			if (annotationFilters == null || annotationFilters.length == 0) {
 				fields.add(f);
 			}	
 			else {
-				if (f.getAnnotation(annotationFilter) != null) {
-					fields.add(f);
+				for (Class<? extends Annotation> annotationFilter : annotationFilters) {
+					if (f.getAnnotation(annotationFilter) != null) {
+						fields.add(f);
+						break;
+					}	
 				}	
 			}
 		}	
@@ -115,35 +107,82 @@ public class ReflectionUtil {
 		return null;
 	}
 	
+	public static Method getMethod(Class<?> cls, String methodName, Class<?>[] paramTypes) {
+		while (cls != null && cls.equals(Object.class) == false) {
+			Method method = null;
+			for (Method m : cls.getDeclaredMethods()) {
+				if (m.getName().equals(methodName)) {
+					Class<?>[] methodParamTypes = m.getParameterTypes();
+					if (paramTypes == null) {
+						if (methodParamTypes.length == 0) {
+							method = m;
+							break;
+						}	
+					}	
+					else {
+						if (paramTypes.length == methodParamTypes.length) {
+							boolean allParamsAreSame = true;
+							int length = paramTypes.length;
+							for (int i = 0; i < length; i++) {
+								if (paramTypes[i].equals(methodParamTypes[i]) == false) {
+									allParamsAreSame = false;
+									break;
+								}
+							}
+							if (allParamsAreSame) {
+								method = m;
+								break;
+							}
+						}
+					}
+				}
+			}
+			if (method == null) {
+				logger.warn("Unable to get method " + methodName + " from class " + cls.getName() + ". " + 
+							 "If there is any super class for class " + cls.getName() + ", it will be tried for getting method ...");
+			}
+			else {
+				method.setAccessible(true);
+				return method;
+			}
+			cls = cls.getSuperclass();
+		}
+		return null;
+	}
+	
+	@SuppressWarnings("unchecked")
 	public static List<Method> getAllMethods(Class<?> cls) {
 		List<Method> methods = new ArrayList<Method>();
-		createMethods(cls, methods, null);
+		createMethods(cls, methods);
 		return methods;
 	}
 	
-	public static List<Method> getAllMethods(Class<?> cls, Class<? extends Annotation> annotationFilter) {
+	public static List<Method> getAllMethods(Class<?> cls, Class<? extends Annotation> ... annotationFilters) {
 		List<Method> methods = new ArrayList<Method>();
-		createMethods(cls, methods, annotationFilter);
+		createMethods(cls, methods, annotationFilters);
 		return methods;
 	}
 	
 	private static void createMethods(Class<?> cls, List<Method> methods, 
-			Class<? extends Annotation> annotationFilter) {
+			Class<? extends Annotation> ... annotationFilters) {
 		if (cls == null || cls.equals(Object.class)) {
 			return;
 		}
 		
 		Class<?> superCls = cls.getSuperclass();
-		createMethods(superCls, methods, annotationFilter);
+		createMethods(superCls, methods, annotationFilters);
 		
 		for (Method m : cls.getDeclaredMethods()) {
 			m.setAccessible(true);
-			if (annotationFilter == null) {
+			if (annotationFilters == null || annotationFilters.length == 0) {
 				methods.add(m);
 			}	
 			else {
-				if (m.getAnnotation(annotationFilter) != null) {
-					methods.add(m);
+				for (Class<? extends Annotation> annotationFilter : annotationFilters) {
+					if (m.getAnnotation(annotationFilter) != null) {
+						methods.add(m);
+						break;
+					}
 				}	
 			}
 		}	

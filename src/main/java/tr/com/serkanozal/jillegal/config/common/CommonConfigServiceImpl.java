@@ -10,16 +10,12 @@ package tr.com.serkanozal.jillegal.config.common;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
-
 import tr.com.serkanozal.jillegal.config.BaseConfigService;
 import tr.com.serkanozal.jillegal.config.common.provider.CommonConfigProvider;
 import tr.com.serkanozal.jillegal.config.common.provider.annotation.AnnotationBasedCommonConfigProvider;
 
 public class CommonConfigServiceImpl extends BaseConfigService<CommonConfigProvider> implements CommonConfigService {
 
-	protected final Logger logger = Logger.getLogger(getClass());
-	
 	protected Set<Class<?>> jillegalAwareClasses;
 	
 	@Override

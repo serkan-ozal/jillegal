@@ -17,19 +17,20 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import tr.com.serkanozal.jcommon.util.ReflectionUtil;
 import tr.com.serkanozal.jillegal.offheap.config.OffHeapConfigService;
 import tr.com.serkanozal.jillegal.offheap.config.OffHeapConfigServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.domain.model.config.OffHeapArrayFieldConfig;
 import tr.com.serkanozal.jillegal.offheap.domain.model.config.OffHeapClassConfig;
 import tr.com.serkanozal.jillegal.offheap.domain.model.config.OffHeapFieldConfig;
 import tr.com.serkanozal.jillegal.offheap.domain.model.config.OffHeapObjectFieldConfig;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAllocationConfigType;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 import tr.com.serkanozal.jillegal.util.JillegalUtil;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
+import tr.com.serkanozal.jillegal.util.ReflectionUtil;
 
 @SuppressWarnings("restriction")
 public class OffHeapUtil {
@@ -100,19 +101,39 @@ public class OffHeapUtil {
 		return objAddress;
 	}
 	
+	@SuppressWarnings("incomplete-switch")
 	private static <T> Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> findNonPrimitiveFieldInitializers(Class<T> clazz) {
 		synchronized (nonPrimitiveFieldInitializerMap) {
 			Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> nonPrimitiveFieldInitializers = 
 					nonPrimitiveFieldInitializerMap.get(clazz);
 			if (nonPrimitiveFieldInitializers == null) {
-				nonPrimitiveFieldInitializers = findNonPrimitiveFieldInitializersForOnlyConfiguredNonPrimitiveFields(clazz);
-				nonPrimitiveFieldInitializerMap.put(clazz, nonPrimitiveFieldInitializers);
+				NonPrimitiveFieldAllocationConfigType nonPrimitiveFieldAllocationConfigType = null;
+				OffHeapClassConfig offHeapClassConfig = offHeapConfigService.getOffHeapClassConfig(clazz);
+				if (offHeapClassConfig != null) {
+					nonPrimitiveFieldAllocationConfigType = offHeapClassConfig.getNonPrimitiveFieldAllocationConfigType();
+				}
+				if (nonPrimitiveFieldAllocationConfigType == null) {
+					nonPrimitiveFieldAllocationConfigType = NonPrimitiveFieldAllocationConfigType.getDefault();
+				}
+				switch (nonPrimitiveFieldAllocationConfigType) {
+					case ALL_NON_PRIMITIVE_FIELDS:
+						nonPrimitiveFieldInitializers = 
+							findNonPrimitiveFieldInitializersForAllNonPrimitiveFields(clazz);
+						break;
+					case ONLY_CONFIGURED_NON_PRIMITIVE_FIELDS:
+						nonPrimitiveFieldInitializers = 
+							findNonPrimitiveFieldInitializersForOnlyConfiguredNonPrimitiveFields(clazz);
+						break;
+				}	
+				if (nonPrimitiveFieldInitializers != null) {
+					nonPrimitiveFieldInitializerMap.put(clazz, nonPrimitiveFieldInitializers);
+				}	
 			}
 			return nonPrimitiveFieldInitializers;
 		}
 	}
 	
-	private static <T> Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> 
+	public static <T> Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> 
 			findNonPrimitiveFieldInitializersForAllNonPrimitiveFields(Class<T> clazz) {
 		Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> nonPrimitiveFieldInitializers =  
 				new HashSet<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>>();
@@ -138,7 +159,7 @@ public class OffHeapUtil {
 		return nonPrimitiveFieldInitializers;
 	}
 	
-	private static <T> Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> 
+	public static <T> Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> 
 			findNonPrimitiveFieldInitializersForOnlyConfiguredNonPrimitiveFields(Class<T> clazz) {
 		Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> nonPrimitiveFieldInitializers = 
 				new HashSet<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>>();
@@ -172,10 +193,9 @@ public class OffHeapUtil {
 		return nonPrimitiveFieldInitializers;
 	}
 	
-	private static abstract class NonPrimitiveFieldInitializer<C extends OffHeapFieldConfig> {
+	public static abstract class NonPrimitiveFieldInitializer<C extends OffHeapFieldConfig> {
 		
 		protected final sun.misc.Unsafe unsafe = JvmUtil.getUnsafe();
-		@SuppressWarnings("unused")
 		protected C fieldConfig;
 		protected final Field field;
 		protected final long fieldOffset;
@@ -193,19 +213,35 @@ public class OffHeapUtil {
 			this.fieldOffset = unsafe.objectFieldOffset(field);
 			this.fieldType = field.getType();
 		}
-		
-		abstract protected void initializeField(Object obj);
-		abstract protected void initializeField(long objAddress);
+
+		public C getFieldConfig() {
+			return fieldConfig;
+		}
+
+		public Field getField() {
+			return field;
+		}
+
+		public long getFieldOffset() {
+			return fieldOffset;
+		}
+
+		public Class<?> getFieldType() {
+			return fieldType;
+		}
+
+		abstract public void initializeField(Object obj);
+		abstract public void initializeField(long objAddress);
 		
 	}
 	
-	private static class ComplexTypedFieldInitializer extends NonPrimitiveFieldInitializer<OffHeapObjectFieldConfig> {
+	public static class ComplexTypedFieldInitializer extends NonPrimitiveFieldInitializer<OffHeapObjectFieldConfig> {
 		
-		protected ComplexTypedFieldInitializer(Field field) {
+		public ComplexTypedFieldInitializer(Field field) {
 			super(field);
 		}
 		
-		protected ComplexTypedFieldInitializer(OffHeapObjectFieldConfig fieldConfig) {
+		public ComplexTypedFieldInitializer(OffHeapObjectFieldConfig fieldConfig) {
 			super(fieldConfig);
 			this.fieldType = 
 					(fieldConfig.getFieldType() == null || fieldConfig.getFieldType().equals(Object.class)) ? 
@@ -213,13 +249,13 @@ public class OffHeapUtil {
 							fieldConfig.getFieldType();
 		}
 		
-		protected void initializeField(Object obj) {
+		public void initializeField(Object obj) {
 			jvmAwareObjectFieldInjecter.injectField(
 					JvmUtil.addressOf(obj) + fieldOffset, 
 					offHeapService.newObjectAsAddress(fieldType));
 		}
 		
-		protected void initializeField(long objAddress) {
+		public void initializeField(long objAddress) {
 			jvmAwareObjectFieldInjecter.injectField(
 					objAddress + fieldOffset, 
 					offHeapService.newObjectAsAddress(fieldType));
@@ -227,19 +263,19 @@ public class OffHeapUtil {
 		
 	}
 	
-	private static class ArrayTypedFieldInitializer extends NonPrimitiveFieldInitializer<OffHeapArrayFieldConfig> {
+	public static class ArrayTypedFieldInitializer extends NonPrimitiveFieldInitializer<OffHeapArrayFieldConfig> {
 		
 		protected Class<?> elementType;
 		protected Class<?> arrayType;
 		protected int length;
 		
-		protected ArrayTypedFieldInitializer(Field field) {
+		public ArrayTypedFieldInitializer(Field field) {
 			super(field);
 			this.elementType = field.getType().getComponentType();
 			this.arrayType = field.getType();
 		}
 		
-		protected ArrayTypedFieldInitializer(OffHeapArrayFieldConfig fieldConfig) {
+		public ArrayTypedFieldInitializer(OffHeapArrayFieldConfig fieldConfig) {
 			super(fieldConfig);
 			this.elementType = 
 					(fieldConfig.getElementType() == null || fieldConfig.getElementType().equals(Object.class)) ? 
@@ -248,14 +284,26 @@ public class OffHeapUtil {
 			this.arrayType = Array.newInstance(elementType, 0).getClass();
 			this.length = fieldConfig.getLength();
 		}
-		
-		protected void initializeField(Object obj) {
+
+		public Class<?> getElementType() {
+			return elementType;
+		}
+
+		public Class<?> getArrayType() {
+			return arrayType;
+		}
+
+		public int getLength() {
+			return length;
+		}
+
+		public void initializeField(Object obj) {
 			jvmAwareObjectFieldInjecter.injectField(
 					JvmUtil.addressOf(obj) + fieldOffset, 
 					offHeapService.newArrayAsAddress(arrayType, length));
 		}
 		
-		protected void initializeField(long objAddress) {
+		public void initializeField(long objAddress) {
 			jvmAwareObjectFieldInjecter.injectField(
 					objAddress + fieldOffset, 
 					offHeapService.newArrayAsAddress(arrayType, length));
@@ -263,13 +311,13 @@ public class OffHeapUtil {
 		
 	}
 	
-	private interface JvmAwareObjectFieldInjecter {
+	public interface JvmAwareObjectFieldInjecter {
 		
 		void injectField(long fieldAddress, long fieldObjectAddress);
 	
 	}
 	
-	private static class Address32BitJvmAwareObjectFieldInjecter implements JvmAwareObjectFieldInjecter {
+	public static class Address32BitJvmAwareObjectFieldInjecter implements JvmAwareObjectFieldInjecter {
 
 		@Override
 		public void injectField(long fieldAddress, long fieldObjectAddress) {
@@ -278,7 +326,7 @@ public class OffHeapUtil {
 		
 	}
 	
-	private static class Address64BitWithoutCompressedOopsJvmAwareObjectFieldInjecter implements JvmAwareObjectFieldInjecter {
+	public static class Address64BitWithoutCompressedOopsJvmAwareObjectFieldInjecter implements JvmAwareObjectFieldInjecter {
 
 		@Override
 		public void injectField(long fieldAddress, long fieldObjectAddress) {
@@ -287,7 +335,7 @@ public class OffHeapUtil {
 		
 	}
 	
-	private static class Address64BitWithCompressedOopsJvmAwareObjectFieldInjecter implements JvmAwareObjectFieldInjecter {
+	public static class Address64BitWithCompressedOopsJvmAwareObjectFieldInjecter implements JvmAwareObjectFieldInjecter {
 
 		@Override
 		public void injectField(long fieldAddress, long fieldObjectAddress) {

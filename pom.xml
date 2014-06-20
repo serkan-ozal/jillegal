@@ -20,12 +20,12 @@
         <maven.deploy.plugin.version>2.6</maven.deploy.plugin.version>
         
         <jillegal.agent.version>1.0.4-RELEASE</jillegal.agent.version>
-        <jcommon.version>1.0.1-RELEASE</jcommon.version>
         <guava.version>13.0</guava.version>
         <commons.lang.version>2.6</commons.lang.version>
         <javassist.version>3.17.1-GA</javassist.version>
         <cglib.version>2.2</cglib.version>
         <reflections.version>0.9.9-RC1</reflections.version>
+        <groovy.version>1.8.4</groovy.version>
         <log4j.version>1.2.16</log4j.version>
         <junit.version>4.11</junit.version>
         <mockito.version>1.9.0</mockito.version>
@@ -132,11 +132,6 @@
             <version>${jillegal.agent.version}</version>
         </dependency>
 		<dependency>
-            <groupId>tr.com.serkanozal</groupId>
-            <artifactId>jcommon</artifactId>
-            <version>${jcommon.version}</version>
-        </dependency>
-		<dependency>
             <groupId>cglib</groupId>
             <artifactId>cglib</artifactId>
             <version>${cglib.version}</version>
@@ -156,6 +151,16 @@
             <artifactId>guava</artifactId>
             <version>${guava.version}</version>
         </dependency>
+        <dependency>
+			<groupId>org.codehaus.groovy</groupId>
+			<artifactId>groovy</artifactId>
+			<version>${groovy.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.codehaus.groovy</groupId>
+			<artifactId>groovy-all</artifactId>
+			<version>${groovy.version}</version>
+		</dependency>
         <dependency>
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
