@@ -27,7 +27,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected long classPointerOffset;
 	protected long classPointerSize;
 	protected JvmAwareClassPointerUpdater jvmAwareClassPointerUpdater;
-	
+
 	public BaseObjectOffHeapPool(Class<T> objectType) {
 		super(objectType);
 	}
@@ -64,13 +64,26 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 			if (defaultConstructor != null) {
 				defaultConstructor.setAccessible(true);
 				this.sampleObject = defaultConstructor.newInstance();
+				sampleObjectCreated = true;
 			}
 		} 
 		catch (Throwable t) {
-			logger.error("Unable to create a sample object for class " + elementType.getName(), t);
+			//logger.error("Unable to create a sample object for class " + elementType.getName(), t);
 		} 
 		if (sampleObjectCreated == false) {
+			try {
+				this.sampleObject = elementType.newInstance();
+				sampleObjectCreated = true;
+			}	
+			catch (Throwable t) {
+				//logger.error("Unable to create a sample object for class " + elementType.getName(), t);
+			} 
+		}
+		if (sampleObjectCreated == false) {
 			this.sampleObject = (T) directMemoryService.allocateInstance(elementType);
+		}
+		if (sampleObject == null) {
+			throw new IllegalStateException("Unable to create a sample object for class " + elementType.getName());
 		}
 		long address = directMemoryService.addressOf(sampleObject);
 		this.offHeapSampleObjectAddress = directMemoryService.allocateMemory(objectSize);
