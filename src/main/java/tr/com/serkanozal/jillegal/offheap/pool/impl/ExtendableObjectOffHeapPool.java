@@ -13,14 +13,16 @@ import java.util.List;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ExtendableObjectOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
+import tr.com.serkanozal.jillegal.offheap.pool.ContentAwareOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.DeeplyForkableObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
 
 public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, ExtendableObjectOffHeapPoolCreateParameter<T>> 
-		implements ObjectOffHeapPool<T, ExtendableObjectOffHeapPoolCreateParameter<T>> {
+		implements 	ObjectOffHeapPool<T, ExtendableObjectOffHeapPoolCreateParameter<T>>,
+					ContentAwareOffHeapPool<T, ExtendableObjectOffHeapPoolCreateParameter<T>> {
 
 	protected DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> rootForkableOffHeapPool;
-	protected List<DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>>> previousForkableOffHeapPoolList = 
+	protected List<DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>>> forkableOffHeapPoolList = 
 					new ArrayList<DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>>>();
 	protected DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> currentForkableOffHeapPool;
 			
@@ -57,8 +59,36 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	}
 	
 	@Override
-	public void reset() {
-		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : previousForkableOffHeapPoolList) {
+	public boolean isMine(T element) {
+		if (element == null) {
+			return false;
+		}
+		else {
+			return isMine(directMemoryService.addressOf(element));
+		}	
+	}
+
+	@SuppressWarnings("rawtypes")
+	@Override
+	public boolean isMine(long address) {
+		if (currentForkableOffHeapPool instanceof ContentAwareOffHeapPool) {
+			if (((ContentAwareOffHeapPool)currentForkableOffHeapPool).isMine(address)) {
+				return true;
+			}
+		}
+		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
+			if (forkableOffHeapPool != currentForkableOffHeapPool && forkableOffHeapPool instanceof ContentAwareOffHeapPool) {
+				if (((ContentAwareOffHeapPool)forkableOffHeapPool).isMine(address)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
+	@Override
+	public synchronized void reset() {
+		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
 			if (forkableOffHeapPool != rootForkableOffHeapPool) {
 				forkableOffHeapPool.free();
 			}	
@@ -70,8 +100,8 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	}
 	
 	@Override
-	public void free() {
-		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : previousForkableOffHeapPoolList) {
+	public synchronized void free() {
+		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
 			forkableOffHeapPool.free();
 		}
 		if (currentForkableOffHeapPool != null) {
@@ -80,7 +110,7 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	}
 
 	@Override
-	public void init(ExtendableObjectOffHeapPoolCreateParameter<T> parameter) {
+	public synchronized void init(ExtendableObjectOffHeapPoolCreateParameter<T> parameter) {
 		init(parameter.getForkableObjectOffHeapPool());
 	}
 	
@@ -92,7 +122,7 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	protected void extend() {
 		DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> newForkableOffHeapPool = 
 				currentForkableOffHeapPool.fork();
-		previousForkableOffHeapPoolList.add(currentForkableOffHeapPool);
+		forkableOffHeapPoolList.add(currentForkableOffHeapPool);
 		currentForkableOffHeapPool = 
 				(DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>>) newForkableOffHeapPool;
 	}

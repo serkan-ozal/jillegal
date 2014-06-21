@@ -38,12 +38,12 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		init(elementType, objectCount, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
 	}
 	
-	protected synchronized void init() {
-		this.currentAddress = allocatedAddress - objectSize;
+	protected void init() {
+		this.currentAddress = allocationStartAddress - objectSize;
 		
 		// Copy sample object to allocated memory region for each object
 		for (long l = 0; l < objectCount; l++) {
-			directMemoryService.copyMemory(offHeapSampleObjectAddress, allocatedAddress + (l * objectSize), objectSize);
+			directMemoryService.copyMemory(offHeapSampleObjectAddress, allocationStartAddress + (l * objectSize), objectSize);
 		}
 	}
 	
@@ -54,7 +54,7 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 	@SuppressWarnings("unchecked")
 	@Override
 	public synchronized T get() {
-		if (currentAddress >= addressLimit) {
+		if (currentAddress >= allocationEndAddress) {
 			return null;
 		}
 		long address = (currentAddress += objectSize);
@@ -65,7 +65,7 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 	
 	@Override
 	public synchronized long getAsAddress() {
-		if (currentAddress >= addressLimit) {
+		if (currentAddress >= allocationEndAddress) {
 			return 0;
 		}
 		long address = (currentAddress += objectSize);
@@ -80,7 +80,7 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		if (index < 0 || index >= objectCount) {
 			throw new IllegalArgumentException("Invalid index: " + index);
 		}
-		long address = allocatedAddress + (index * objectSize);
+		long address = allocationStartAddress + (index * objectSize);
 		// Address of class could be changed by GC at "Compact" phase.
 		//return directMemoryService.getObject(updateClassPointerOfObject(allocatedAddress));
 		return processObject((T) directMemoryService.getObject(address));
@@ -97,17 +97,17 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 	}
 	
 	@Override
-	public void reset() {
+	public synchronized void reset() {
 		init();
 	}
 	
 	@Override
 	public void free() {
-		directMemoryService.freeMemory(allocatedAddress);
+		directMemoryService.freeMemory(allocationStartAddress);
 	}
 
 	@Override
-	public void init(ObjectOffHeapPoolCreateParameter<T> parameter) {
+	public synchronized void init(ObjectOffHeapPoolCreateParameter<T> parameter) {
 		init(parameter.getElementType(), parameter.getObjectCount(), 
 				parameter.getAllocateNonPrimitiveFieldsAtOffHeapConfigType(), 
 				parameter.getDirectMemoryService());
@@ -117,9 +117,10 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
 			DirectMemoryService directMemoryService) {
 		super.init(elementType, objectCount, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
-		this.allocatedAddress = directMemoryService.allocateMemory(objectSize * objectCount + 
-									JvmUtil.getAddressSize()); // Extra memory for possible aligning);
-		this.addressLimit = allocatedAddress + (objectCount * objectSize) - objectSize;
+		this.allocationSize = 
+				objectSize * objectCount + JvmUtil.getAddressSize(); // Extra memory for possible aligning)
+		this.allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
+		this.allocationEndAddress = allocationStartAddress + (objectCount * objectSize) - objectSize;
 		init();
 	}
 

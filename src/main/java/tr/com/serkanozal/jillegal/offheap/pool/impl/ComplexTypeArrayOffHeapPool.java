@@ -11,17 +11,18 @@ import java.lang.reflect.Array;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ArrayOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
+import tr.com.serkanozal.jillegal.offheap.pool.ContentAwareOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.DeeplyForkableArrayOffHeapPool;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayOffHeapPoolCreateParameter<T>> 
-		implements DeeplyForkableArrayOffHeapPool<T, A, ArrayOffHeapPoolCreateParameter<T>> {
+		implements 	DeeplyForkableArrayOffHeapPool<T, A, ArrayOffHeapPoolCreateParameter<T>>,
+					ContentAwareOffHeapPool<T, ArrayOffHeapPoolCreateParameter<T>> {
 
 	protected int length;
 	protected boolean initializeElements;
 	protected long objectSize;
 	protected long arraySize;
-	protected long allocatedAddress;
 	protected T sampleObject;
 	protected A sampleArray;
 	protected A objectArray;
@@ -49,14 +50,14 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	}
 	
 	@SuppressWarnings("unchecked")
-	protected synchronized void init() {
+	protected void init() {
 		int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
 		arrayIndexScale = JvmUtil.arrayIndexScale(elementType);
-		arrayIndexStartAddress = allocatedAddress + JvmUtil.arrayBaseOffset(elementType);
-		objStartAddress = allocatedAddress + JvmUtil.sizeOfArray(elementType, length);
+		arrayIndexStartAddress = allocationStartAddress + JvmUtil.arrayBaseOffset(elementType);
+		objStartAddress = allocationStartAddress + JvmUtil.sizeOfArray(elementType, length);
 		
 		// Allocated objects must start aligned as address size from start address of allocated address
-		long diffBetweenArrayAndObjectStartAddresses = objStartAddress - allocatedAddress;
+		long diffBetweenArrayAndObjectStartAddresses = objStartAddress - allocationStartAddress;
 		long addressMod = diffBetweenArrayAndObjectStartAddresses % JvmUtil.getAddressSize();
 		if (addressMod != 0) {
 			objStartAddress += (JvmUtil.getAddressSize() - addressMod);
@@ -64,11 +65,11 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 
 		// Copy sample array header to object pool array header
 		for (int i = 0; i < arrayHeaderSize; i++) {
-			directMemoryService.putByte(allocatedAddress + i, directMemoryService.getByte(sampleArray, i));
+			directMemoryService.putByte(allocationStartAddress + i, directMemoryService.getByte(sampleArray, i));
 		}
 		
 		// Set length of array object pool array
-		JvmUtil.setArrayLength(allocatedAddress, elementType, length);
+		JvmUtil.setArrayLength(allocationStartAddress, elementType, length);
 
 		if (initializeElements) {
 			// All index is object pool array header point to allocated objects 
@@ -89,7 +90,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 			}
 		}
 		
-		this.objectArray = (A) directMemoryService.getObject(allocatedAddress);
+		this.objectArray = (A) directMemoryService.getObject(allocationStartAddress);
 		
 		switch (JvmUtil.getAddressSize()) {
 	        case JvmUtil.SIZE_32_BIT:
@@ -122,6 +123,21 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 		return length;
 	}
 	
+	@Override
+	public boolean isMine(T element) {
+		if (element == null) {
+			return false;
+		}
+		else {
+			return isMine(directMemoryService.addressOf(element));
+		}	
+	}
+
+	@Override
+	public boolean isMine(long address) {
+		return isIn(address);
+	}
+	
 	@SuppressWarnings("unchecked")
 	@Override
 	public T getAt(int index) {
@@ -152,18 +168,18 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	}
 	
 	@Override
-	public synchronized long getArrayAsAddress() {
-		return allocatedAddress;
+	public long getArrayAsAddress() {
+		return allocationStartAddress;
 	}
 	
 	@Override
-	public void reset() {
+	public synchronized void reset() {
 		init();
 	}
 	
 	@Override
 	public void free() {
-		directMemoryService.freeMemory(allocatedAddress);
+		directMemoryService.freeMemory(allocationStartAddress);
 	}
 
 	@Override
@@ -180,9 +196,10 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 		this.directMemoryService = directMemoryService;
 		this.objectSize = directMemoryService.sizeOf(elementType);
 		this.arraySize = JvmUtil.sizeOfArray(elementType, length);
-		this.allocatedAddress = 
-				directMemoryService.allocateMemory(arraySize + (length * objectSize) + 
-						JvmUtil.getAddressSize()); // Extra memory for possible aligning
+		this.allocationSize = 
+				arraySize + (length * objectSize) + JvmUtil.getAddressSize(); // Extra memory for possible aligning
+		this.allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
+		this.allocationEndAddress = allocationStartAddress + allocationSize;
 		try {
 			this.sampleObject = (T) elementType.newInstance();
 		} 

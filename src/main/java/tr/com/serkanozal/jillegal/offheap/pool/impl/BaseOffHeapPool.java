@@ -37,6 +37,9 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 	protected Set<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>> nonPrimitiveFieldInitializers;
 	protected OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
 	protected OffHeapConfigService offHeapConfigService = ConfigManager.getOffHeapConfigService();
+	protected long allocationStartAddress;
+	protected long allocationEndAddress;
+	protected long allocationSize;
 	
 	public BaseOffHeapPool(Class<T> elementType) {
 		if (elementType == null) {
@@ -84,6 +87,10 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 	
 	public DirectMemoryService getDirectMemoryService() {
 		return directMemoryService;
+	}
+	
+	protected boolean isIn(long address) {
+		return address >= allocationStartAddress && address <= allocationEndAddress;
 	}
 	
 	protected T processObject(T obj) {

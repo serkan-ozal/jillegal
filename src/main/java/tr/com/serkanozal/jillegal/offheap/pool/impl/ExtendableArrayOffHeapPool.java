@@ -13,11 +13,13 @@ import java.util.List;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ExtendableArrayOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
+import tr.com.serkanozal.jillegal.offheap.pool.ContentAwareOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.DeeplyForkableArrayOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.ArrayOffHeapPool;
 
 public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ExtendableArrayOffHeapPoolCreateParameter<T, A>> 
-		implements ArrayOffHeapPool<T, A, ExtendableArrayOffHeapPoolCreateParameter<T, A>> {
+		implements 	ArrayOffHeapPool<T, A, ExtendableArrayOffHeapPoolCreateParameter<T, A>>,
+					ContentAwareOffHeapPool<T, ExtendableArrayOffHeapPoolCreateParameter<T, A>> {
 
 	protected DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> rootForkableOffHeapPool;
 	protected List<DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>>> forkableOffHeapPoolList = 
@@ -44,7 +46,7 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	}
 
 	@Override
-	public A getArray() {
+	public synchronized A getArray() {
 		return currentForkableOffHeapPool.getArray();
 	}
 	
@@ -59,7 +61,7 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	}
 	
 	@Override
-	public T getAt(int index) {
+	public synchronized T getAt(int index) {
 		if (index < 0 || index > getLength()) {
 			return null;
 		}
@@ -70,7 +72,7 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	}
 
 	@Override
-	public void setAt(T element, int index) {
+	public synchronized void setAt(T element, int index) {
 		if (index > 0 && index < getLength()) {
 			extendUntil(index);
 			getArrayOffHeapPoolAt(index).
@@ -79,7 +81,35 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	}
 	
 	@Override
-	public void reset() {
+	public boolean isMine(T element) {
+		if (element == null) {
+			return false;
+		}
+		else {
+			return isMine(directMemoryService.addressOf(element));
+		}	
+	}
+
+	@SuppressWarnings("rawtypes")
+	@Override
+	public boolean isMine(long address) {
+		if (currentForkableOffHeapPool instanceof ContentAwareOffHeapPool) {
+			if (((ContentAwareOffHeapPool)currentForkableOffHeapPool).isMine(address)) {
+				return true;
+			}
+		}
+		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
+			if (forkableOffHeapPool != currentForkableOffHeapPool && forkableOffHeapPool instanceof ContentAwareOffHeapPool) {
+				if (((ContentAwareOffHeapPool)forkableOffHeapPool).isMine(address)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
+	@Override
+	public synchronized void reset() {
 		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
 			if (forkableOffHeapPool != rootForkableOffHeapPool) {
 				forkableOffHeapPool.free();
@@ -92,7 +122,7 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	}
 	
 	@Override
-	public void free() {
+	public synchronized void free() {
 		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
 			forkableOffHeapPool.free();
 		}
@@ -102,7 +132,7 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	}
 
 	@Override
-	public void init(ExtendableArrayOffHeapPoolCreateParameter<T, A> parameter) {
+	public synchronized void init(ExtendableArrayOffHeapPoolCreateParameter<T, A> parameter) {
 		init(parameter.getForkableArrayOffHeapPool());
 	}
 	

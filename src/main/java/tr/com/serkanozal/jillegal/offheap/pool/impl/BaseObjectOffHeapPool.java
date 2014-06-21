@@ -12,20 +12,20 @@ import java.lang.reflect.Constructor;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAllocationConfigType;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
+import tr.com.serkanozal.jillegal.offheap.pool.ContentAwareOffHeapPool;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
-public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> extends BaseOffHeapPool<T, P> {
+public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> 
+		extends BaseOffHeapPool<T, P> implements ContentAwareOffHeapPool<T, P> {
 
 	protected int objectCount;
 	protected long objectSize;
 	protected long currentAddress;
-	protected long allocatedAddress;
 	protected T sampleObject;
 	protected long offHeapSampleObjectAddress;
 	protected long classPointerAddress;
 	protected long classPointerOffset;
 	protected long classPointerSize;
-	protected long addressLimit;
 	protected JvmAwareClassPointerUpdater jvmAwareClassPointerUpdater;
 	
 	public BaseObjectOffHeapPool(Class<T> objectType) {
@@ -98,6 +98,21 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	        default:
 	            throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
 		} 
+	}
+	
+	@Override
+	public boolean isMine(T element) {
+		if (element == null) {
+			return false;
+		}
+		else {
+			return isMine(directMemoryService.addressOf(element));
+		}	
+	}
+	
+	@Override
+	public boolean isMine(long address) {
+		return isIn(address);
 	}
 	
 	protected boolean checkAndRefreshIfClassPointerOfObjectUpdated() {

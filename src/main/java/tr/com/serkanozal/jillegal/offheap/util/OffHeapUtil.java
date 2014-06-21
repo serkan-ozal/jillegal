@@ -28,14 +28,13 @@ import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
-import tr.com.serkanozal.jillegal.util.JillegalUtil;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 import tr.com.serkanozal.jillegal.util.ReflectionUtil;
 
 @SuppressWarnings("restriction")
 public class OffHeapUtil {
 	
-	private static final Logger logger = Logger.getLogger(JillegalUtil.class);
+	private static final Logger logger = Logger.getLogger(OffHeapUtil.class);
 	
 	private static final OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
 	private static final OffHeapConfigService offHeapConfigService = OffHeapConfigServiceFactory.getOffHeapConfigService();
