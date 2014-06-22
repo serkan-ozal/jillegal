@@ -84,4 +84,9 @@ public interface OffHeapService {
 	<A> void freeArray(A array);
 	void freeArrayWithAddress(long address);
 	
+	String newString(String str);
+	long newStringAsAddress(String str);
+	void freeString(String str);
+	void freeStringWithAddress(long address);
+	
 }

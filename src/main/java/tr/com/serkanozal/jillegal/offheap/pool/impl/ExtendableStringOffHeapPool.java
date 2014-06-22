@@ -80,6 +80,19 @@ public class ExtendableStringOffHeapPool
 	}
 	
 	@Override
+	public synchronized long getAsAddress(String str) {
+		checkAvailability();
+		long address = currentForkableOffHeapPool.getAsAddress(str);
+		if (address == 0) {
+			extend();
+			return currentForkableOffHeapPool.getAsAddress(str);
+		}
+		else {
+			return address;
+		}
+	}
+	
+	@Override
 	public boolean isMine(String element) {
 		checkAvailability();
 		if (element == null) {

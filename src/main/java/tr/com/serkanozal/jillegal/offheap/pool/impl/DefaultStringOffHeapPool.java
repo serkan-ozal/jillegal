@@ -11,6 +11,7 @@ import tr.com.serkanozal.jillegal.offheap.domain.model.pool.StringOffHeapPoolCre
 import tr.com.serkanozal.jillegal.offheap.pool.ContentAwareOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.DeeplyForkableStringOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.StringOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.service.OffHeapConstants;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffHeapPoolCreateParameter> 
@@ -31,6 +32,12 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	protected String sampleStr;
 	protected long sampleStrAddress;
 	protected char[] sampleCharArray;
+	
+	public DefaultStringOffHeapPool() {
+		this(
+			OffHeapConstants.DEFAULT_ESTIMATED_STRING_COUNT, 
+			OffHeapConstants.DEFAULT_ESTIMATED_STRING_LENGTH);
+	}
 	
 	public DefaultStringOffHeapPool(StringOffHeapPoolCreateParameter parameter) {
 		this(parameter.getEstimatedStringCount(), parameter.getEstimatedStringLength());
@@ -81,6 +88,18 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	@Override
 	public synchronized String get(String str) {
 		checkAvailability();
+		long allocatedStrAddress = allocateStringFromOffHeap(str);
+		if (allocatedStrAddress == 0) {
+			return null;
+		}
+		else {
+			return directMemoryService.getObject(allocatedStrAddress);
+		}
+	}
+	
+	@Override
+	public synchronized long getAsAddress(String str) {
+		checkAvailability();
 		return allocateStringFromOffHeap(str);
 	}
 	
@@ -101,7 +120,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		return isIn(address);
 	}
 	
-	protected String allocateStringFromOffHeap(String str) {
+	protected long allocateStringFromOffHeap(String str) {
 		long addressOfStr = JvmUtil.addressOf(str);
 		char[] valueArray = (char[]) directMemoryService.getObject(str, valueArrayOffsetInString);
 		int valueArraySize = charArrayIndexStartOffset + (charArrayIndexScale * valueArray.length);
@@ -113,7 +132,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		}
 		
 		if (currentAddress + strSize > allocationEndAddress) {
-			return null;
+			return 0;
 		}
 		
 		// Copy string object content to allocated area
@@ -137,11 +156,11 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 				currentAddress + valueArrayOffsetInString, 
 				JvmUtil.toJvmAddress(valueAddress));
 		
-		String allocatedStr = directMemoryService.getObject(currentAddress);
+		long allocatedStrAddress = currentAddress;
 
 		currentAddress += strSize;
 		
-		return allocatedStr;
+		return allocatedStrAddress;
 	}
 	
 	@Override

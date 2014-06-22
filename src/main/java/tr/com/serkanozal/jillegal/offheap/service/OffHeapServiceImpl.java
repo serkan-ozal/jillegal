@@ -30,6 +30,8 @@ import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.factory.DefaultOffHeapPoolFactory;
 import tr.com.serkanozal.jillegal.offheap.pool.factory.OffHeapPoolFactory;
+import tr.com.serkanozal.jillegal.offheap.pool.impl.DefaultStringOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.impl.ExtendableStringOffHeapPool;
 import tr.com.serkanozal.jillegal.util.ReflectionUtil;
 
 public class OffHeapServiceImpl implements OffHeapService {
@@ -42,7 +44,9 @@ public class OffHeapServiceImpl implements OffHeapService {
 	protected Set<Class<?>> offHeapableClasses = Collections.synchronizedSet(new HashSet<Class<?>>());
 	@SuppressWarnings("rawtypes")
 	protected Map<Class<?>, ObjectOffHeapPool> objectOffHeapPoolMap = new ConcurrentHashMap<Class<?>, ObjectOffHeapPool>();
-	
+	protected ExtendableStringOffHeapPool extendableStringOffHeapPool =
+					new ExtendableStringOffHeapPool(new DefaultStringOffHeapPool());
+
 	public OffHeapServiceImpl() {
 		init();
 	}
@@ -214,6 +218,26 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@Override
 	public void freeArrayWithAddress(long address) {
 		throw new UnsupportedOperationException("\"void freeArrayWithAddress(long address)\" is not supported right now !");
+	}
+	
+	@Override
+	public String newString(String str) {
+		return extendableStringOffHeapPool.get(str);
+	}
+	
+	@Override
+	public long newStringAsAddress(String str) {
+		return extendableStringOffHeapPool.getAsAddress(str);
+	}
+	
+	@Override
+	public void freeString(String str) {
+		throw new UnsupportedOperationException("\"void freeString(String str)\" is not supported right now !");
+	}
+	
+	@Override
+	public void freeStringWithAddress(long address) {
+		throw new UnsupportedOperationException("\"void freeStringWithAddress(long address)\" is not supported right now !");
 	}
 	
 }
