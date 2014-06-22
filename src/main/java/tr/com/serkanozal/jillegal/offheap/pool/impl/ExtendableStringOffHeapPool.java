@@ -28,7 +28,8 @@ public class ExtendableStringOffHeapPool
 	protected DeeplyForkableStringOffHeapPool currentForkableOffHeapPool;
 	protected DirectMemoryService directMemoryService = 
 				DirectMemoryServiceFactory.getDirectMemoryService();
-			
+	protected volatile boolean available = false;
+	
 	public ExtendableStringOffHeapPool(ExtendableStringOffHeapPoolCreateParameter parameter) {
 		this(parameter.getForkableStringOffHeapPool());
 	}
@@ -37,7 +38,7 @@ public class ExtendableStringOffHeapPool
 		init(forkableOffHeapPool);
 	}
 	
-	protected synchronized void init() {
+	protected void init() {
 		currentForkableOffHeapPool = rootForkableOffHeapPool;
 	}
 	
@@ -47,7 +48,27 @@ public class ExtendableStringOffHeapPool
 	}
 
 	@Override
+	public boolean isAvailable() {
+		return available;
+	}
+
+	protected void makeAvaiable() {
+		available = true;
+	}
+	
+	protected void makeUnavaiable() {
+		available = false;
+	}
+	
+	protected void checkAvailability() {
+		if (!available) {
+			throw new IllegalStateException(getClass() + " is not available !");
+		}
+	}
+	
+	@Override
 	public synchronized String get(String str) {
+		checkAvailability();
 		String obj = currentForkableOffHeapPool.get(str);
 		if (obj == null) {
 			extend();
@@ -60,6 +81,7 @@ public class ExtendableStringOffHeapPool
 	
 	@Override
 	public boolean isMine(String element) {
+		checkAvailability();
 		if (element == null) {
 			return false;
 		}
@@ -71,6 +93,7 @@ public class ExtendableStringOffHeapPool
 	@SuppressWarnings("rawtypes")
 	@Override
 	public boolean isMine(long address) {
+		checkAvailability();
 		if (currentForkableOffHeapPool instanceof ContentAwareOffHeapPool) {
 			if (((ContentAwareOffHeapPool)currentForkableOffHeapPool).isMine(address)) {
 				return true;
@@ -97,16 +120,19 @@ public class ExtendableStringOffHeapPool
 			currentForkableOffHeapPool.free();
 		}
 		init();
+		makeAvaiable();
 	}
 	
 	@Override
 	public synchronized void free() {
+		checkAvailability();
 		for (DeeplyForkableStringOffHeapPool forkableOffHeapPool : forkableOffHeapPoolList) {
 			forkableOffHeapPool.free();
 		}
 		if (currentForkableOffHeapPool != null) {
 			currentForkableOffHeapPool.free();
 		}
+		makeUnavaiable();
 	}
 
 	@Override
@@ -117,6 +143,7 @@ public class ExtendableStringOffHeapPool
 	protected void init(DeeplyForkableStringOffHeapPool forkableOffHeapPool) {
 		rootForkableOffHeapPool = forkableOffHeapPool;
 		init();
+		makeAvaiable();
 	}
 	
 	protected void extend() {
@@ -127,5 +154,4 @@ public class ExtendableStringOffHeapPool
 				(DeeplyForkableStringOffHeapPool) newForkableOffHeapPool;
 	}
 
-	
 }

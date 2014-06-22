@@ -36,6 +36,11 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		super(objectType, directMemoryService);
 	}
 	
+	@Override
+	protected void init() {
+		super.init();
+	}
+	
 	@SuppressWarnings("unchecked")
 	protected void init(Class<T> elementType, int objectCount, 
 			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
@@ -110,7 +115,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	        	break;    
 	        default:
 	            throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
-		} 
+		}
 	}
 	
 	@Override

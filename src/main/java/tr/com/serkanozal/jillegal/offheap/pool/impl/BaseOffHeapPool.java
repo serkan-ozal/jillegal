@@ -40,6 +40,7 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 	protected long allocationStartAddress;
 	protected long allocationEndAddress;
 	protected long allocationSize;
+	protected volatile boolean available = false;
 	
 	public BaseOffHeapPool(Class<T> elementType) {
 		if (elementType == null) {
@@ -60,6 +61,24 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 						DirectMemoryServiceFactory.getDirectMemoryService();
 	}
 	
+	protected void init() {
+		
+	}
+	
+	protected void makeAvaiable() {
+		available = true;
+	}
+	
+	protected void makeUnavaiable() {
+		available = false;
+	}
+	
+	protected void checkAvailability() {
+		if (!available) {
+			throw new IllegalStateException(getClass() + " is not available !");
+		}
+	}
+	
 	protected void init(Class<T> elementType, 
 			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
 			DirectMemoryService directMemoryService) {
@@ -77,12 +96,17 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 						OffHeapUtil.findNonPrimitiveFieldInitializersForOnlyConfiguredNonPrimitiveFields(elementType);
 					break;
 			}
-		}	
+		}
 	}
 	
 	@Override
 	public Class<T> getElementType() {
 		return elementType;
+	}
+	
+	@Override
+	public boolean isAvailable() {
+		return available;
 	}
 	
 	public DirectMemoryService getDirectMemoryService() {

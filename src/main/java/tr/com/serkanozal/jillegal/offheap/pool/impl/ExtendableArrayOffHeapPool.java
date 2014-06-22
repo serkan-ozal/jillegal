@@ -39,7 +39,10 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 		init(forkableOffHeapPool);
 	}
 	
-	protected synchronized void init() {
+	@Override
+	protected void init() {
+		super.init();
+		
 		currentForkableOffHeapPool = rootForkableOffHeapPool;
 		length = rootForkableOffHeapPool.getLength();
 		totalLength = rootForkableOffHeapPool.getLength();
@@ -47,6 +50,7 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 
 	@Override
 	public synchronized A getArray() {
+		checkAvailability();
 		return currentForkableOffHeapPool.getArray();
 	}
 	
@@ -57,11 +61,13 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	
 	@Override
 	public synchronized long getArrayAsAddress() {
+		checkAvailability();
 		return currentForkableOffHeapPool.getArrayAsAddress();
 	}
 	
 	@Override
 	public synchronized T getAt(int index) {
+		checkAvailability();
 		if (index < 0 || index > getLength()) {
 			return null;
 		}
@@ -73,6 +79,7 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 
 	@Override
 	public synchronized void setAt(T element, int index) {
+		checkAvailability();
 		if (index > 0 && index < getLength()) {
 			extendUntil(index);
 			getArrayOffHeapPoolAt(index).
@@ -82,6 +89,7 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	
 	@Override
 	public boolean isMine(T element) {
+		checkAvailability();
 		if (element == null) {
 			return false;
 		}
@@ -93,6 +101,7 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	@SuppressWarnings("rawtypes")
 	@Override
 	public boolean isMine(long address) {
+		checkAvailability();
 		if (currentForkableOffHeapPool instanceof ContentAwareOffHeapPool) {
 			if (((ContentAwareOffHeapPool)currentForkableOffHeapPool).isMine(address)) {
 				return true;
@@ -119,16 +128,19 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 			currentForkableOffHeapPool.free();
 		}
 		init();
+		makeAvaiable();
 	}
 	
 	@Override
 	public synchronized void free() {
+		checkAvailability();
 		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
 			forkableOffHeapPool.free();
 		}
 		if (currentForkableOffHeapPool != null) {
 			currentForkableOffHeapPool.free();
 		}
+		makeUnavaiable();
 	}
 
 	@Override
@@ -139,6 +151,7 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	protected void init(DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool) {
 		rootForkableOffHeapPool = forkableOffHeapPool;
 		init();
+		makeAvaiable();
 	}
 	
 	protected ArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> getArrayOffHeapPoolAt(int index) {

@@ -50,7 +50,10 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	}
 	
 	@SuppressWarnings("unchecked")
+	@Override
 	protected void init() {
+		super.init();
+		
 		int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
 		arrayIndexScale = JvmUtil.arrayIndexScale(elementType);
 		arrayIndexStartAddress = allocationStartAddress + JvmUtil.arrayBaseOffset(elementType);
@@ -125,6 +128,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	
 	@Override
 	public boolean isMine(T element) {
+		checkAvailability();
 		if (element == null) {
 			return false;
 		}
@@ -135,12 +139,14 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 
 	@Override
 	public boolean isMine(long address) {
+		checkAvailability();
 		return isIn(address);
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
 	public T getAt(int index) {
+		checkAvailability();
 		if (index < 0 || index > length) {
 			throw new IllegalArgumentException("Invalid index: " + index);
 		}	
@@ -152,6 +158,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	
 	@Override
 	public void setAt(T element, int index) {
+		checkAvailability();
 		if (index >= 0 && index < length) {
 			// Make target index points to element 
 			directMemoryService.putLong(arrayIndexStartAddress + (index * arrayIndexScale), 
@@ -164,22 +171,27 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	
 	@Override
 	public A getArray() {
+		checkAvailability();
 		return objectArray;
 	}
 	
 	@Override
 	public long getArrayAsAddress() {
+		checkAvailability();
 		return allocationStartAddress;
 	}
 	
 	@Override
 	public synchronized void reset() {
 		init();
+		makeAvaiable();
 	}
 	
 	@Override
-	public void free() {
+	public synchronized void free() {
+		checkAvailability();
 		directMemoryService.freeMemory(allocationStartAddress);
+		makeUnavaiable();
 	}
 
 	@Override
@@ -211,6 +223,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 		this.sampleObjectAddress = directMemoryService.addressOf(sampleObject);
 		
 		init();
+		makeAvaiable();
 	}
 	
 	@Override

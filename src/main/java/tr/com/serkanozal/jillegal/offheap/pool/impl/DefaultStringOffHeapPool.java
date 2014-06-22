@@ -8,12 +8,15 @@
 package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.StringOffHeapPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.pool.ContentAwareOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.DeeplyForkableStringOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.StringOffHeapPool;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffHeapPoolCreateParameter> 
-		implements StringOffHeapPool, DeeplyForkableStringOffHeapPool {
+		implements 	StringOffHeapPool, 
+					DeeplyForkableStringOffHeapPool, 
+					ContentAwareOffHeapPool<String, StringOffHeapPoolCreateParameter> {
 
 	protected int estimatedStringCount;
 	protected int estimatedStringLength;
@@ -38,15 +41,12 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		init(estimatedStringCount, estimatedStringLength);
 	}
 	
-	protected void init(int estimatedStringCount, int estimatedStringLength) {
-		this.estimatedStringCount = estimatedStringCount;
-		this.estimatedStringLength = estimatedStringLength;
-		init();
-	}
-	
 	@SuppressWarnings({ "restriction", "deprecation" })
+	@Override
 	protected void init() {
 		try {
+			super.init();
+			
 			charArrayIndexScale = JvmUtil.arrayIndexScale(char.class);
 			charArrayIndexStartOffset = JvmUtil.arrayBaseOffset(char.class);
 			valueArrayOffsetInString = JvmUtil.getUnsafe().fieldOffset(String.class.getDeclaredField("value"));
@@ -66,6 +66,13 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		}
 	}
 	
+	protected void init(int estimatedStringCount, int estimatedStringLength) {
+		this.estimatedStringCount = estimatedStringCount;
+		this.estimatedStringLength = estimatedStringLength;
+		init();
+		makeAvaiable();
+	}
+	
 	@Override
 	public Class<String> getElementType() {
 		return String.class;
@@ -73,7 +80,25 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	
 	@Override
 	public synchronized String get(String str) {
+		checkAvailability();
 		return allocateStringFromOffHeap(str);
+	}
+	
+	@Override
+	public boolean isMine(String str) {
+		checkAvailability();
+		if (str == null) {
+			return false;
+		}
+		else {
+			return isMine(directMemoryService.addressOf(str));
+		}	
+	}
+	
+	@Override
+	public boolean isMine(long address) {
+		checkAvailability();
+		return isIn(address);
 	}
 	
 	protected String allocateStringFromOffHeap(String str) {
@@ -127,11 +152,14 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	@Override
 	public synchronized void reset() {
 		init();
+		makeAvaiable();
 	}
 	
 	@Override
-	public void free() {
+	public synchronized void free() {
+		checkAvailability();
 		directMemoryService.freeMemory(allocationStartAddress);
+		makeUnavaiable();
 	}
 	
 	@Override

@@ -10,8 +10,7 @@ package tr.com.serkanozal.jillegal.offheap.pool;
 import java.util.ArrayList;
 import java.util.List;
 
-import junit.framework.Assert;
-
+import org.junit.Assert;
 import org.junit.Test;
 
 import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.DefaultExtendableObjectOffHeapPoolCreateParameterBuilder;
@@ -24,7 +23,6 @@ import tr.com.serkanozal.jillegal.offheap.pool.impl.LazyReferencedObjectOffHeapP
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 
-@SuppressWarnings("deprecation")
 public class ExtendableObjectOffHeapPoolTest {
 
 	private static final int ELEMENT_COUNT = 100;

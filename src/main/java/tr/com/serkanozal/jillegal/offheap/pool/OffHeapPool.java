@@ -15,5 +15,6 @@ public interface OffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> {
 	void init(P parameter);
 	void reset();
 	void free();
+	boolean isAvailable();
 	
 }

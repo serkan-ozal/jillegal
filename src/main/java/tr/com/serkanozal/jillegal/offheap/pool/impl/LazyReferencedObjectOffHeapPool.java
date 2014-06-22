@@ -38,7 +38,10 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		init(elementType, objectCount, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
 	}
 	
+	@Override
 	protected void init() {
+		super.init();
+		
 		this.currentAddress = allocationStartAddress - objectSize;
 		
 		// Copy sample object to allocated memory region for each object
@@ -54,6 +57,7 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 	@SuppressWarnings("unchecked")
 	@Override
 	public synchronized T get() {
+		checkAvailability();
 		if (currentAddress >= allocationEndAddress) {
 			return null;
 		}
@@ -65,6 +69,7 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 	
 	@Override
 	public synchronized long getAsAddress() {
+		checkAvailability();
 		if (currentAddress >= allocationEndAddress) {
 			return 0;
 		}
@@ -77,6 +82,7 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 	@SuppressWarnings("unchecked")
 	@Override
 	public T getAt(int index) {
+		checkAvailability();
 		if (index < 0 || index >= objectCount) {
 			throw new IllegalArgumentException("Invalid index: " + index);
 		}
@@ -93,17 +99,21 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 
 	@Override
 	public boolean hasMoreElement() {
+		checkAvailability();
 		return currentAddress < objectCount;
 	}
 	
 	@Override
 	public synchronized void reset() {
 		init();
+		makeAvaiable();
 	}
 	
 	@Override
-	public void free() {
+	public synchronized void free() {
+		checkAvailability();
 		directMemoryService.freeMemory(allocationStartAddress);
+		makeUnavaiable();
 	}
 
 	@Override
@@ -122,6 +132,7 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		this.allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
 		this.allocationEndAddress = allocationStartAddress + (objectCount * objectSize) - objectSize;
 		init();
+		makeAvaiable();
 	}
 
 	@Override

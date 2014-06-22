@@ -40,7 +40,10 @@ public class PrimitiveTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Arra
 	}
 	
 	@SuppressWarnings("unchecked")
+	@Override
 	protected void init() {
+		super.init();
+		
 		int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
 		arrayIndexScale = JvmUtil.arrayIndexScale(elementType);
 		arrayIndexStartAddress = allocationStartAddress + JvmUtil.arrayBaseOffset(elementType);
@@ -64,6 +67,7 @@ public class PrimitiveTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Arra
 	@SuppressWarnings("unchecked")
 	@Override
 	public T getAt(int index) {
+		checkAvailability();
 		if (index < 0 || index > length) {
 			return null;
 		}	
@@ -72,6 +76,7 @@ public class PrimitiveTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Arra
 	
 	@Override
 	public void setAt(T element, int index) {
+		checkAvailability();
 		if (index >= 0 && index < length) {
 			if (element.getClass().equals(boolean.class) || element.getClass().equals(Boolean.class)) {
 				directMemoryService.putByte(arrayIndexStartAddress + (index * arrayIndexScale), 
@@ -109,32 +114,39 @@ public class PrimitiveTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Arra
 	
 	@Override
 	public A getArray() {
+		checkAvailability();
 		return primitiveArray;
 	}
 	
 	@Override
 	public long getArrayAsAddress() {
+		checkAvailability();
 		return allocationStartAddress;
 	}
 	
 	@Override
 	public boolean isMine(T element) {
+		checkAvailability();
 		return false;
 	}
 
 	@Override
 	public boolean isMine(long address) {
+		checkAvailability();
 		return isIn(address);
 	}
 	
 	@Override
 	public synchronized void reset() {
 		init();
+		makeAvaiable();
 	}
 	
 	@Override
-	public void free() {
+	public synchronized void free() {
+		checkAvailability();
 		directMemoryService.freeMemory(allocationStartAddress);
+		makeUnavaiable();
 	}
 
 	@Override
@@ -156,6 +168,7 @@ public class PrimitiveTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Arra
 		this.sampleArray = (A) Array.newInstance(JvmUtil.primitiveTypeOf(elementType), 0);
 		
 		init();
+		makeAvaiable();
 	}
 
 	@Override

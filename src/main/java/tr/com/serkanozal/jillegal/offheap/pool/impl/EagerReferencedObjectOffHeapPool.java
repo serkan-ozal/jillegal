@@ -47,7 +47,10 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	}
 	
 	@SuppressWarnings("unchecked")
+	@Override
 	protected void init() {
+		super.init();
+		
 		this.currentIndex = 0;
 		
 		int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
@@ -90,6 +93,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	
 	@Override
 	public synchronized T get() {
+		checkAvailability();
 		if (currentIndex >= objectCount) {
 			return null;
 		}
@@ -100,6 +104,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	
 	@Override
 	public synchronized long getAsAddress() {
+		checkAvailability();
 		if (currentIndex >= objectCount) {
 			return 0;
 		}
@@ -111,6 +116,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	
 	@Override
 	public T getAt(int index) {
+		checkAvailability();
 		if (index < 0 || index >= objectCount) {
 			throw new IllegalArgumentException("Invalid index: " + index);
 		}	
@@ -120,6 +126,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	}
 	
 	public T[] getObjectArray() {
+		checkAvailability();
 		return objectArray;
 	}
 	
@@ -130,17 +137,21 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 
 	@Override
 	public boolean hasMoreElement() {
+		checkAvailability();
 		return currentIndex < objectCount;
 	}
 	
 	@Override
 	public synchronized void reset() {
 		init();
+		makeAvaiable();
 	}
 	
 	@Override
-	public void free() {
+	public synchronized void free() {
+		checkAvailability();
 		directMemoryService.freeMemory(allocationStartAddress);
+		makeUnavaiable();
 	}
 
 	@Override
@@ -162,6 +173,8 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 		this.allocationEndAddress = allocationStartAddress + (objectCount * objectSize) - objectSize;;
 		this.sampleArray = (T[]) Array.newInstance(elementType, 0);
 		init();
+		
+		makeAvaiable();
 	}
 	
 	@Override

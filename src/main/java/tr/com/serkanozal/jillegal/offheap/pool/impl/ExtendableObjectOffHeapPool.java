@@ -37,12 +37,16 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 		init(forkableOffHeapPool);
 	}
 	
-	protected synchronized void init() {
+	@Override
+	protected void init() {
+		super.init();
+		
 		currentForkableOffHeapPool = rootForkableOffHeapPool;
 	}
 
 	@Override
 	public synchronized T get() {
+		checkAvailability();
 		T obj = currentForkableOffHeapPool.get();
 		if (obj == null) {
 			extend();
@@ -55,11 +59,13 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	
 	@Override
 	public synchronized long getAsAddress() {
+		checkAvailability();
 		return currentForkableOffHeapPool.getAsAddress();
 	}
 	
 	@Override
 	public boolean isMine(T element) {
+		checkAvailability();
 		if (element == null) {
 			return false;
 		}
@@ -71,6 +77,7 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	@SuppressWarnings("rawtypes")
 	@Override
 	public boolean isMine(long address) {
+		checkAvailability();
 		if (currentForkableOffHeapPool instanceof ContentAwareOffHeapPool) {
 			if (((ContentAwareOffHeapPool)currentForkableOffHeapPool).isMine(address)) {
 				return true;
@@ -97,16 +104,19 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 			currentForkableOffHeapPool.free();
 		}
 		init();
+		makeAvaiable();
 	}
 	
 	@Override
 	public synchronized void free() {
+		checkAvailability();
 		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
 			forkableOffHeapPool.free();
 		}
 		if (currentForkableOffHeapPool != null) {
 			currentForkableOffHeapPool.free();
 		}
+		makeUnavaiable();
 	}
 
 	@Override
@@ -117,6 +127,7 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	protected void init(DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool) {
 		rootForkableOffHeapPool = forkableOffHeapPool;
 		init();
+		makeAvaiable();
 	}
 	
 	protected void extend() {

@@ -7,6 +7,7 @@
 
 package tr.com.serkanozal.jillegal.offheap.pool;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.StringOffHeapPoolCreateParameterBuilder;
@@ -30,7 +31,7 @@ public class StringOffHeapPoolTest {
 							build());
    
     	for (int i = 0; i < STRING_COUNT; i++) {
-    		System.out.println(stringPool.get("String " + i));
+    		Assert.assertEquals("String " + i, stringPool.get("String " + i));
     	}
 	}
 	
