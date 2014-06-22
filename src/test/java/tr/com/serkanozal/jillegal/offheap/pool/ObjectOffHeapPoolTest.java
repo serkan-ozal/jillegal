@@ -19,15 +19,15 @@ import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 
 @SuppressWarnings("deprecation")
-public class SequentialObjectOffHeapPoolTest {
+public class ObjectOffHeapPoolTest {
 
 	private static final int ELEMENT_COUNT = 1000;
 	
 	private OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
 	
 	@Test
-	public void objectRetrievedSuccessfullyFromLazyReferencedSequentialObjectOffHeapPool() {
-		LazyReferencedObjectOffHeapPool<SampleOffHeapClass> sequentialObjectPool = 
+	public void objectRetrievedSuccessfullyFromLazyReferencedObjectOffHeapPool() {
+		LazyReferencedObjectOffHeapPool<SampleOffHeapClass> objectPool = 
 				offHeapService.createOffHeapPool(
 						new ObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapClass>().
 								type(SampleOffHeapClass.class).
@@ -36,19 +36,19 @@ public class SequentialObjectOffHeapPoolTest {
 							build());
    
     	for (int i = 0; i < ELEMENT_COUNT; i++) {
-    		SampleOffHeapClass obj = sequentialObjectPool.get();
+    		SampleOffHeapClass obj = objectPool.get();
     		obj.setOrder(i);
     	}
     	
     	for (int i = 0; i < ELEMENT_COUNT; i++) {
-    		SampleOffHeapClass obj = sequentialObjectPool.getAt(i);
+    		SampleOffHeapClass obj = objectPool.getAt(i);
     		Assert.assertEquals(i, obj.getOrder());
     	}
 	}
 	
 	@Test
-	public void objectRetrievedSuccessfullyFromEagerReferencedSequentialObjectOffHeapPool() {
-		EagerReferencedObjectOffHeapPool<SampleOffHeapClass> sequentialObjectPool = 
+	public void objectRetrievedSuccessfullyFromEagerReferencedObjectOffHeapPool() {
+		EagerReferencedObjectOffHeapPool<SampleOffHeapClass> objectPool = 
 				offHeapService.createOffHeapPool(
 						new ObjectOffHeapPoolCreateParameterBuilder<SampleOffHeapClass>().
 								type(SampleOffHeapClass.class).
@@ -57,12 +57,12 @@ public class SequentialObjectOffHeapPoolTest {
 							build());
    
     	for (int i = 0; i < ELEMENT_COUNT; i++) {
-    		SampleOffHeapClass obj = sequentialObjectPool.get();
+    		SampleOffHeapClass obj = objectPool.get();
     		obj.setOrder(i);
     	}
     	
     	for (int i = 0; i < ELEMENT_COUNT; i++) {
-    		SampleOffHeapClass obj = sequentialObjectPool.getAt(i);
+    		SampleOffHeapClass obj = objectPool.getAt(i);
     		Assert.assertEquals(i, obj.getOrder());
     	}
 	}

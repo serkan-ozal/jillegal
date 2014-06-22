@@ -329,7 +329,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     public void putAddress(long address, long x) {
     	unsafe.putAddress(address, x);
     }
-    
+   
     @Override
     public boolean getBoolean(Object o, long offset) {
     	return unsafe.getBoolean(o, offset);
@@ -412,7 +412,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     
     @Override
     public Object getObject(Object o, long offset) {
-    	return unsafe.getInt(o, offset);
+    	return unsafe.getObject(o, offset);
     }
 
     @Override
