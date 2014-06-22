@@ -9,28 +9,37 @@ package tr.com.serkanozal.jillegal.offheap.pool;
 
 import org.junit.Test;
 
+import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.ExtendableStringOffHeapPoolCreateParameterBuilder;
 import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.StringOffHeapPoolCreateParameterBuilder;
+import tr.com.serkanozal.jillegal.offheap.pool.impl.ExtendableStringOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 
-public class StringOffHeapPoolTest {
+public class ExtendableStringOffHeapPoolTest {
 
 	private static final int STRING_COUNT = 1000;
+	private static final int TOTAL_STRING_COUNT = 10000;
 	private static final int ESTIMATED_STRING_LENGTH = 20;
 	
 	private OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
 	
 	@Test
-	public void stringsRetrievedSuccessfullyStringOffHeapPool() {
-		StringOffHeapPool stringPool = 
+	public void stringRetrievedSuccessfullyFromExtendableStringOffHeapPoolWithStringObjectPoolOffHeap() {
+		DeeplyForkableStringOffHeapPool stringPool = 
 				offHeapService.createOffHeapPool(
 						new StringOffHeapPoolCreateParameterBuilder().
 								estimatedStringCount(STRING_COUNT).
 								estimatedStringLength(ESTIMATED_STRING_LENGTH).
 							build());
    
-    	for (int i = 0; i < STRING_COUNT; i++) {
-    		System.out.println(stringPool.get("String " + i));
+		ExtendableStringOffHeapPool extendableStringPool =
+				offHeapService.createOffHeapPool(
+						new ExtendableStringOffHeapPoolCreateParameterBuilder().
+								forkableStringOffHeapPool(stringPool).
+							build());
+		
+		for (int i = 0; i < TOTAL_STRING_COUNT; i++) {
+    		System.out.println(extendableStringPool.get("String " + i));
     	}
 	}
 	

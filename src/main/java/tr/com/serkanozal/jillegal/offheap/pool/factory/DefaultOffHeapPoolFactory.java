@@ -9,10 +9,13 @@ package tr.com.serkanozal.jillegal.offheap.pool.factory;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ArrayOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.BaseOffHeapPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ExtendableArrayOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ExtendableObjectOffHeapPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ExtendableStringOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolType;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectOffHeapPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.StringOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.pool.ArrayOffHeapPool;
@@ -23,8 +26,10 @@ import tr.com.serkanozal.jillegal.offheap.pool.impl.DefaultForkableObjectOffHeap
 import tr.com.serkanozal.jillegal.offheap.pool.impl.EagerReferencedObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.impl.ExtendableArrayOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.impl.ExtendableObjectOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.impl.ExtendableStringOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.impl.LazyReferencedObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.impl.PrimitiveTypeArrayOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.impl.DefaultStringOffHeapPool;
 
 public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 
@@ -34,15 +39,15 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 	@Override
 	public <T, O extends OffHeapPool> O  createOffHeapPool(OffHeapPoolCreateParameter<T> parameter) {
 		Class<?> elementType = parameter.getElementType();
-		if (elementType.equals(String.class) || elementType.equals(String[].class)) {
-			throw new IllegalArgumentException("\"String\" and \"String[]\" types are not supported yet !");
+		if (elementType.equals(String[].class)) {
+			throw new IllegalArgumentException("\"String[]\" types are not supported yet !");
 		}
 		
 		assignOffHeapMemoryServiceIfNeeded(parameter);
 		
 		OffHeapPoolType offHeapPoolType = parameter.getOffHeapPoolType();
 		switch (offHeapPoolType) {
-			case SEQUENTIAL_OBJECT_POOL:
+			case OBJECT_POOL:
 				ObjectOffHeapPoolCreateParameter<T> seqObjPoolParameter = (ObjectOffHeapPoolCreateParameter<T>)parameter; 
 				switch (seqObjPoolParameter.getReferenceType()) {
 					case LAZY_REFERENCED:
@@ -60,8 +65,14 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 				else {
 					return (O) new ComplexTypeArrayOffHeapPool<T, T[]>(arrayPoolParameter);
 				}
+			case STRING_POOL:
+				return (O) new DefaultStringOffHeapPool((StringOffHeapPoolCreateParameter)parameter);
 			case EXTENDABLE_OBJECT_POOL:
 				return (O) new ExtendableObjectOffHeapPool<T>((ExtendableObjectOffHeapPoolCreateParameter<T>)parameter);
+			case EXTENDABLE_ARRAY_POOL:
+				return (O) new ExtendableArrayOffHeapPool<T, T[]>((ExtendableArrayOffHeapPoolCreateParameter<T, T[]>)parameter);
+			case EXTENDABLE_STRING_POOL:
+				return (O) new ExtendableStringOffHeapPool((ExtendableStringOffHeapPoolCreateParameter)parameter);	
 			default:
 				throw new IllegalArgumentException("Unsupported off heap pool type: " + offHeapPoolType);
 		}

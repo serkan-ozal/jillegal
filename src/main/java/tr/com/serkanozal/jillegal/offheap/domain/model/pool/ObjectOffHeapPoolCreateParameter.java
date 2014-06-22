@@ -18,21 +18,21 @@ public class ObjectOffHeapPoolCreateParameter<T> extends BaseOffHeapPoolCreatePa
 	
 	public ObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
 			ObjectPoolReferenceType referenceType) {
-		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType);
+		super(OffHeapPoolType.OBJECT_POOL, elementType);
 		this.objectCount = objectCount;
 		this.referenceType = referenceType;
 	}
 	
 	public ObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
 			ObjectPoolReferenceType referenceType, DirectMemoryService offHeapMemoryService) {
-		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType, offHeapMemoryService);
+		super(OffHeapPoolType.OBJECT_POOL, elementType, offHeapMemoryService);
 		this.objectCount = objectCount;
 		this.referenceType = referenceType;
 	}
 	
 	public ObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
 			ObjectPoolReferenceType referenceType, boolean makeOffHeapableAsAuto) {
-		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType, makeOffHeapableAsAuto);
+		super(OffHeapPoolType.OBJECT_POOL, elementType, makeOffHeapableAsAuto);
 		this.objectCount = objectCount;
 		this.referenceType = referenceType;
 	}
@@ -40,7 +40,7 @@ public class ObjectOffHeapPoolCreateParameter<T> extends BaseOffHeapPoolCreatePa
 	public ObjectOffHeapPoolCreateParameter(Class<T> elementType, int objectCount, 
 			ObjectPoolReferenceType referenceType, boolean makeOffHeapableAsAuto, 
 			DirectMemoryService offHeapMemoryService) {
-		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType, offHeapMemoryService, makeOffHeapableAsAuto);
+		super(OffHeapPoolType.OBJECT_POOL, elementType, offHeapMemoryService, makeOffHeapableAsAuto);
 		this.objectCount = objectCount;
 		this.referenceType = referenceType;
 	}
@@ -49,7 +49,7 @@ public class ObjectOffHeapPoolCreateParameter<T> extends BaseOffHeapPoolCreatePa
 			ObjectPoolReferenceType referenceType, 
 			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
 			boolean makeOffHeapableAsAuto) {
-		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType, makeOffHeapableAsAuto);
+		super(OffHeapPoolType.OBJECT_POOL, elementType, makeOffHeapableAsAuto);
 		this.objectCount = objectCount;
 		this.referenceType = referenceType;
 		this.allocateNonPrimitiveFieldsAtOffHeapConfigType = allocateNonPrimitiveFieldsAtOffHeapConfigType;
@@ -59,7 +59,7 @@ public class ObjectOffHeapPoolCreateParameter<T> extends BaseOffHeapPoolCreatePa
 			ObjectPoolReferenceType referenceType, 
 			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
 			boolean makeOffHeapableAsAuto, DirectMemoryService offHeapMemoryService) {
-		super(OffHeapPoolType.SEQUENTIAL_OBJECT_POOL, elementType, offHeapMemoryService, makeOffHeapableAsAuto);
+		super(OffHeapPoolType.OBJECT_POOL, elementType, offHeapMemoryService, makeOffHeapableAsAuto);
 		this.objectCount = objectCount;
 		this.referenceType = referenceType;
 		this.allocateNonPrimitiveFieldsAtOffHeapConfigType = allocateNonPrimitiveFieldsAtOffHeapConfigType;
