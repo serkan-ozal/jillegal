@@ -117,7 +117,7 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 			return 
 				(O) new ExtendableArrayOffHeapPool<T, A>(
 							elementType, 
-							new ComplexTypeArrayOffHeapPool<T, A>(elementType, arrayLength, directMemoryService), 
+							new ComplexTypeArrayOffHeapPool<T, A>(elementType, arrayLength, true, directMemoryService), 
 							directMemoryService);
 		}
 	}

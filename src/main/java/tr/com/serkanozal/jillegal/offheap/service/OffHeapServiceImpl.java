@@ -197,17 +197,15 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@Override
 	public synchronized <A> A newArray(Class<A> arrayType, int length) {
 		return
-			(A) defaultOffHeapPoolFactory.createArrayOffHeapPool(
-					arrayType, OffHeapConstants.DEFAULT_OBJECT_COUNT).
-						getArray();
+			(A) defaultOffHeapPoolFactory.
+					createArrayOffHeapPool(arrayType, length).getArray();
 	}
 	
 	@Override
 	public synchronized <A> long newArrayAsAddress(Class<A> arrayType, int length) {
 		return
-			defaultOffHeapPoolFactory.createArrayOffHeapPool(
-					arrayType, OffHeapConstants.DEFAULT_OBJECT_COUNT).
-						getArrayAsAddress();
+			defaultOffHeapPoolFactory.
+					createArrayOffHeapPool(arrayType, length).getArrayAsAddress();
 	}
 
 	@Override

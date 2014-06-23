@@ -35,9 +35,9 @@ public class JillegalAwarer {
 			if (jillegalAwareClasses != null) {
 				for (Class<?> jillegalAwareClass : jillegalAwareClasses) {
 					try {
-						logger.error("Class " + jillegalAwareClass.getName() + " will be maked Jillegal-Aware ...");
+						logger.info("Class " + jillegalAwareClass.getName() + " will be maked Jillegal-Aware ...");
 						jillegalAwareClassTransformer.transform(jillegalAwareClass);
-						logger.error("Class " + jillegalAwareClass.getName() + " has been maked Jillegal-Aware ...");
+						logger.info("Class " + jillegalAwareClass.getName() + " has been maked Jillegal-Aware ...");
 					}
 					catch (Throwable t) {
 						logger.error("Unable to making class " + jillegalAwareClass.getName() + " Jillegal-Aware", t);

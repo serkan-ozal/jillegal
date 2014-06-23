@@ -7,7 +7,6 @@
 
 package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
-import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
@@ -29,8 +28,6 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 
 	protected final Logger logger = Logger.getLogger(getClass());
 	
-	protected static final ThreadLocal<Set<Class<?>>> classesInProcessStore = new ThreadLocal<Set<Class<?>>>();
-	
 	protected Class<T> elementType;
 	protected DirectMemoryService directMemoryService;
 	protected NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType;
@@ -41,6 +38,7 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 	protected long allocationEndAddress;
 	protected long allocationSize;
 	protected volatile boolean available = false;
+	protected volatile boolean inProgress = false;
 	
 	public BaseOffHeapPool(Class<T> elementType) {
 		if (elementType == null) {
@@ -89,11 +87,11 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 					break;
 				case ONLY_CONFIGURED_NON_PRIMITIVE_FIELDS:
 					nonPrimitiveFieldInitializers = 
-						OffHeapUtil.findNonPrimitiveFieldInitializersForAllNonPrimitiveFields(elementType);
+						OffHeapUtil.findNonPrimitiveFieldInitializersForOnlyConfiguredNonPrimitiveFields(elementType);
 					break;
 				case ALL_NON_PRIMITIVE_FIELDS:
 					nonPrimitiveFieldInitializers = 
-						OffHeapUtil.findNonPrimitiveFieldInitializersForOnlyConfiguredNonPrimitiveFields(elementType);
+						OffHeapUtil.findNonPrimitiveFieldInitializersForAllNonPrimitiveFields(elementType);
 					break;
 			}
 		}
@@ -117,49 +115,31 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 		return address >= allocationStartAddress && address <= allocationEndAddress;
 	}
 	
-	protected T processObject(T obj) {
-		if (nonPrimitiveFieldInitializers != null && !nonPrimitiveFieldInitializers.isEmpty()) {
-			Set<Class<?>> classesInProcess = classesInProcessStore.get();
-			if (classesInProcess == null) {
-				classesInProcessStore.set(classesInProcess = new HashSet<Class<?>>());
-			}
+	protected synchronized T processObject(T obj) {
+		if (!inProgress && nonPrimitiveFieldInitializers != null && !nonPrimitiveFieldInitializers.isEmpty()) {
 			try {
-				classesInProcess.add(elementType);
+				inProgress = true;
 				for (NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig> fieldInitializer : nonPrimitiveFieldInitializers) {
-					if (!classesInProcess.contains(fieldInitializer.getFieldType())) {
-						fieldInitializer.initializeField(obj);
-					}	
+					fieldInitializer.initializeField(obj);	
 				}
 			}
 			finally {
-				classesInProcess.remove(elementType);
-				if (classesInProcess.isEmpty()) {
-					classesInProcessStore.remove();
-				}
+				inProgress = false;
 			}
 		}
 		return obj;
 	}
 	
-	protected long processObject(long objAddress) {
-		if (nonPrimitiveFieldInitializers != null && !nonPrimitiveFieldInitializers.isEmpty()) {
-			Set<Class<?>> classesInProcess = classesInProcessStore.get();
-			if (classesInProcess == null) {
-				classesInProcessStore.set(classesInProcess = new HashSet<Class<?>>());
-			}
+	protected synchronized long processObject(long objAddress) {
+		if (!inProgress && nonPrimitiveFieldInitializers != null && !nonPrimitiveFieldInitializers.isEmpty()) {
 			try {
-				classesInProcess.add(elementType);
+				inProgress = true;
 				for (NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig> fieldInitializer : nonPrimitiveFieldInitializers) {
-					if (!classesInProcess.contains(fieldInitializer.getFieldType())) {
-						fieldInitializer.initializeField(objAddress);
-					}	
+					fieldInitializer.initializeField(objAddress);
 				}
 			}
 			finally {
-				classesInProcess.remove(elementType);
-				if (classesInProcess.isEmpty()) {
-					classesInProcessStore.remove();
-				}
+				inProgress = false;
 			}
 		}
 		return objAddress;

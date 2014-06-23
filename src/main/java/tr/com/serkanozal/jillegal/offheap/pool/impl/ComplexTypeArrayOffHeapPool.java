@@ -8,6 +8,7 @@
 package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ArrayOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
@@ -212,13 +213,33 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 				arraySize + (length * objectSize) + JvmUtil.getAddressSize(); // Extra memory for possible aligning
 		this.allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
 		this.allocationEndAddress = allocationStartAddress + allocationSize;
+		boolean sampleObjectCreated = false;
 		try {
-			this.sampleObject = (T) elementType.newInstance();
+			Constructor<T> defaultConstructor = elementType.getConstructor();
+			if (defaultConstructor != null) {
+				defaultConstructor.setAccessible(true);
+				this.sampleObject = defaultConstructor.newInstance();
+				sampleObjectCreated = true;
+			}
 		} 
-		catch (Exception e) {
-			e.printStackTrace();
+		catch (Throwable t) {
+			//logger.error("Unable to create a sample object for class " + elementType.getName(), t);
+		} 
+		if (sampleObjectCreated == false) {
+			try {
+				this.sampleObject = elementType.newInstance();
+				sampleObjectCreated = true;
+			}	
+			catch (Throwable t) {
+				//logger.error("Unable to create a sample object for class " + elementType.getName(), t);
+			} 
+		}
+		if (sampleObjectCreated == false) {
 			this.sampleObject = (T) directMemoryService.allocateInstance(elementType);
-		} 
+		}
+		if (sampleObject == null) {
+			throw new IllegalStateException("Unable to create a sample object for class " + elementType.getName());
+		}
 		this.sampleArray = (A) Array.newInstance(elementType, 0);
 		this.sampleObjectAddress = directMemoryService.addressOf(sampleObject);
 		

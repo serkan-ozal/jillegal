@@ -138,15 +138,7 @@ public class OffHeapUtil {
 				new HashSet<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>>();
 		List<Field> fields = ReflectionUtil.getAllFields(clazz);
 		for (Field f : fields) {
-			if (f.getType().isArray()) {
-				nonPrimitiveFieldInitializers.add(new ArrayTypedFieldInitializer(f));
-				if (logger.isInfoEnabled()) {
-					logger.info(
-						"Created \"ArrayTypedFieldInitializer\" for field " + f.getName() + 
-						" in class " + clazz.getName());
-				}
-			}
-			else if (!f.getType().isPrimitive()) {
+			if (!f.getType().isPrimitive() && !f.getType().isArray()) {
 				nonPrimitiveFieldInitializers.add(new ComplexTypedFieldInitializer(f));
 				if (logger.isInfoEnabled()) {
 					logger.info(
@@ -267,13 +259,7 @@ public class OffHeapUtil {
 		protected Class<?> elementType;
 		protected Class<?> arrayType;
 		protected int length;
-		
-		public ArrayTypedFieldInitializer(Field field) {
-			super(field);
-			this.elementType = field.getType().getComponentType();
-			this.arrayType = field.getType();
-		}
-		
+
 		public ArrayTypedFieldInitializer(OffHeapArrayFieldConfig fieldConfig) {
 			super(fieldConfig);
 			this.elementType = 
@@ -338,7 +324,7 @@ public class OffHeapUtil {
 
 		@Override
 		public void injectField(long fieldAddress, long fieldObjectAddress) {
-			directMemoryService.putAsIntAddress(fieldAddress, fieldObjectAddress);
+			directMemoryService.putAsIntAddress(fieldAddress, JvmUtil.toJvmAddress(fieldObjectAddress));
 		}
 		
 	}
