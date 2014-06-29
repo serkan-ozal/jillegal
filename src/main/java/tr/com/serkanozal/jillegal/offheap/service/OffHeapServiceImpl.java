@@ -44,9 +44,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	protected Set<Class<?>> offHeapableClasses = Collections.synchronizedSet(new HashSet<Class<?>>());
 	@SuppressWarnings("rawtypes")
 	protected Map<Class<?>, ObjectOffHeapPool> objectOffHeapPoolMap = new ConcurrentHashMap<Class<?>, ObjectOffHeapPool>();
-	protected ExtendableStringOffHeapPool extendableStringOffHeapPool =
-					new ExtendableStringOffHeapPool(new DefaultStringOffHeapPool());
-
+	protected ExtendableStringOffHeapPool extendableStringOffHeapPool;
+					
 	public OffHeapServiceImpl() {
 		init();
 	}
@@ -220,11 +219,19 @@ public class OffHeapServiceImpl implements OffHeapService {
 	
 	@Override
 	public String newString(String str) {
+		if (extendableStringOffHeapPool == null) {
+			extendableStringOffHeapPool = 
+					new ExtendableStringOffHeapPool(new DefaultStringOffHeapPool());
+		}
 		return extendableStringOffHeapPool.get(str);
 	}
 	
 	@Override
 	public long newStringAsAddress(String str) {
+		if (extendableStringOffHeapPool == null) {
+			extendableStringOffHeapPool = 
+					new ExtendableStringOffHeapPool(new DefaultStringOffHeapPool());
+		}
 		return extendableStringOffHeapPool.getAsAddress(str);
 	}
 	
