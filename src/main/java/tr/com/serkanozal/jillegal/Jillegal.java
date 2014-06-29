@@ -11,6 +11,7 @@ import tr.com.serkanozal.jillegal.initializer.AgentInitializer;
 import tr.com.serkanozal.jillegal.instrument.initializer.InstrumentInitializer;
 import tr.com.serkanozal.jillegal.offheap.initializer.OffHeapInitializer;
 import tr.com.serkanozal.jillegal.util.JillegalAwarer;
+import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 public class Jillegal {
 
@@ -30,6 +31,8 @@ public class Jillegal {
 	
 	public synchronized static void init() {
 		if (initialized == false) {
+			JvmUtil.info();
+			
 			AgentInitializer.init();
 			InstrumentInitializer.init();
 			OffHeapInitializer.init();
