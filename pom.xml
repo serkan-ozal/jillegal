@@ -20,6 +20,7 @@
         <maven.deploy.plugin.version>2.6</maven.deploy.plugin.version>
         
         <jillegal.agent.version>1.1.0-RELEASE</jillegal.agent.version>
+        <sa_jdi.version>1.8</sa_jdi.version> 
         <guava.version>13.0</guava.version>
         <commons.lang.version>2.6</commons.lang.version>
         <javassist.version>3.17.1-GA</javassist.version>
@@ -130,6 +131,11 @@
             <groupId>tr.com.serkanozal</groupId>
             <artifactId>jillegal-agent</artifactId>
             <version>${jillegal.agent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.tools</groupId>
+            <artifactId>sa_jdi</artifactId>
+            <version>${sa_jdi.version}</version>
         </dependency>
 		<dependency>
             <groupId>cglib</groupId>

@@ -42,6 +42,7 @@ import org.apache.log4j.Logger;
 
 import sun.management.VMManagement;
 import sun.misc.Unsafe;
+import tr.com.serkanozal.jillegal.util.JvmInfoUtil.JvmInfo;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
@@ -137,7 +138,7 @@ public class JvmUtil {
 	private static int classDefPointerOffsetInObject;
     private static int classDefPointerOffsetInClass;
     private static int sizeFieldOffsetOffsetInClass;
-    
+    private static Integer processId;
     private static JvmAwareUtil jvmAwareUtil;
     
     private static final Map<Class<?>, ClassInfo> classCache = new HashMap<Class<?>, ClassInfo>();
@@ -165,6 +166,13 @@ public class JvmUtil {
         	throw new RuntimeException("Unable to get unsafe", e);
         }
 
+		try {
+			findProcessId();
+		}
+		catch (Exception e) {
+			throw new RuntimeException("Couldn't find current process id", e);
+		}
+		
         objArray = new Object[1];
         
         int headerSize;
@@ -337,17 +345,24 @@ public class JvmUtil {
 		return options.compressRefShift;
 	}
 	
+	public static long getCompressedReferenceBase() {
+		return options.compressRefBase;
+	}
+	
 	public static String getVmName() {
 		return options.name;
 	}
 	
     public static long normalize(int value) {
+    	return value & 0xFFFFFFFFL;
+    	/*
         if (value >= 0) {
             return value;
         }    
         else {
             return (~0L >>> 32) & value;
         }    
+        */
     }
     
     public static long internalAddressOf(Object obj) {
@@ -505,7 +520,12 @@ public class JvmUtil {
 		@Override
 		public long addressOfClassInternal(Class<?> clazz) {
 			long addressOfClass = addressOf(clazz);
-			return JvmUtil.toNativeAddress(normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass)));
+			if (isJava_8()) {
+	    		return addressOfClass;
+	    	}
+			else {
+				return JvmUtil.toNativeAddress(normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass)));
+			}	
 		}
 
     }
@@ -1248,18 +1268,20 @@ public class JvmUtil {
     public static String toBinaryStringAddress(long address) {
         return "0x" + Long.toBinaryString(address).toUpperCase();
     }
+    
+    private static void findProcessId() throws Exception {
+    	 RuntimeMXBean mxbean = ManagementFactory.getRuntimeMXBean();
+         Field jvmField = mxbean.getClass().getDeclaredField("jvm");
+
+         jvmField.setAccessible(true);
+         VMManagement management = (VMManagement) jvmField.get(mxbean);
+         Method method = management.getClass().getDeclaredMethod("getProcessId");
+         method.setAccessible(true);
+         processId = (Integer) method.invoke(management);
+    }
 	
-	public static String getProcessId() throws Exception {
-        RuntimeMXBean mxbean = ManagementFactory.getRuntimeMXBean();
-        Field jvmField = mxbean.getClass().getDeclaredField("jvm");
-
-        jvmField.setAccessible(true);
-        VMManagement management = (VMManagement) jvmField.get(mxbean);
-        Method method = management.getClass().getDeclaredMethod("getProcessId");
-        method.setAccessible(true);
-        Integer processId = (Integer) method.invoke(management);
-
-        return processId.toString();
+	public static Integer getProcessId() throws Exception {
+		return processId;
     }
 	
 	public static void runGC() {
@@ -1283,26 +1305,21 @@ public class JvmUtil {
         
         System.out.println("Running " + (addressSize * BYTE) + "-bit " + options.name + " VM.");
         if (options.compressedRef) {
-        	System.out.println("Using compressed references with " + options.compressRefShift + "-bit shift.");
+        	System.out.println("Using compressed references with " + 
+        			options.compressRefShift + "-bit shift " + " and with " +
+        			options.compressRefBase + " base address");
         }
         System.out.println("Objects are " + options.objectAlignment + " bytes aligned.");
         System.out.println();
     }
 
     private static VMOptions findOptions() {
-        // Try Hotspot
-        VMOptions hsOpts = getHotspotSpecifics();
-        if (hsOpts != null) {
-        	return hsOpts;
-        }
-
-        // Try JRockit
-        VMOptions jrOpts = getJRockitSpecifics();
-        if (jrOpts != null) {
-        	return jrOpts;
-        }
-        
-        /*
+    	JvmInfo jvmInfo = JvmInfoUtil.getJvmInfo();
+    	if (jvmInfo != null) {
+    		return new VMOptions("Auto-detected", jvmInfo.narrowOopShift, jvmInfo.narrowOopBase);
+    	}
+    	
+    	/*
          * When running with CompressedOops on 64-bit platform, the address size
          * reported by Unsafe is still 8, while the real reference fields are 4 bytes long.
          * Try to guess the reference field size with this naive trick.
@@ -1317,6 +1334,30 @@ public class JvmUtil {
             oopSize = -1;
         }
 
+        /*
+        if (oopSize != unsafe.addressSize()) {
+	    	for (int i = 0; i < 32; i++) {
+	    		logger.info("Checking compressed-oops for shifting as " + i + " ...");
+	    		if (CompressedOopsDetectionUtil.isCompressedOopShiftingThis(i)) {
+	    			logger.info("Found compressed-oops for shifting as " + i);
+	    			return new VMOptions("Auto-detected", i);
+	    		}
+	    	}
+        }
+        */
+        
+        // Try Hotspot
+        VMOptions hsOpts = getHotspotSpecifics();
+        if (hsOpts != null) {
+        	return hsOpts;
+        }
+
+        // Try JRockit
+        VMOptions jrOpts = getJRockitSpecifics();
+        if (jrOpts != null) {
+        	return jrOpts;
+        }
+        
         if (oopSize != unsafe.addressSize()) {
         	switch (oopSize) {
 	            case ADDRESSING_8_BYTE:
@@ -1516,6 +1557,7 @@ public class JvmUtil {
         private final String name;
         private final boolean compressedRef;
         private final int compressRefShift;
+        private final long compressRefBase;
         private final int objectAlignment;
         private final int referenceSize;
 
@@ -1525,6 +1567,7 @@ public class JvmUtil {
             this.objectAlignment = guessAlignment(this.referenceSize);
             this.compressedRef = false;
             this.compressRefShift = 0;
+            this.compressRefBase = 0;
         }
 
         public VMOptions(String name, int shift) {
@@ -1533,11 +1576,21 @@ public class JvmUtil {
             this.objectAlignment = guessAlignment(this.referenceSize) << shift;
             this.compressedRef = true;
             this.compressRefShift = shift;
+            this.compressRefBase = 0;
+        }
+        
+        public VMOptions(String name, int shift, long base) {
+            this.name = name;
+            this.referenceSize = SIZE_32_BIT;
+            this.objectAlignment = guessAlignment(this.referenceSize) << shift;
+            this.compressedRef = true;
+            this.compressRefShift = shift;
+            this.compressRefBase = base;
         }
 
         public long toNativeAddress(long address) {
             if (compressedRef) {
-                return address << compressRefShift;
+                return compressRefBase + (address << compressRefShift);
             } 
             else {
                 return address;
@@ -1546,7 +1599,7 @@ public class JvmUtil {
         
         public long toJvmAddress(long address) {
             if (compressedRef) {
-                return address >> compressRefShift;
+                return (address >> compressRefShift) - compressRefBase;
             } 
             else {
                 return address;
@@ -1563,6 +1616,10 @@ public class JvmUtil {
 
 		public int getCompressRefShift() {
 			return compressRefShift;
+		}
+		
+		public long getCompressRefBase() {
+			return compressRefBase;
 		}
 
 		public int getObjectAlignment() {
