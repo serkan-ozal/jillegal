@@ -13,6 +13,8 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.log4j.Logger;
 
@@ -39,50 +41,55 @@ public class JvmInfoUtil {
 	}
 	
 	public static void main(final String[] args) throws InterruptedException {
-		System.out.println(JVM_INFO_RETRIEVE_START);
-		
-		System.setProperty("sun.jvm.hotspot.debugger.useProcDebugger", "true");
-		System.setProperty("sun.jvm.hotspot.debugger.useWindbgDebugger", "true");
-		
-		final HotSpotAgent agent = new HotSpotAgent();
-		Thread t = new Thread() {
-			public void run() {
-				agent.attach(Integer.parseInt(args[0])); 
+		try {
+			System.out.println(JVM_INFO_RETRIEVE_START);
+			
+			System.setProperty("sun.jvm.hotspot.debugger.useProcDebugger", "true");
+			System.setProperty("sun.jvm.hotspot.debugger.useWindbgDebugger", "true");
+			
+			final HotSpotAgent agent = new HotSpotAgent();
+			Thread t = new Thread() {
+				public void run() {
+					agent.attach(Integer.parseInt(args[0])); 
+				};
 			};
-		};
-		t.start();
-		
-		boolean vmInitialized = false;
-		// Check five times :)
-		for (int i = 0; i < 5; i++) {
-			Thread.sleep(1000);
-			try {
-				if (VM.getVM() != null) {
-					vmInitialized = true;
-					break;
+			t.start();
+			
+			boolean vmInitialized = false;
+			// Check five times :)
+			for (int i = 0; i < 5; i++) {
+				Thread.sleep(1000);
+				try {
+					if (VM.getVM() != null) {
+						vmInitialized = true;
+						break;
+					}
+				}
+				catch (Throwable err) {
+					
 				}
 			}
-			catch (Throwable err) {
-				
+			
+			if (vmInitialized) {
+				try {
+					System.out.println(JVM_INFO_LINE + " " + NARROW_OOP_BASE_INFO_KEY + " " + Universe.getNarrowOopBase());
+					System.out.println(JVM_INFO_LINE + " " + NARROW_OOP_SHIFT_INFO_KEY + " " + Universe.getNarrowOopShift());
+				}
+				catch (Throwable e) {
+					e.printStackTrace(System.out);
+				}
 			}
-		}
-		
-		if (vmInitialized) {
-			try {
-				System.out.println(JVM_INFO_LINE + " " + NARROW_OOP_BASE_INFO_KEY + " " + Universe.getNarrowOopBase());
-				System.out.println(JVM_INFO_LINE + " " + NARROW_OOP_SHIFT_INFO_KEY + " " + Universe.getNarrowOopShift());
+			else {
+				System.out.println("VM couldn't be initialized !");
 			}
-			catch (Throwable e) {
-				e.printStackTrace(System.out);
-			}
+			
+			agent.detach();
+			
+			System.out.println(JVM_INFO_RETRIEVE_FINISH);
 		}
-		else {
-			System.out.println("VM couldn't be initialized !");
+		catch (Throwable t) {
+			t.printStackTrace(System.out);
 		}
-		
-		agent.detach();
-		
-		System.out.println(JVM_INFO_RETRIEVE_FINISH);
 	}
 
 	public static JvmInfo getJvmInfo() {
@@ -99,11 +106,15 @@ public class JvmInfoUtil {
 		try {
 			long narrowOopBase = -1;
 			int narrowOopShift = -1;
-			Process p = 
-					Runtime.getRuntime().exec(
-							"java -classpath " + ClasspathUtil.getFullClasspath() + " " + 
-							JvmInfoUtil.class.getName() + " " + 
-							processId);
+			
+			List<String> args = new ArrayList<String>();
+			args.add(System.getProperty("java.home") + "/" + "bin" + "/" + "java");
+			args.add("-cp");
+			args.add(ClasspathUtil.getFullClasspath());
+			args.add(JvmInfoUtil.class.getName());
+			args.add(String.valueOf(processId));
+
+			Process p =  new ProcessBuilder(args).start();
 	        BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
 	        for (String line = br.readLine(); line != null; line = br.readLine()) {
 	        	String[] parts = line.split("[\\s]+");
@@ -119,7 +130,14 @@ public class JvmInfoUtil {
 	        		break;
 	        	}
 	        }
+	        BufferedReader brErr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+	        for (String line = brErr.readLine(); line != null; line = brErr.readLine()) {
+	        	System.err.println(line);
+	        }
 	        p.destroy();
+	        
+	        System.out.println("Narrow oop base  : " + narrowOopBase);
+	        System.out.println("Narrow oop shift : " + narrowOopShift);
 	        
 	        if (narrowOopBase != -1 && narrowOopShift != -1) {
 	        	logger.info("Narrow oop base  : " + narrowOopBase);

@@ -30,6 +30,7 @@ public class JavaClassCompiler extends BaseClassCompiler {
 		
 	}
 
+	@SuppressWarnings("resource")
 	@Override
 	public Class<?> compile(InputStream codeInputStream) throws ClassCompileException {
 		return compile(new Scanner(codeInputStream).useDelimiter("\\A").next());

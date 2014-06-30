@@ -55,7 +55,7 @@ public class ClasspathUtil {
 				classpathBuilder.append(url.getPath()).append(File.pathSeparator);
 			}
 		}
-		fullClasspath = classpathBuilder.toString();
+		fullClasspath = classpathBuilder.toString().replace("%20", " ");
 	}
 	
 	private static Set<URL> findClasspathUrls() {

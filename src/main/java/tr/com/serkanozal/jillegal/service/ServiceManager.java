@@ -7,8 +7,6 @@
 
 package tr.com.serkanozal.jillegal.service;
 
-import tr.com.serkanozal.jillegal.compiler.service.ClassCompilerService;
-import tr.com.serkanozal.jillegal.compiler.service.ClassCompilerServiceFactory;
 import tr.com.serkanozal.jillegal.instrument.service.InstrumentService;
 import tr.com.serkanozal.jillegal.instrument.service.InstrumentServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
@@ -34,8 +32,10 @@ public class ServiceManager {
 		return OffHeapServiceFactory.getOffHeapService();
 	}
 	
+	/*
 	public static ClassCompilerService getClassCompilerService() {
 		return ClassCompilerServiceFactory.getClassCompilerService();
 	}
+	*/
 	
 }

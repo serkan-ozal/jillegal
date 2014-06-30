@@ -1253,14 +1253,6 @@ public class JvmUtil {
 		}
 	}
 
-	public static Class<?> defineClass(byte[] classContents) {
-		return unsafe.defineClass(null, classContents, 0, classContents.length);
-	}
-	
-	public static void throwException(Throwable t) {
-		unsafe.throwException(t);
-	}
-	 
     public static String toHexAddress(long address) {
         return "0x" + Long.toHexString(address).toUpperCase();
     }
@@ -1306,7 +1298,7 @@ public class JvmUtil {
         System.out.println("Running " + (addressSize * BYTE) + "-bit " + options.name + " VM.");
         if (options.compressedRef) {
         	System.out.println("Using compressed references with " + 
-        			options.compressRefShift + "-bit shift " + " and with " +
+        			options.compressRefShift + "-bit shift" + " and with " +
         			options.compressRefBase + " base address");
         }
         System.out.println("Objects are " + options.objectAlignment + " bytes aligned.");
