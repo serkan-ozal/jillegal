@@ -64,9 +64,45 @@ Latest version is `2.0-SNAPSHOT`.
 4. Usage
 =======
 
+4.1. Instrumentation Module
+-------
+
+4.2. Instrumentation Module
+-------
+
+4.3. Instrumentation Module
+-------
+
+4.4. Instrumentation Module
+-------
+
+4.5. Instrumentation Module
+-------
+
+4.6. Instrumentation Module
+-------
+
+4.7. Instrumentation Module
+-------
+
+4.8. Instrumentation Module
+-------
+
+4.9. Instrumentation Module
+-------
+
+4.10. Instrumentation Module
+-------
+
+4.11. Instrumentation Module
+-------
+
+4.12. Instrumentation Module
+-------
+
 5. Roadmap
 =======
 
-* Distributed lock (**`ILock`**) will be supported.
+* On the fly in memory compiler support under **Compiler module** for Java and Groovy lamguages under.
 
-* Distributed object will be supported.
+* Java 6 / Java 7 support for OffHeap module.
