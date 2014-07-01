@@ -1,7 +1,7 @@
 1. What is Jillegal?
 ==============
 
-**Jillegal** is a library including unknown tricks of Java. It abstracts developer from low-level details to implement those tricks. Its design and logic are based on Java 8 so it can be used at only Java 8 platform. Java 6 and Java 7 supports are in progress and as soon as possible they will be released. Demo application is avaiable at [https://github.com/serkan-ozal/jillegal-demo](https://github.com/serkan-ozal/jillegal-demo). 
+**Jillegal** is a library including unknown tricks of Java. It abstracts developer from low-level details to implement those tricks. Its design and logic are based on **Java 8** so it can be used at only **_Java 8 platform_**. Java 6 and Java 7 supports are in progress and as soon as possible they will be released. Demo application is avaiable at [https://github.com/serkan-ozal/jillegal-demo](https://github.com/serkan-ozal/jillegal-demo). 
 
 Currently it has two main module: **OffHeap**  and **Instrumentation**. 
 
