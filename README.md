@@ -64,9 +64,167 @@ Latest version is `2.0-SNAPSHOT`.
 4. Usage
 =======
 
-4.2. Eagaer Referenced Object OffHeap Pool
+To initialize Jillegal and find Jillegal Aware classes, there are two ways:
+
+1) You just need to call explicitly making aware method at startup in anywhere of your application.
+
+~~~~~ java
+...
+
+tr.com.serkanozal.jillegal.Jillegal.init();
+
+...
+~~~~~
+
+or
+
+2) You can extend your main class from **`tr.com.serkanozal.jillegal.util.JillegalAware`** class.
+
+~~~~~ java
+...
+
+public class JillegalDemo extends JillegalAware {
+
+	public static void main(String[] args) {
+	
+		...
+	
+	}
+	
+}	
+
+...
+~~~~~
+
+4.1. Jillegal Aware OffHeap Pool
+
+To make any of your class, just annotate it with **`tr.com.serkanozal.jillegal.config.annotation.JillegalAware`** annotation. So it will be detected by Jillegal on initialize cycle and will be instrumented automatically to be aware of Jillegal.
+
+~~~~~ java
+public class SampleClassWrapper {
+
+	private SampleClass sampleClass;
+
+	public SampleClass getSampleClass() {
+		return sampleClass;
+	}
+
+	public void setSampleClass(SampleClass sampleClass) {
+		this.sampleClass = sampleClass;
+	}
+
+}
+~~~~~
+
+~~~~~ java
+@JillegalAware
+public class JillegalAwareSampleClassWrapper {
+
+	@OffHeapObject
+	private SampleClass sampleClass;
+
+	@OffHeapArray(length = 1000)
+	private SampleClass[] sampleClassArray;
+
+	public SampleClass getSampleClass() {
+		return sampleClass;
+	}
+
+	public void setSampleClass(SampleClass sampleClass) {
+		this.sampleClass = sampleClass;
+	}
+
+	public SampleClass[] getSampleClassArray() {
+		return sampleClassArray;
+	}
+
+	public void setSampleClassArray(SampleClass[] sampleClassArray) {
+		this.sampleClassArray = sampleClassArray;
+	}
+
+}
+~~~~~
+
+~~~~~ java
+public class SampleClass {
+
+	private int i1 = 5;
+	private int i2 = 10;
+	private int order;
+	private SampleLinkClass link;
+
+	public int getI1() {
+		return i1;
+	}
+
+	public int getI2() {
+		return i2;
+	}
+
+	public int getOrder() {
+		return order;
+	}
+
+	public void setOrder(int order) {
+		this.order = order;
+	}
+
+	public SampleLinkClass getLink() {
+		return link;
+	}
+
+	public void setLink(SampleLinkClass link) {
+		this.link = link;
+	}
+	
+}
+~~~~~
+
+~~~~~ java
+public class SampleLinkClass {
+
+	private long linkNo;
+
+	public long getLinkNo() {
+		return linkNo;
+	}
+
+	public void setLinkNo(long linkNo) {
+		this.linkNo = linkNo;
+	}
+	
+}
+~~~~~
+
+~~~~~ java
+
+JillegalAwareSampleClassWrapper sampleClassWrapper = new JillegalAwareSampleClassWrapper();
+
+sampleClassWrapper.getSampleClass().setOrder(-1);
+
+SampleClass[] objArray = sampleClassWrapper.getSampleClassArray();
+    	
+for (int i = 0; i < objArray.length; i++) {
+    	SampleClass obj = objArray[i];
+    	obj.setOrder(i);
+    	System.out.println("Order value of auto injected off-heap object field has been set to " + i);
+}
+
+System.out.println("Order value of sample object at off heap pool: " + 
+sampleClassWrapper.getSampleClass().getOrder());
+    	
+for (int i = 0; i < objArray.length; i++) {
+    	SampleClass obj = objArray[i];
+    	System.out.println("Order value of " + i + ". object at off heap pool: " + obj.getOrder());
+}
+
+~~~~~
+
+4.2. Eager Referenced Object OffHeap Pool
 -------
 ~~~~~ java
+
+OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
 
 ObjectOffHeapPoolCreateParameterBuilder<SampleClass> offHeapPoolParameterBuilder = 
 				new ObjectOffHeapPoolCreateParameterBuilder<SampleClass>().
@@ -88,6 +246,8 @@ for (int i = 0; i < ELEMENT_COUNT; i++) {
 -------
 ~~~~~ java
 
+OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
+
 ObjectOffHeapPoolCreateParameterBuilder<SampleClass> offHeapPoolParameterBuilder = 
 				new ObjectOffHeapPoolCreateParameterBuilder<SampleClass>().
 						type(SampleClass.class).
@@ -107,6 +267,8 @@ for (int i = 0; i < ELEMENT_COUNT; i++) {
 4.4. Primitive Type Array OffHeap Pool
 -------
 ~~~~~ java
+
+OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
 
 PrimitiveTypeArrayOffHeapPool<Integer, int[]> primitiveTypeArrayPool = 
 				offHeapService.createOffHeapPool(
@@ -128,6 +290,8 @@ for (int i = 0; i < primitiveArray.length; i++) {
 -------
 ~~~~~ java
 
+OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
+
 ComplexTypeArrayOffHeapPool<SampleClass, SampleClass[]> complexTypeArrayPool = 
 				offHeapService.createOffHeapPool(
 						new ArrayOffHeapPoolCreateParameterBuilder<SampleClass>().
@@ -145,26 +309,170 @@ for (int i = 0; i < complexArray.length; i++) {
 
 ~~~~~
 
-4.6. Instrumentation Module
+4.6. Extendable Eager Referenced Object OffHeap Pool
 -------
+~~~~~ java
 
-4.7. Instrumentation Module
--------
+OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
 
-4.8. Instrumentation Module
--------
+EagerReferencedObjectOffHeapPool<SampleClass> sequentialObjectPool = 
+				offHeapService.createOffHeapPool(
+						new ObjectOffHeapPoolCreateParameterBuilder<SampleClass>().
+								type(SampleClass.class).
+								objectCount(ELEMENT_COUNT).
+								referenceType(ObjectPoolReferenceType.EAGER_REFERENCED).
+							build());
 
-4.9. Instrumentation Module
+ExtendableObjectOffHeapPool<SampleClass> extendableObjectPool =
+				offHeapService.createOffHeapPool(
+						new ExtendableObjectOffHeapPoolCreateParameterBuilder<SampleClass>().
+								forkableObjectOffHeapPool(sequentialObjectPool).
+							build());
+
+for (int i = 0; i < TOTAL_ELEMENT_COUNT; i++) {
+	SampleClass obj = extendableObjectPool.get();
+	...
+}	
+
+~~~~~
+
+4.7. Extendable Lazy Referenced Object OffHeap Pool
 -------
+~~~~~ java
+
+OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
+
+LazyReferencedObjectOffHeapPool<SampleClass> sequentialObjectPool = 
+				offHeapService.createOffHeapPool(
+						new ObjectOffHeapPoolCreateParameterBuilder<SampleClass>().
+								type(SampleClass.class).
+								objectCount(ELEMENT_COUNT).
+								referenceType(ObjectPoolReferenceType.LAZY_REFERENCED).
+							build());
+
+ExtendableObjectOffHeapPool<SampleClass> extendableObjectPool =
+				offHeapService.createOffHeapPool(
+						new ExtendableObjectOffHeapPoolCreateParameterBuilder<SampleClass>().
+								forkableObjectOffHeapPool(sequentialObjectPool).
+							build());
+
+for (int i = 0; i < TOTAL_ELEMENT_COUNT; i++) {
+	SampleClass obj = extendableObjectPool.get();
+	...
+}	
+
+~~~~~
+
+4.8. String OffHeap Pool
+-------
+~~~~~ java
+
+OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
+
+StringOffHeapPool stringPool = 
+				offHeapService.createOffHeapPool(
+						new StringOffHeapPoolCreateParameterBuilder().
+								estimatedStringCount(STRING_COUNT).
+								estimatedStringLength(ESTIMATED_STRING_LENGTH).
+							build());
+   
+for (int i = 0; i < STRING_COUNT; i++) {
+	System.out.println(stringPool.get("String " + i));
+}
+    	
+~~~~~
+
+4.9. Extendable String OffHeap Pool
+-------
+~~~~~ java
+
+OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
+
+DeeplyForkableStringOffHeapPool stringPool = 
+				offHeapService.createOffHeapPool(
+						new StringOffHeapPoolCreateParameterBuilder().
+								estimatedStringCount(STRING_COUNT).
+								estimatedStringLength(ESTIMATED_STRING_LENGTH).
+							build());
+   
+ExtendableStringOffHeapPool extendableStringPool =
+				offHeapService.createOffHeapPool(
+						new ExtendableStringOffHeapPoolCreateParameterBuilder().
+								forkableStringOffHeapPool(stringPool).
+							build());
+
+for (int i = 0; i < TOTAL_STRING_COUNT; i++) {
+	System.out.println(stringPool.get("String " + i));
+}
+
+~~~~~
 
 4.10. Instrumentation Module
 -------
+~~~~~ java
 
-4.11. Instrumentation Module
--------
+public class SampleClass {
 
-4.12. Instrumentation Module
--------
+	public SampleClass() {
+		System.out.println("SampleInstrumentClass.SampleClassToInstrument()"); 
+	}
+
+	public void methodToIntercept() {
+		System.out.println("SampleInstrumentClass.methodToIntercept()"); 
+	}
+	
+}
+
+~~~~~
+
+~~~~~ java
+
+Jillegal.init();
+
+System.out.println("Before Intrumentation: ");
+System.out.println("=====================================================");
+
+SampleClass obj1 = new SampleClass();
+obj1.methodToIntercept();
+
+System.out.println("=====================================================");
+
+System.out.println("After Intrumentation: ");
+System.out.println("=====================================================");
+
+InstrumentService instrumentService = InstrumentServiceFactory.getInstrumentService();
+Instrumenter<SampleClass> inst = instrumentService.getInstrumenter(SampleClass.class);
+GeneratedClass<SampleClass> redefinedClass =
+	inst.
+		insertBeforeConstructors(
+                    	new BeforeConstructorInterceptor<SampleClass>() {
+				@Override
+				public void beforeConstructor(SampleClass o, Constructor<SampleClass> c, Object[] args) {
+					System.out.println("Intercepted by Jillegal before constructor ...");
+				}}).
+
+		insertAfterConstructors("System.out.println(\"Intercepted by Jillegal after constructor ...\");").
+
+		insertBeforeMethod("methodToIntercept", 
+                    	new BeforeMethodInterceptor<SampleClass>() {
+				@Override
+                    		public void beforeMethod(SampleClass o, Method m, Object[] args) {
+					System.out.println("Intercepted by Jillegal before methodToIntercept method ...");
+				}}).
+
+		insertAfterMethod("methodToIntercept", 
+			"System.out.println(\"Intercepted by Jillegal after methodToIntercept method ...\");").
+                    			
+	build();
+
+instrumentService.redefineClass(redefinedClass); 
+
+SampleClass obj2 = new SampleClass();
+obj2.methodToIntercept();
+        
+System.out.println("=====================================================");
+
+~~~~~
 
 5. Roadmap
 =======
