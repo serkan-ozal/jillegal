@@ -97,6 +97,7 @@ public class JillegalDemo extends JillegalAware {
 ~~~~~
 
 4.1. Jillegal Aware OffHeap Pool
+-------
 
 To make any of your class, just annotate it with **`tr.com.serkanozal.jillegal.config.annotation.JillegalAware`** annotation. So it will be detected by Jillegal on initialize cycle and will be instrumented automatically to be aware of Jillegal.
 
