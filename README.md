@@ -64,20 +64,86 @@ Latest version is `2.0-SNAPSHOT`.
 4. Usage
 =======
 
-4.1. Instrumentation Module
+4.2. Eagaer Referenced Object OffHeap Pool
 -------
+~~~~~ java
 
-4.2. Instrumentation Module
--------
+ObjectOffHeapPoolCreateParameterBuilder<SampleClass> offHeapPoolParameterBuilder = 
+				new ObjectOffHeapPoolCreateParameterBuilder<SampleClass>().
+						type(SampleClass.class).
+						objectCount(ELEMENT_COUNT).
+						makeOffHeapableAsAuto(true).
+						referenceType(ObjectPoolReferenceType.EAGER_REFERENCED);
+ObjectOffHeapPoolCreateParameter<SampleClass> offHeapPoolParameter = offHeapPoolParameterBuilder.build();
+EagerReferencedObjectOffHeapPool<SampleClass> eagerReferencedObjectPool = 
+				offHeapService.createOffHeapPool(offHeapPoolParameter);
+for (int i = 0; i < ELEMENT_COUNT; i++) {
+	SampleClass obj = eagerReferencedObjectPool.get();
+	...
+}
 
-4.3. Instrumentation Module
--------
+~~~~~
 
-4.4. Instrumentation Module
+4.3. Lazy Referenced Object OffHeap Pool
 -------
+~~~~~ java
 
-4.5. Instrumentation Module
+ObjectOffHeapPoolCreateParameterBuilder<SampleClass> offHeapPoolParameterBuilder = 
+				new ObjectOffHeapPoolCreateParameterBuilder<SampleClass>().
+						type(SampleClass.class).
+						objectCount(ELEMENT_COUNT).
+						makeOffHeapableAsAuto(true).
+						referenceType(ObjectPoolReferenceType.LAZY_REFERENCED);
+ObjectOffHeapPoolCreateParameter<SampleClass> offHeapPoolParameter = offHeapPoolParameterBuilder.build();
+LazyReferencedObjectOffHeapPool<SampleClass> lazyReferencedObjectPool = 
+				offHeapService.createOffHeapPool(offHeapPoolParameter);
+for (int i = 0; i < ELEMENT_COUNT; i++) {
+	SampleClass obj = lazyReferencedObjectPool.get();
+	...
+}
+
+~~~~~
+
+4.4. Primitive Type Array OffHeap Pool
 -------
+~~~~~ java
+
+PrimitiveTypeArrayOffHeapPool<Integer, int[]> primitiveTypeArrayPool = 
+				offHeapService.createOffHeapPool(
+						new ArrayOffHeapPoolCreateParameterBuilder<Integer>().
+								type(Integer.class).
+								length(ELEMENT_COUNT).
+								usePrimitiveTypes(true).
+							build());
+
+int[] primitiveArray = primitiveTypeArrayPool.getArray();
+
+for (int i = 0; i < primitiveArray.length; i++) {
+	primitiveArray[i] = i;
+}
+
+~~~~~
+
+4.5. Complex Type Array OffHeap Pool
+-------
+~~~~~ java
+
+ComplexTypeArrayOffHeapPool<SampleClass, SampleClass[]> complexTypeArrayPool = 
+				offHeapService.createOffHeapPool(
+						new ArrayOffHeapPoolCreateParameterBuilder<SampleClass>().
+								type(SampleClass.class).
+								length(ELEMENT_COUNT).
+								initializeElements(true).
+							build());
+							
+SampleClass[] complexArray = complexTypeArrayPool.getArray();
+
+for (int i = 0; i < complexArray.length; i++) {
+	SampleClass obj = complexArray[i];
+	...
+}	
+
+~~~~~
 
 4.6. Instrumentation Module
 -------
