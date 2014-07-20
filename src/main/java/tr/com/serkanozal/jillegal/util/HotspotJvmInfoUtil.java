@@ -24,11 +24,11 @@ import sun.jvm.hotspot.runtime.VM;
 import sun.management.VMManagement;
 
 @SuppressWarnings("restriction")
-public class JvmInfoUtil {
+public class HotspotJvmInfoUtil {
 
-	private static final Logger logger = Logger.getLogger(JvmInfoUtil.class);
+	private static final Logger logger = Logger.getLogger(HotspotJvmInfoUtil.class);
 	
-	private static JvmInfo jvmInfo;
+	private static HotspotJvmInfo jvmInfo;
 	
 	private static final String JVM_INFO_RETRIEVE_START = "$$$_JVM_INFO_RETRIEVE_START_$$$";
 	private static final String JVM_INFO_RETRIEVE_FINISH = "$$$_JVM_INFO_RETRIEVE_FINISH_$$$";
@@ -36,7 +36,7 @@ public class JvmInfoUtil {
 	private static final String NARROW_OOP_BASE_INFO_KEY = "NARROW_OOP_BASE_INFO";
 	private static final String NARROW_OOP_SHIFT_INFO_KEY = "NARROW_OOP_SHIFT_INFO";
 	
-	private JvmInfoUtil() {
+	private HotspotJvmInfoUtil() {
         
 	}
 	
@@ -92,14 +92,14 @@ public class JvmInfoUtil {
 		}
 	}
 
-	public static JvmInfo getJvmInfo() {
+	public static HotspotJvmInfo getJvmInfo() {
 		if (jvmInfo == null) {
 			jvmInfo = findJvmInfo(findProcessId());
 		}
 		return jvmInfo;
 	}
 	
-	private static JvmInfo findJvmInfo(int processId) {
+	private static HotspotJvmInfo findJvmInfo(int processId) {
 		if (processId == 0) {
 			return null;
 		}
@@ -111,7 +111,7 @@ public class JvmInfoUtil {
 			args.add(System.getProperty("java.home") + "/" + "bin" + "/" + "java");
 			args.add("-cp");
 			args.add(ClasspathUtil.getFullClasspath());
-			args.add(JvmInfoUtil.class.getName());
+			args.add(HotspotJvmInfoUtil.class.getName());
 			args.add(String.valueOf(processId));
 
 			Process p =  new ProcessBuilder(args).start();
@@ -142,7 +142,7 @@ public class JvmInfoUtil {
 	        if (narrowOopBase != -1 && narrowOopShift != -1) {
 	        	logger.info("Narrow oop base  : " + narrowOopBase);
 	        	logger.info("Narrow oop shift : " + narrowOopShift);
-	        	return new JvmInfo(narrowOopBase, narrowOopShift);
+	        	return new HotspotJvmInfo(narrowOopBase, narrowOopShift);
 	        }
 	        else {
 	        	return null;
@@ -171,12 +171,12 @@ public class JvmInfoUtil {
 		} 
    }
 	
-	public static class JvmInfo {
+	public static class HotspotJvmInfo {
 		
 		public final long narrowOopBase;
 		public final int narrowOopShift;
 		
-		public JvmInfo(long narrowOopBase, int narrowOopShift) {
+		public HotspotJvmInfo(long narrowOopBase, int narrowOopShift) {
 			this.narrowOopBase = narrowOopBase;
 			this.narrowOopShift = narrowOopShift;
 		}

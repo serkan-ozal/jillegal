@@ -207,7 +207,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 		this.length = length;
 		this.initializeElements = initializeElements;
 		this.directMemoryService = directMemoryService;
-		this.objectSize = directMemoryService.sizeOf(elementType);
+		this.objectSize = directMemoryService.sizeOfClass(elementType);
 		this.arraySize = JvmUtil.sizeOfArray(elementType, length);
 		this.allocationSize = 
 				arraySize + (length * objectSize) + JvmUtil.getAddressSize(); // Extra memory for possible aligning

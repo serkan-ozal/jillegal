@@ -13,7 +13,6 @@ import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAll
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.pool.ContentAwareOffHeapPool;
-import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> 
 		extends BaseOffHeapPool<T, P> implements ContentAwareOffHeapPool<T, P> {
@@ -23,11 +22,13 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected long currentAddress;
 	protected T sampleObject;
 	protected long offHeapSampleObjectAddress;
+	/*
 	protected long classPointerAddress;
 	protected long classPointerOffset;
 	protected long classPointerSize;
 	protected JvmAwareClassPointerUpdater jvmAwareClassPointerUpdater;
-
+	*/
+	
 	public BaseObjectOffHeapPool(Class<T> objectType) {
 		super(objectType);
 	}
@@ -62,7 +63,6 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		this.elementType = elementType;
 		this.objectCount = objectCount;
 		this.directMemoryService = directMemoryService;
-		this.objectSize = directMemoryService.sizeOf(elementType);
 		boolean sampleObjectCreated = false;
 		try {
 			Constructor<T> defaultConstructor = elementType.getConstructor();
@@ -91,8 +91,10 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 			throw new IllegalStateException("Unable to create a sample object for class " + elementType.getName());
 		}
 		long address = directMemoryService.addressOf(sampleObject);
+		this.objectSize = directMemoryService.sizeOfObject(sampleObject);
 		this.offHeapSampleObjectAddress = directMemoryService.allocateMemory(objectSize);
 		directMemoryService.copyMemory(address, offHeapSampleObjectAddress, objectSize);
+		/*
 		this.classPointerAddress = JvmUtil.jvmAddressOfClass(sampleObject);
 		this.classPointerOffset = JvmUtil.getClassDefPointerOffsetInObject();
 		this.classPointerSize = JvmUtil.getReferenceSize();
@@ -116,6 +118,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	        default:
 	            throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
 		}
+		*/
 	}
 	
 	@Override
@@ -133,6 +136,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		return isIn(address);
 	}
 	
+	/*
 	protected boolean checkAndRefreshIfClassPointerOfObjectUpdated() {
 		long currentClassPointerAddress = JvmUtil.jvmAddressOfClass(sampleObject);
 		if (currentClassPointerAddress != classPointerAddress) {
@@ -182,6 +186,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		}
 		
 	}
+	*/
 	
 	/**
 	 * Get and copy class pointer to current object's class pointer field. 
@@ -189,8 +194,10 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	 * 
 	 * @param address
 	 */
+	/*
 	protected long updateClassPointerOfObject(long address) {
 		return jvmAwareClassPointerUpdater.updateClassPointerOfObject(address);
 	}
+	*/
 	
 }

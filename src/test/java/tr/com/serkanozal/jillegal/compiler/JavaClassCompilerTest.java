@@ -7,11 +7,14 @@
 
 package tr.com.serkanozal.jillegal.compiler;
 
+import org.junit.Test;
+
 import junit.framework.Assert;
 
 //import org.junit.Test;
 
 import tr.com.serkanozal.jillegal.compiler.domain.model.DefaultCodeType;
+import tr.com.serkanozal.jillegal.compiler.exception.ClassCompileException;
 //import tr.com.serkanozal.jillegal.compiler.exception.ClassCompileException;
 import tr.com.serkanozal.jillegal.compiler.service.ClassCompilerService;
 import tr.com.serkanozal.jillegal.compiler.service.ClassCompilerServiceFactory;
@@ -26,7 +29,7 @@ public class JavaClassCompilerTest {
 
 	private ClassCompilerService classCompilerService = ClassCompilerServiceFactory.getClassCompilerService();
 	
-	//@Test
+	@Test
 	public void compileValid() throws Exception {
 		String code = 
 			"package tr.com.serkanozal.jillegal.compiler;"+ "\n" +
@@ -46,7 +49,7 @@ public class JavaClassCompilerTest {
 		Assert.assertEquals("I am SampleJavaClass", obj.toString());
 	}
 	
-	//@Test(expected = ClassCompileException.class)
+	@Test(expected = ClassCompileException.class)
 	public void compileInvalid() throws Exception {
 		String code = 
 				"package tr.com.serkanozal.jillegal.compiler;"+ "\n" +

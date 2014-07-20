@@ -42,7 +42,7 @@ import org.apache.log4j.Logger;
 
 import sun.management.VMManagement;
 import sun.misc.Unsafe;
-import tr.com.serkanozal.jillegal.util.JvmInfoUtil.JvmInfo;
+import tr.com.serkanozal.jillegal.util.HotspotJvmInfoUtil.HotspotJvmInfo;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
@@ -78,16 +78,21 @@ public class JvmUtil {
 	public static final String OS_VERSION = System.getProperty("os.version");
 	
 	public static final JavaVersionInfo JAVA_VERSION_INFO = findJavaVersionInfo();
+	public static final JvmInfo JVM_INFO = findJvmInfo();
 	  
+	public static final byte BITS_32 = 32;
+    public static final byte BITS_64 = 64;
 	public static final byte SIZE_32_BIT = 4;
     public static final byte SIZE_64_BIT = 8;
+    public static final byte DEFAULT_COMPRESSED_REF_SHIFT_SIZE = 3;
     public static final byte INVALID_ADDRESS = -1;
+    private static final byte INVALID_OOP_SIZE = -1;
     
     public static final byte ADDRESSING_4_BYTE = 4;
     public static final byte ADDRESSING_8_BYTE = 8;
     public static final byte ADDRESSING_16_BYTE = 16;
 
-    public static final int NR_BITS = Integer.valueOf(System.getProperty("sun.arch.data.model"));
+    public static final int NR_BITS = findNumberOfBits();
     public static final int BYTE = 8;
     public static final int WORD = NR_BITS / BYTE;
     public static final int MIN_SIZE = 16; 
@@ -115,6 +120,9 @@ public class JvmUtil {
     
     public static final int SIZE_FIELD_OFFSET_IN_CLASS_32_BIT = 12;
     public static final int SIZE_FIELD_OFFSET_IN_CLASS_64_BIT = 24;
+    
+    private static final long TWENTY_FIVE_GB = 25L * 1024L * 1024L * 1024L;
+    private static final long FIFTY_SEVEN_GB = 57L * 1024L * 1024L * 1024L;
     
     public static final int BOOLEAN_SIZE = 1;
     public static final int BYTE_SIZE = Byte.SIZE / BYTE;
@@ -150,8 +158,8 @@ public class JvmUtil {
     }
 	
 	private static void init() {
-        if (isJavaVersionSupported() == false) {
-        	throw new AssertionError("Java version is not supported: " + JAVA_SPEC_VERSION); 
+        if (isJvmSupported() == false) {
+        	throw new AssertionError("JVM is not supported: " + JVM_NAME); 
         }
 		
 		try {
@@ -193,61 +201,79 @@ public class JvmUtil {
 
         switch (addressSize) {
             case SIZE_32_BIT:
-            	JvmUtil.classDefPointerOffsetInObject = CLASS_DEF_POINTER_OFFSET_IN_OBJECT_FOR_32_BIT;
-            	if (isJava_6()) {
-            		JvmUtil.classDefPointerOffsetInClass = CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT_FOR_JAVA_6;
-            	}	
-            	else if (isJava_7()) {
-            		JvmUtil.classDefPointerOffsetInClass = CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT_FOR_JAVA_7;
+            	if (isHotspotJvm()) {
+            		JvmUtil.classDefPointerOffsetInObject = CLASS_DEF_POINTER_OFFSET_IN_OBJECT_FOR_32_BIT;
+            		if (isJava_6()) {
+                		JvmUtil.classDefPointerOffsetInClass = CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT_FOR_JAVA_6;
+                	}	
+                	else if (isJava_7()) {
+                		JvmUtil.classDefPointerOffsetInClass = CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT_FOR_JAVA_7;
+                	}
+                	else if (isJava_8()) {
+                		JvmUtil.classDefPointerOffsetInClass = CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT_FOR_JAVA_8;
+                	}
+                	else {
+	            		throw new AssertionError("Java version is not supported: " + JAVA_SPEC_VERSION); 
+	            	}
+            		JvmUtil.sizeFieldOffsetOffsetInClass = SIZE_FIELD_OFFSET_IN_CLASS_32_BIT;
+            		jvmAwareUtil = new Address32BitJvmUtil();
             	}
-            	else if (isJava_8()) {
-            		JvmUtil.classDefPointerOffsetInClass = CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT_FOR_JAVA_8;
+            	else if (isJRockitJvm()) {
+            		jvmAwareUtil = new Address32BitJRockitJvmUtil();
             	}
-            	JvmUtil.sizeFieldOffsetOffsetInClass = SIZE_FIELD_OFFSET_IN_CLASS_32_BIT;
-            	jvmAwareUtil = new Address32BitJvmUtil();
                 break;
             case SIZE_64_BIT:
-            	JvmUtil.classDefPointerOffsetInObject = CLASS_DEF_POINTER_OFFSET_IN_OBJECT_FOR_64_BIT;
-            	if (isJava_6()) {
+            	if (isHotspotJvm()) {
+            		JvmUtil.classDefPointerOffsetInObject = CLASS_DEF_POINTER_OFFSET_IN_OBJECT_FOR_64_BIT;
+	            	if (isJava_6()) {
+	            		if (options.compressedRef) {
+	            			JvmUtil.classDefPointerOffsetInClass = 
+	            					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITH_COMPRESSED_REF_FOR_JAVA_6;
+	            			jvmAwareUtil = new Address64BitWithCompressedOopsJvmUtil();
+	            		}
+	            		else {
+	            			JvmUtil.classDefPointerOffsetInClass = 
+	            					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITHOUT_COMPRESSED_REF_FOR_JAVA_6;
+	            			jvmAwareUtil = new Address64BitWithoutCompressedOopsJvmUtil();
+	            		}
+	            	}
+	            	else if (isJava_7()) {
+	            		if (options.compressedRef) {
+	            			JvmUtil.classDefPointerOffsetInClass = 
+	            					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITH_COMPRESSED_REF_FOR_JAVA_7;
+	            			jvmAwareUtil = new Address64BitWithCompressedOopsJvmUtil();
+	            		}
+	            		else {
+	            			JvmUtil.classDefPointerOffsetInClass = 
+	            					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITHOUT_COMPRESSED_REF_FOR_JAVA_7;
+	            			jvmAwareUtil = new Address64BitWithoutCompressedOopsJvmUtil();
+	            		}
+	            	}
+	            	else if (isJava_8()) {
+	            		if (options.compressedRef) {
+	            			JvmUtil.classDefPointerOffsetInClass = 
+	            					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITH_COMPRESSED_REF_FOR_JAVA_8;
+	            			jvmAwareUtil = new Address64BitWithCompressedOopsJvmUtil();
+	            		}
+	            		else {
+	            			JvmUtil.classDefPointerOffsetInClass = 
+	            					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITHOUT_COMPRESSED_REF_FOR_JAVA_8;
+	            			jvmAwareUtil = new Address64BitWithoutCompressedOopsJvmUtil();
+	            		}
+	            	}
+	            	else {
+	            		throw new AssertionError("Java version is not supported: " + JAVA_SPEC_VERSION); 
+	            	}
+	            	JvmUtil.sizeFieldOffsetOffsetInClass = SIZE_FIELD_OFFSET_IN_CLASS_64_BIT;
+            	}
+            	else if (isJRockitJvm()) {
             		if (options.compressedRef) {
-            			JvmUtil.classDefPointerOffsetInClass = 
-            					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITH_COMPRESSED_REF_FOR_JAVA_6;
-            			jvmAwareUtil = new Address64BitWithCompressedOopsJvmUtil();
+            			jvmAwareUtil = new Address64BitWithCompressedOopsJRockitJvmUtil();
             		}
             		else {
-            			JvmUtil.classDefPointerOffsetInClass = 
-            					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITHOUT_COMPRESSED_REF_FOR_JAVA_6;
-            			jvmAwareUtil = new Address64BitWithoutCompressedOopsJvmUtil();
-            		}
+            			jvmAwareUtil = new Address64BitWithoutCompressedOopsJRockitJvmUtil();
+            		}	
             	}
-            	else if (isJava_7()) {
-            		if (options.compressedRef) {
-            			JvmUtil.classDefPointerOffsetInClass = 
-            					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITH_COMPRESSED_REF_FOR_JAVA_7;
-            			jvmAwareUtil = new Address64BitWithCompressedOopsJvmUtil();
-            		}
-            		else {
-            			JvmUtil.classDefPointerOffsetInClass = 
-            					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITHOUT_COMPRESSED_REF_FOR_JAVA_7;
-            			jvmAwareUtil = new Address64BitWithoutCompressedOopsJvmUtil();
-            		}
-            	}
-            	else if (isJava_8()) {
-            		if (options.compressedRef) {
-            			JvmUtil.classDefPointerOffsetInClass = 
-            					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITH_COMPRESSED_REF_FOR_JAVA_8;
-            			jvmAwareUtil = new Address64BitWithCompressedOopsJvmUtil();
-            		}
-            		else {
-            			JvmUtil.classDefPointerOffsetInClass = 
-            					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITHOUT_COMPRESSED_REF_FOR_JAVA_8;
-            			jvmAwareUtil = new Address64BitWithoutCompressedOopsJvmUtil();
-            		}
-            	}
-            	else {
-            		throw new AssertionError("Java version is not supported: " + JAVA_SPEC_VERSION); 
-            	}
-            	JvmUtil.sizeFieldOffsetOffsetInClass = SIZE_FIELD_OFFSET_IN_CLASS_64_BIT;
                 break;
             default:
             	throw new AssertionError("Unsupported address size: " + addressSize); 
@@ -272,6 +298,22 @@ public class JvmUtil {
 			throw new AssertionError("Java version is not supported: " + JAVA_SPEC_VERSION); 
 		}
 	}
+	
+	private static JvmInfo findJvmInfo() {
+		String name = JVM_NAME.toLowerCase();
+		if (name.contains("hotspot") || name.contains("openjdk")) {
+			return JvmInfo.HOTSPOT_JVM;
+		}
+		else if (name.contains("jrockit")) {
+			return JvmInfo.JROCKIT_JVM;
+		}
+		else if (name.contains("ibm")) {
+			return JvmInfo.IBM_JVM;
+		}
+		else {
+			throw new AssertionError("Jvm is not supported: " + JVM_NAME); 
+		}
+	}
 
 	public static boolean isJava_6() {
 		return JAVA_VERSION_INFO == JavaVersionInfo.JAVA_VERSION_6;
@@ -283,6 +325,18 @@ public class JvmUtil {
 	
 	public static boolean isJava_8() {
 		return JAVA_VERSION_INFO == JavaVersionInfo.JAVA_VERSION_8;
+	}
+	
+	public static boolean isJvmSupported() {
+		return isHotspotJvmSupported() || isJrockitJvmSupported();
+	}
+	
+	public static boolean isHotspotJvmSupported() {
+		return isHotspotJvm() || isJavaVersionSupported();
+	}
+	
+	public static boolean isJrockitJvmSupported() {
+		return isJRockitJvm();
 	}
 	
 	public static boolean isJavaVersionSupported() {
@@ -457,18 +511,54 @@ public class JvmUtil {
 
     }
     
+    private static class Address32BitJRockitJvmUtil extends Address32BitJvmUtil {
+    	
+    	@Override
+		public long addressOfClass(Object o) {
+    		throw new UnsupportedOperationException("\"addressOfClass(Object o)\" is not supported by JRockit JVM");
+    	}
+    	
+    	@Override
+		public long jvmAddressOfClass(Object o) {
+    		throw new UnsupportedOperationException("\"jvmAddressOfClass(Object o)\" is not supported by JRockit JVM");
+    	}
+    	
+    	@Override
+		public long addressOfClassBase(Class<?> clazz) {
+    		throw new UnsupportedOperationException("\"addressOfClassBase(Class<?> clazz)\" is not supported by JRockit JVM");
+    	}
+    	
+    	@Override
+		public long addressOfClassInternal(Class<?> clazz) {
+    		throw new UnsupportedOperationException("\"addressOfClassInternal(Class<?> clazz)\" is not supported by JRockit JVM");
+    	}
+    	
+    	@Override
+		public int getArrayLength(long arrayStartAddress, Class<?> elementType) {
+			long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+			return unsafe.getInt(arrayIndexStartAddress - 2 * JvmUtil.arrayLengthSize());
+		}
+
+		@Override
+		public void setArrayLength(long arrayStartAddress, Class<?> elementType, int length) {
+			long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+			unsafe.putInt(arrayIndexStartAddress - 2 * JvmUtil.arrayLengthSize(), length);
+		}
+		
+    }
+    
     private static abstract class Address64BitJvmUtil extends BaseJvmAwaretil {
 
     	@Override
     	public int getArrayLength(long arrayStartAddress, Class<?> elementType) {
     		long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
-    		return (int)unsafe.getLong(arrayIndexStartAddress - JvmUtil.arrayLengthSize());
+    		return (int)unsafe.getInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize());
     	}
     	
     	@Override
 		public void setArrayLength(long arrayStartAddress, Class<?> elementType, int length) {
 			long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
-			unsafe.putLong(arrayIndexStartAddress - JvmUtil.arrayLengthSize(), length);
+			unsafe.putInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize(), length);
 		}
 
     }
@@ -508,13 +598,15 @@ public class JvmUtil {
 		@Override
 		public long addressOfClassBase(Class<?> clazz) {
 			long addressOfClass = addressOf(clazz);
-	    	if (isJava_7()) {
+			if (isJava_7()) {
 	    		return addressOfClass;
 	    	}
 	    	else if (isJava_8()) {
 	    		return addressOfClass;
 	    	}
-	    	return JvmUtil.toNativeAddress(normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass)));
+	    	else {
+	    		return JvmUtil.toNativeAddress(normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass)));
+	    	}
 		}
 
 		@Override
@@ -528,6 +620,42 @@ public class JvmUtil {
 			}	
 		}
 
+    }
+    
+    private static class Address64BitWithCompressedOopsJRockitJvmUtil extends Address64BitWithCompressedOopsJvmUtil {
+    	
+    	@Override
+		public long addressOfClass(Object o) {
+    		throw new UnsupportedOperationException("\"addressOfClass(Object o)\" is not supported by JRockit JVM");
+    	}
+    	
+    	@Override
+		public long jvmAddressOfClass(Object o) {
+    		throw new UnsupportedOperationException("\"jvmAddressOfClass(Object o)\" is not supported by JRockit JVM");
+    	}
+    	
+    	@Override
+		public long addressOfClassBase(Class<?> clazz) {
+    		throw new UnsupportedOperationException("\"addressOfClassBase(Class<?> clazz)\" is not supported by JRockit JVM");
+    	}
+    	
+    	@Override
+		public long addressOfClassInternal(Class<?> clazz) {
+    		throw new UnsupportedOperationException("\"addressOfClassInternal(Class<?> clazz)\" is not supported by JRockit JVM");
+    	}
+    	
+    	@Override
+    	public int getArrayLength(long arrayStartAddress, Class<?> elementType) {
+    		long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+    		return (int)unsafe.getInt(arrayIndexStartAddress - 2 * JvmUtil.arrayLengthSize());
+    	}
+    	
+    	@Override
+		public void setArrayLength(long arrayStartAddress, Class<?> elementType, int length) {
+			long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+			unsafe.putInt(arrayIndexStartAddress - 2 * JvmUtil.arrayLengthSize(), length);
+		}
+    	
     }
     
     private static class Address64BitWithoutCompressedOopsJvmUtil extends Address64BitJvmUtil {
@@ -575,6 +703,42 @@ public class JvmUtil {
 			return unsafe.getLong(addressOfClass + classDefPointerOffsetInClass); 
 		}
 
+    }
+    
+    private static class Address64BitWithoutCompressedOopsJRockitJvmUtil extends Address64BitWithoutCompressedOopsJvmUtil {
+    	
+    	@Override
+		public long addressOfClass(Object o) {
+    		throw new UnsupportedOperationException("\"addressOfClass(Object o)\" is not supported by JRockit JVM");
+    	}
+    	
+    	@Override
+		public long jvmAddressOfClass(Object o) {
+    		throw new UnsupportedOperationException("\"jvmAddressOfClass(Object o)\" is not supported by JRockit JVM");
+    	}
+    	
+    	@Override
+		public long addressOfClassBase(Class<?> clazz) {
+    		throw new UnsupportedOperationException("\"addressOfClassBase(Class<?> clazz)\" is not supported by JRockit JVM");
+    	}
+    	
+    	@Override
+		public long addressOfClassInternal(Class<?> clazz) {
+    		throw new UnsupportedOperationException("\"addressOfClassInternal(Class<?> clazz)\" is not supported by JRockit JVM");
+    	}
+    	
+    	@Override
+    	public int getArrayLength(long arrayStartAddress, Class<?> elementType) {
+    		long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+    		return (int)unsafe.getInt(arrayIndexStartAddress - 2 * JvmUtil.arrayLengthSize());
+    	}
+    	
+    	@Override
+		public void setArrayLength(long arrayStartAddress, Class<?> elementType, int length) {
+			long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+			unsafe.putInt(arrayIndexStartAddress - 2 * JvmUtil.arrayLengthSize(), length);
+		}
+    	
     }
     
     public synchronized static long addressOf(Object obj) {
@@ -1306,12 +1470,7 @@ public class JvmUtil {
     }
 
     private static VMOptions findOptions() {
-    	JvmInfo jvmInfo = JvmInfoUtil.getJvmInfo();
-    	if (jvmInfo != null) {
-    		return new VMOptions("Auto-detected", jvmInfo.narrowOopShift, jvmInfo.narrowOopBase);
-    	}
-    	
-    	/*
+    	 /*
          * When running with CompressedOops on 64-bit platform, the address size
          * reported by Unsafe is still 8, while the real reference fields are 4 bytes long.
          * Try to guess the reference field size with this naive trick.
@@ -1323,9 +1482,27 @@ public class JvmUtil {
             oopSize = (int) Math.abs(off2 - off1);
         } 
         catch (NoSuchFieldException e) {
-            oopSize = -1;
+            oopSize = INVALID_OOP_SIZE;
+        }
+        
+        // Try Hotspot
+        VMOptions hsOpts = getHotspotSpecifics(oopSize);
+        if (hsOpts != null) {
+        	return hsOpts;
         }
 
+        // Try JRockit
+        VMOptions jrOpts = getJRockitSpecifics(oopSize);
+        if (jrOpts != null) {
+        	return jrOpts;
+        }
+        
+        // Try IBM
+        VMOptions ibmOpts = getIBMSpecifics(oopSize);
+        if (ibmOpts != null) {
+        	return ibmOpts;
+        }
+        
         /*
         if (oopSize != unsafe.addressSize()) {
 	    	for (int i = 0; i < 32; i++) {
@@ -1337,18 +1514,6 @@ public class JvmUtil {
 	    	}
         }
         */
-        
-        // Try Hotspot
-        VMOptions hsOpts = getHotspotSpecifics();
-        if (hsOpts != null) {
-        	return hsOpts;
-        }
-
-        // Try JRockit
-        VMOptions jrOpts = getJRockitSpecifics();
-        if (jrOpts != null) {
-        	return jrOpts;
-        }
         
         if (oopSize != unsafe.addressSize()) {
         	switch (oopSize) {
@@ -1365,13 +1530,65 @@ public class JvmUtil {
         }
     }
     
-    private static VMOptions getHotspotSpecifics() {
-        String name = System.getProperty("java.vm.name");
-        if (!name.contains("HotSpot") && !name.contains("OpenJDK")) {
+    public static String getPlatformMBeanAttribute(String beanName, String attrName) {
+        try {
+            MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+            ObjectName name = ObjectName.getInstance(beanName);
+            Object attr = server.getAttribute(name, attrName).toString();
+            if (attr != null) {
+                return attr.toString();
+            }
+            return null;
+        } 
+        catch (Throwable t) {
             return null;
         }
-
+    }
+    
+    public static boolean isHotspotJvm() {
+        return JVM_INFO == JvmInfo.HOTSPOT_JVM;
+    }
+    
+    public static boolean isJRockitJvm() {
+    	return JVM_INFO == JvmInfo.JROCKIT_JVM;
+    }
+    
+    public static boolean isIBMJvm() {
+    	return JVM_INFO == JvmInfo.IBM_JVM;
+    }
+    
+    private static int findNumberOfBits() {
+    	 String systemProp = System.getProperty("com.ibm.vm.bitmode");
+         if (systemProp != null) {
+        	 return Integer.valueOf(systemProp);
+         }
+         systemProp = System.getProperty("sun.arch.data.model");
+         if (systemProp != null) {
+        	 return Integer.valueOf(systemProp);
+         }
+         systemProp = System.getProperty("java.vm.version");
+         if (systemProp.contains("_64")) {
+        	 return 64;
+         }
+         else {
+        	 return 32;
+         }
+    }
+    
+    private static VMOptions getHotspotSpecifics(int oopSize) {
+        if (!isHotspotJvm()) {
+        	return null;
+        }
         try {
+        	if (oopSize == unsafe.addressSize()) {
+        		return new VMOptions("HotSpot");
+        	}
+        	
+        	HotspotJvmInfo jvmInfo = HotspotJvmInfoUtil.getJvmInfo();
+	    	if (jvmInfo != null) {
+	    		return new VMOptions("Auto-detected", jvmInfo.narrowOopShift, jvmInfo.narrowOopBase);
+	    	}
+        	
             MBeanServer server = ManagementFactory.getPlatformMBeanServer();
 
             try {
@@ -1391,7 +1608,6 @@ public class JvmUtil {
                 else {
                     return new VMOptions("HotSpot");
                 }
-
             } 
             catch (RuntimeMBeanException iae) {
                 return new VMOptions("HotSpot");
@@ -1403,13 +1619,15 @@ public class JvmUtil {
         } 
     }
 
-    private static VMOptions getJRockitSpecifics() {
-        String name = System.getProperty("java.vm.name");
-        if (!name.contains("JRockit")) {
-            return null;
+    private static VMOptions getJRockitSpecifics(int oopSize) {
+    	if (!isJRockitJvm()) {
+        	return null;
         }
-
         try {
+        	if (oopSize == unsafe.addressSize()) {
+        		return new VMOptions("JRockit");
+        	}
+        	
             MBeanServer server = ManagementFactory.getPlatformMBeanServer();
             String str = (String) server.invoke(new ObjectName("oracle.jrockit.management:type=DiagnosticCommand"), "execute", new Object[]{"print_vm_state"}, new String[]{"java.lang.String"});
             String[] split = str.split("\n");
@@ -1431,6 +1649,66 @@ public class JvmUtil {
         	logger.error("Failed to read JRockit-specific configuration properly", e);
             return null;
         }
+    }
+    
+    private static String getJRockitVmArgs() {
+        return getPlatformMBeanAttribute("oracle.jrockit.management:type=PerfCounters", "java.rt.vmArgs");
+    }
+    
+    @SuppressWarnings("unused")
+	private static boolean isJRockit64GBCompression() {
+    	String jrockitVmArgs = getJRockitVmArgs();
+        if (jrockitVmArgs.contains("-XXcompressedRefs:enable=false")) {
+            return false;
+        }
+        if (jrockitVmArgs.contains("-XXcompressedRefs:size=4GB") ||
+        		jrockitVmArgs.contains("-XXcompressedRefs:size=32GB")) {
+            return false;
+        }
+        if (jrockitVmArgs.contains("-XXcompressedRefs:size=64GB")) {
+            return true;
+        }
+        if (Runtime.getRuntime().maxMemory() > TWENTY_FIVE_GB && Runtime.getRuntime().maxMemory() <= FIFTY_SEVEN_GB
+            && jrockitVmArgs.contains("-XXcompressedRefs:enable=true")) {
+            return true;
+        }
+        return false;
+    }
+    
+    private static VMOptions getIBMSpecifics(int oopSize) {
+    	if (!isIBMJvm()) {
+        	return null;
+        }
+        try {
+        	// TODO IBM is not supported right now
+        	return null;
+        	/*
+        	if (oopSize == unsafe.addressSize()) {
+        		return new VMOptions("IBM");
+        	}
+        	
+        	if (NR_BITS == BITS_64) {
+        		if (isIBMCompressedRefs()) {
+        			return new VMOptions("IBM", DEFAULT_COMPRESSED_REF_SHIFT_SIZE);
+        		}
+        		else {
+        			return new VMOptions("IBM");
+        		}
+        	}
+        	else {
+        		return new VMOptions("IBM");
+        	}
+        	*/
+        }
+        catch (Exception e) {
+        	logger.error("Failed to read IBM-specific configuration properly", e);
+            return null;
+        }
+    }
+    
+    @SuppressWarnings("unused")
+	private static boolean isIBMCompressedRefs() {
+        return System.getProperty("com.ibm.oti.vm.bootstrap.library.path", "").contains("compressedrefs");
     }
     
     @SuppressWarnings("unused")
@@ -1765,6 +2043,24 @@ public class JvmUtil {
 	    	return children;
 	    }
 	    
+	}
+	
+	public enum JvmInfo {
+		
+		HOTSPOT_JVM("Hotspot"),
+		JROCKIT_JVM("JRocit"),
+		IBM_JVM("IBM");
+		
+		String name;
+		
+		JvmInfo(String name) {
+			this.name = name;
+		}
+		
+		public String getName() {
+			return name;
+		}
+		
 	}
 	
 	public enum JavaVersionInfo {

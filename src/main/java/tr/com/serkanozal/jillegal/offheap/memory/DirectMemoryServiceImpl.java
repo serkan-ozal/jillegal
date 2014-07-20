@@ -73,7 +73,12 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     }
 
     @Override
-    public long sizeOf(Class<?> objClass) {
+    public <T> long sizeOfObject(T obj) {
+    	return sizeOfWithAgent(obj);
+    }
+    
+    @Override
+    public long sizeOfClass(Class<?> objClass) {
     	return sizeOfWithReflection(objClass);
     }
     
@@ -197,7 +202,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
             }
         }
         else {
-            long objSize = sizeOf(obj.getClass());
+            long objSize = sizeOfClass(obj.getClass());
             long objAddress = addressOf(obj);
             unsafe.copyMemory(objAddress, address, JvmUtil.getHeaderSize() + objSize);   
         }    

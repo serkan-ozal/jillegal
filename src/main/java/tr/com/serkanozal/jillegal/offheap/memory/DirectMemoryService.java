@@ -14,7 +14,8 @@ public interface DirectMemoryService {
 	Object allocateInstance(Class<?> clazz);
 	void copyMemory(long sourceAddress, long destinationAddress, long size);
 	
-	long sizeOf(Class<?> objClass);
+	<T> long sizeOfObject(T obj);
+	long sizeOfClass(Class<?> objClass);
 	
 	long addressOf(Object obj);
     long addressOfField(Object obj, String fieldName) throws SecurityException, NoSuchFieldException;

@@ -35,6 +35,8 @@ import tr.com.serkanozal.jillegal.offheap.pool.factory.OffHeapPoolFactory;
 			
 			-XX:MarkSweepAlwaysCompactCount=999999999 -XX:HeapMaximumCompactionInterval=999999999 -XX:HeapFirstMaximumCompactionCount=999999999 -XX:-UseMaximumCompactionOnSystemGC -XX:-CMSCompactWhenClearAllSoftRefs -XX:-UseCMSCompactAtFullCollection -XX:CMSFullGCsBeforeCompaction=999999999
 		
+			Possibly "-XX:MarkSweepAlwaysCompactCount=999999999999999999" is enough
+			
 		References:	
 			http://stas-blogspot.blogspot.com/2011/07/most-complete-list-of-xx-options-for.html
 			http://jvm-options.tech.xebia.fr/
