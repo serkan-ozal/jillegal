@@ -17,7 +17,7 @@ Instrumenting and redefining any Java class, interface, ... (even core Java clas
 1.3. In Memory Compiler Module
 -------
 
-Compiling Java and Groovy source codes in memory is supported. You can compile your Java and Groovy based source codes at runtime in memory and can get its compiled class.
+Compiling **Java** and Groovy source codes in memory is supported. You can compile your Java and Groovy based source codes at runtime in memory and can get its compiled class.
 
 2. Compile and Build
 =======
@@ -27,9 +27,9 @@ Compiling Java and Groovy source codes in memory is supported. You can compile y
 
 2. To set **JDK / JRE**  installation/home directory:
  
-	2.1. Add an environment variable named `JAVA8_HOME` points to **JDK 8 / JRE 8**  installation/home directory.
+	2.1. For **Java 8**, add an environment variable named `JAVA8_HOME` points to **JDK 8 / JRE 8**  installation/home directory.
 
-	2.2. Add an environment variable named `JROCKIT_HOME` points to **JRockit JDK / JRockit JRE**  installation/home directory.
+	2.2. For *JRockit**, add an environment variable named `JROCKIT_HOME` points to **JRockit JDK / JRockit JRE**  installation/home directory.
 	
 3. Compile with maven.
    `mvn clean install`
@@ -70,7 +70,7 @@ Latest version is `2.1-SNAPSHOT`.
 ...
 ~~~~~
 
-For **JRockit** usage, change **`artifactId`** to **`jillegal-jrockit`** in dependency such as:
+For **JRockit** usage, change **`<artifactId>`** to **`jillegal-jrockit`** in dependency such as:
 
 ~~~~~ xml
 ...
