@@ -25,8 +25,12 @@ Compiling Java and Groovy source codes in memory is supported. You can compile y
 1. First clone code from GitHub.
    `git clone https://github.com/serkan-ozal/jillegal.git`
 
-2. Add an environment variable named `JAVA8_HOME` points to **JDK 8 / JRE 8**  installation/home directory.
+2. To set JDK / JRE **  installation/home directory:
+ 
+	2.1. Add an environment variable named `JAVA8_HOME` points to **JDK 8 / JRE 8**  installation/home directory.
 
+	2.2. Add an environment variable named `JROCKIT_HOME` points to **JRockit JDK / JRockit JRE**  installation/home directory.
+	
 3. Compile with maven.
    `mvn clean install`
 
