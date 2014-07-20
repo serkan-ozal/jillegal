@@ -496,6 +496,20 @@ System.out.println("=====================================================");
 
 ~~~~~
 
+4.11. In Memory Java Compiler
+-------
+
+~~~~~ java
+
+~~~~~
+
+4.12. In Memory Groovy Compiler
+-------
+
+~~~~~ java
+
+~~~~~
+
 5. Roadmap
 =======
 
