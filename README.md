@@ -25,7 +25,7 @@ Compiling Java and Groovy source codes in memory is supported. You can compile y
 1. First clone code from GitHub.
    `git clone https://github.com/serkan-ozal/jillegal.git`
 
-2. To set JDK / JRE **  installation/home directory:
+2. To set **JDK / JRE**  installation/home directory:
  
 	2.1. Add an environment variable named `JAVA8_HOME` points to **JDK 8 / JRE 8**  installation/home directory.
 
@@ -39,13 +39,13 @@ Compiling Java and Groovy source codes in memory is supported. You can compile y
 
 In your `pom.xml`, you must add repository and dependency for **Jillegal**. 
 You can change `jillegal.version` to any existing **Jillegal** library version.
-Latest version is `2.0-SNAPSHOT`.
+Latest version is `2.1-SNAPSHOT`.
 
 ~~~~~ xml
 ...
 <properties>
     ...
-    <jillegal.version>2.0-SNAPSHOT</jillegal.version>
+    <jillegal.version>2.1-SNAPSHOT</jillegal.version>
     ...
 </properties>
 ...
@@ -67,6 +67,18 @@ Latest version is `2.0-SNAPSHOT`.
 	</repository>
 	...
 </repositories>
+...
+~~~~~
+
+For **JRockit** usage, change **`artifactId`** to **`jillegal-jrockit`** in dependency such as:
+
+~~~~~ xml
+...
+	<dependency>
+		<groupId>tr.com.serkanozal</groupId>
+		<artifactId>jillegal-jrockit</artifactId>
+		<version>${jillegal.version}</version>
+	</dependency>
 ...
 ~~~~~
 
