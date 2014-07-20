@@ -30,19 +30,24 @@
         <h1>
 <a name="1-what-is-jillegal" class="anchor" href="#1-what-is-jillegal"><span class="octicon octicon-link"></span></a>1. What is Jillegal?</h1>
 
-<p><strong>Jillegal</strong> is a library including unknown tricks of Java. It abstracts developer from low-level details to implement those tricks. Its design and logic are based on <strong>Java 8</strong> so it can be used at only <strong><em>Java 8 platform</em></strong>. Java 6 and Java 7 supports are in progress and as soon as possible they will be released. Demo application is avaiable at <a href="https://github.com/serkan-ozal/jillegal-demo">https://github.com/serkan-ozal/jillegal-demo</a>. </p>
+<p><strong>Jillegal</strong> is a library including unknown tricks of Java. It abstracts developer from low-level details to implement those tricks. Its design and logic are based on <strong>Java 8</strong> and <strong>JRockit</strong> so it can be used at only <strong><em>Java 8 and JRockit platforms</em></strong>. Java 6 and Java 7 supports are in progress and as soon as possible they will be released. Demo application is avaiable at <a href="https://github.com/serkan-ozal/jillegal-demo">https://github.com/serkan-ozal/jillegal-demo</a>. </p>
 
-<p>Currently it has two main module: <strong>OffHeap</strong>  and <strong>Instrumentation</strong>. </p>
+<p>Currently it has three main modules: <strong>OffHeap</strong>, <strong>Instrumentation</strong> and <strong>In Memory Compiler</strong>. </p>
 
 <h2>
 <a name="11-offheap-module" class="anchor" href="#11-offheap-module"><span class="octicon octicon-link"></span></a>1.1. OffHeap Module</h2>
 
-<p>Design and logic of Jillegal OffHeap module different from all of the other offheap frameworks. It doesn't serilalize/deserialize objects to/from allocated offheap memory region. Becuase objects already lives on offheap and GC doesn't track them :). With this feature, all objects in pool are exist as sequential at memory, so sequential accessing to them is faster. Because, they will be fetched to CPU cache together as limited size of CPU cache.</p>
+<p>Design and logic of Jillegal OffHeap module different from all of the other offheap frameworks. It doesn't serilalize/deserialize objects to/from allocated offheap memory region. Because objects already lives on offheap and GC doesn't track them :). With this feature, all objects in pool are exist as sequential at memory, so sequential accessing to them is faster. Because, they will be fetched to CPU cache together as limited size of CPU cache.</p>
 
 <h2>
 <a name="12-instrumentation-module" class="anchor" href="#12-instrumentation-module"><span class="octicon octicon-link"></span></a>1.2. Instrumentation Module</h2>
 
 <p>Instrumenting and redefining any Java class, interface, ... (even core Java classes) at runtime with developer friendly API (with Builder Pattern based design) is supported. You can add your custom pre/post listeners to method and constructor invocations dynamically. It serves a platform to develop your custom AOP framework. It uses Java Instrumentation API but adding extra VM argument (like <code>-javaagent:&lt;jarpath&gt;[=&lt;options&gt;]</code> is not required. <strong>Jillegal</strong> has its own internal agent and it can enable it's agent at runtime dynamically.</p>
+
+<h2>
+<a name="13-in-memory-compiler-module" class="anchor" href="#13-in-memory-compiler-module"><span class="octicon octicon-link"></span></a>1.3. In Memory Compiler Module</h2>
+
+<p>Compiling Java and Groovy source codes in memory is supported. You can compile your Java and Groovy based source codes at runtime in memory and can get its compiled class.</p>
 
 <h1>
 <a name="2-compile-and-build" class="anchor" href="#2-compile-and-build"><span class="octicon octicon-link"></span></a>2. Compile and Build</h1>
@@ -50,7 +55,13 @@
 <ol>
 <li><p>First clone code from GitHub.
 <code>git clone https://github.com/serkan-ozal/jillegal.git</code></p></li>
-<li><p>Add an environment variable named <code>JAVA8_HOME</code> points to <strong>JDK 8 / JRE 8</strong>  installation/home directory.</p></li>
+<li>
+<p>To set <strong>JDK / JRE</strong>  installation/home directory:</p>
+
+<p>2.1. Add an environment variable named <code>JAVA8_HOME</code> points to <strong>JDK 8 / JRE 8</strong>  installation/home directory.</p>
+
+<p>2.2. Add an environment variable named <code>JROCKIT_HOME</code> points to <strong>JRockit JDK / JRockit JRE</strong>  installation/home directory.</p>
+</li>
 <li><p>Compile with maven.
 <code>mvn clean install</code></p></li>
 </ol><h1>
@@ -58,12 +69,12 @@
 
 <p>In your <code>pom.xml</code>, you must add repository and dependency for <strong>Jillegal</strong>. 
 You can change <code>jillegal.version</code> to any existing <strong>Jillegal</strong> library version.
-Latest version is <code>2.0-SNAPSHOT</code>.</p>
+Latest version is <code>2.1-SNAPSHOT</code>.</p>
 
 <div class="highlight highlight-xml"><pre>...
 <span class="nt">&lt;properties&gt;</span>
     ...
-    <span class="nt">&lt;jillegal.version&gt;</span>2.0-SNAPSHOT<span class="nt">&lt;/jillegal.version&gt;</span>
+    <span class="nt">&lt;jillegal.version&gt;</span>2.1-SNAPSHOT<span class="nt">&lt;/jillegal.version&gt;</span>
     ...
 <span class="nt">&lt;/properties&gt;</span>
 ...
@@ -85,6 +96,17 @@ Latest version is <code>2.0-SNAPSHOT</code>.</p>
     <span class="nt">&lt;/repository&gt;</span>
     ...
 <span class="nt">&lt;/repositories&gt;</span>
+...
+</pre></div>
+
+<p>For <strong>JRockit</strong> usage, change <strong><code>artifactId</code></strong> to <strong><code>jillegal-jrockit</code></strong> in dependency such as:</p>
+
+<div class="highlight highlight-xml"><pre>...
+    <span class="nt">&lt;dependency&gt;</span>
+        <span class="nt">&lt;groupId&gt;</span>tr.com.serkanozal<span class="nt">&lt;/groupId&gt;</span>
+        <span class="nt">&lt;artifactId&gt;</span>jillegal-jrockit<span class="nt">&lt;/artifactId&gt;</span>
+        <span class="nt">&lt;version&gt;</span>${jillegal.version}<span class="nt">&lt;/version&gt;</span>
+    <span class="nt">&lt;/dependency&gt;</span>
 ...
 </pre></div>
 
@@ -465,7 +487,7 @@ Latest version is <code>2.0-SNAPSHOT</code>.</p>
 <span class="n">GeneratedClass</span><span class="o">&lt;</span><span class="n">SampleClass</span><span class="o">&gt;</span> <span class="n">redefinedClass</span> <span class="o">=</span>
     <span class="n">inst</span><span class="o">.</span>
         <span class="nf">insertBeforeConstructors</span><span class="o">(</span>
-                        <span class="k">new</span> <span class="n">BeforeConstructorInterceptor</span><span class="o">&lt;</span><span class="n">SampleClass</span><span class="o">&gt;()</span> <span class="o">{</span>
+            <span class="k">new</span> <span class="n">BeforeConstructorInterceptor</span><span class="o">&lt;</span><span class="n">SampleClass</span><span class="o">&gt;()</span> <span class="o">{</span>
                 <span class="nd">@Override</span>
                 <span class="kd">public</span> <span class="kt">void</span> <span class="nf">beforeConstructor</span><span class="o">(</span><span class="n">SampleClass</span> <span class="n">o</span><span class="o">,</span> <span class="n">Constructor</span><span class="o">&lt;</span><span class="n">SampleClass</span><span class="o">&gt;</span> <span class="n">c</span><span class="o">,</span> <span class="n">Object</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
                     <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Intercepted by Jillegal before constructor ..."</span><span class="o">);</span>
@@ -474,9 +496,9 @@ Latest version is <code>2.0-SNAPSHOT</code>.</p>
         <span class="n">insertAfterConstructors</span><span class="o">(</span><span class="s">"System.out.println(\"Intercepted by Jillegal after constructor ...\");"</span><span class="o">).</span>
 
         <span class="n">insertBeforeMethod</span><span class="o">(</span><span class="s">"methodToIntercept"</span><span class="o">,</span> 
-                        <span class="k">new</span> <span class="n">BeforeMethodInterceptor</span><span class="o">&lt;</span><span class="n">SampleClass</span><span class="o">&gt;()</span> <span class="o">{</span>
+            <span class="k">new</span> <span class="n">BeforeMethodInterceptor</span><span class="o">&lt;</span><span class="n">SampleClass</span><span class="o">&gt;()</span> <span class="o">{</span>
                 <span class="nd">@Override</span>
-                            <span class="kd">public</span> <span class="kt">void</span> <span class="nf">beforeMethod</span><span class="o">(</span><span class="n">SampleClass</span> <span class="n">o</span><span class="o">,</span> <span class="n">Method</span> <span class="n">m</span><span class="o">,</span> <span class="n">Object</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
+                <span class="kd">public</span> <span class="kt">void</span> <span class="nf">beforeMethod</span><span class="o">(</span><span class="n">SampleClass</span> <span class="n">o</span><span class="o">,</span> <span class="n">Method</span> <span class="n">m</span><span class="o">,</span> <span class="n">Object</span><span class="o">[]</span> <span class="n">args</span><span class="o">)</span> <span class="o">{</span>
                     <span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="s">"Intercepted by Jillegal before methodToIntercept method ..."</span><span class="o">);</span>
                 <span class="o">}}).</span>
 
@@ -494,12 +516,63 @@ Latest version is <code>2.0-SNAPSHOT</code>.</p>
 
 </pre></div>
 
+<h2>
+<a name="411-in-memory-java-compiler" class="anchor" href="#411-in-memory-java-compiler"><span class="octicon octicon-link"></span></a>4.11. In Memory Java Compiler</h2>
+
+<div class="highlight highlight-java"><pre>
+<span class="n">ClassCompilerService</span> <span class="n">classCompilerService</span> <span class="o">=</span> 
+            <span class="n">ClassCompilerServiceFactory</span><span class="o">.</span><span class="na">getClassCompilerService</span><span class="o">();</span>
+
+<span class="n">String</span> <span class="n">code</span> <span class="o">=</span> 
+    <span class="s">"package tr.com.serkanozal.jillegal.compiler.demo;"</span><span class="o">+</span> <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"public class SampleJavaClass {"</span> <span class="o">+</span> <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"\t"</span> <span class="o">+</span> <span class="s">"public String toString() {"</span> <span class="o">+</span> <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"\t"</span> <span class="o">+</span> <span class="s">"\t"</span> <span class="o">+</span> <span class="s">"return \"I am SampleJavaClass\";"</span> <span class="o">+</span> <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"\t"</span> <span class="o">+</span>  <span class="s">"}"</span> <span class="o">+</span> <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"}"</span><span class="o">;</span>
+
+<span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">compiledClass</span> <span class="o">=</span> <span class="n">classCompilerService</span><span class="o">.</span><span class="na">getClassCompiler</span><span class="o">(</span><span class="n">DefaultCodeType</span><span class="o">.</span><span class="na">JAVA</span><span class="o">).</span><span class="na">compile</span><span class="o">(</span><span class="n">code</span><span class="o">);</span>
+<span class="n">Object</span> <span class="n">obj</span> <span class="o">=</span> <span class="n">compiledClass</span><span class="o">.</span><span class="na">newInstance</span><span class="o">();</span>
+
+<span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">obj</span><span class="o">.</span><span class="na">toString</span><span class="o">());</span>
+
+</pre></div>
+
+<h2>
+<a name="412-in-memory-groovy-compiler" class="anchor" href="#412-in-memory-groovy-compiler"><span class="octicon octicon-link"></span></a>4.12. In Memory Groovy Compiler</h2>
+
+<div class="highlight highlight-java"><pre>
+<span class="n">ClassCompilerService</span> <span class="n">classCompilerService</span> <span class="o">=</span> 
+            <span class="n">ClassCompilerServiceFactory</span><span class="o">.</span><span class="na">getClassCompilerService</span><span class="o">();</span>
+
+<span class="n">String</span> <span class="n">code</span> <span class="o">=</span> 
+    <span class="s">"package tr.com.serkanozal.jillegal.compiler.demo;"</span><span class="o">+</span> <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"public class SampleGroovyClass {"</span> <span class="o">+</span> <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"\t"</span> <span class="o">+</span> <span class="s">"public String toString() {"</span> <span class="o">+</span> <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"\t"</span> <span class="o">+</span> <span class="s">"\t"</span> <span class="o">+</span> <span class="s">"def str = \"I am SampleGroovyClass\";"</span> <span class="o">+</span> <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"\t"</span> <span class="o">+</span> <span class="s">"\t"</span> <span class="o">+</span> <span class="s">"return str;"</span> <span class="o">+</span> <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"\t"</span> <span class="o">+</span>  <span class="s">"}"</span> <span class="o">+</span> <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"\n"</span> <span class="o">+</span>
+    <span class="s">"}"</span><span class="o">;</span>
+
+<span class="n">Class</span><span class="o">&lt;?&gt;</span> <span class="n">compiledClass</span> <span class="o">=</span> <span class="n">classCompilerService</span><span class="o">.</span><span class="na">getClassCompiler</span><span class="o">(</span><span class="n">DefaultCodeType</span><span class="o">.</span><span class="na">GROOVY</span><span class="o">).</span><span class="na">compile</span><span class="o">(</span><span class="n">code</span><span class="o">);</span>
+<span class="n">Object</span> <span class="n">obj</span> <span class="o">=</span> <span class="n">compiledClass</span><span class="o">.</span><span class="na">newInstance</span><span class="o">();</span>
+
+<span class="n">System</span><span class="o">.</span><span class="na">out</span><span class="o">.</span><span class="na">println</span><span class="o">(</span><span class="n">obj</span><span class="o">.</span><span class="na">toString</span><span class="o">());</span>
+
+</pre></div>
+
 <h1>
 <a name="5-roadmap" class="anchor" href="#5-roadmap"><span class="octicon octicon-link"></span></a>5. Roadmap</h1>
 
 <ul>
-<li><p>On the fly in memory compiler support under <strong>Compiler module</strong> for Java and Groovy lamguages under.</p></li>
 <li><p>Java 6 / Java 7 support for OffHeap module.</p></li>
+<li><p>IBM JVM support for OffHeap module.</p></li>
 </ul>
       </section>
     </div>
