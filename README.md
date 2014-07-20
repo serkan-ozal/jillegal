@@ -12,7 +12,7 @@ Design and logic of Jillegal OffHeap module different from all of the other offh
 1.2. Instrumentation Module
 -------
 
-Instrumenting and redefining any Java class, interface, ... (even core Java classes) at runtime with developer friendly API (with Builder Pattern based design) is supported. You can add your custom pre/post listeners to method and constructor invocations dynamically. It serves a platform to develop your custom AOP framework. It uses Java Instrumentation API but adding extra VM argument (like `-javaagent:<jarpath>[=<options>]` is not required. **Jillegal** has its own internal agent and it can enable it's agent at runtime dynamically.
+Instrumenting and redefining any Java class, interface, ... (even core Java classes) at runtime with developer friendly API (with Builder Pattern based design) is supported. You can add your custom pre/post listeners to method and constructor invocations dynamically. It serves a platform to develop your custom AOP framework. It uses Java Instrumentation API but adding extra VM argument (like `-javaagent:<jarpath>[=<options>]`) is not required. **Jillegal** has its own internal agent and it can enable it's agent at runtime dynamically.
 
 1.3. In Memory Compiler Module
 -------
