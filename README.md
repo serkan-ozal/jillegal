@@ -501,12 +501,51 @@ System.out.println("=====================================================");
 
 ~~~~~ java
 
+ClassCompilerService classCompilerService = 
+			ClassCompilerServiceFactory.getClassCompilerService();
+			
+String code = 
+	"package tr.com.serkanozal.jillegal.compiler.demo;"+ "\n" +
+	"\n" +
+	"public class SampleJavaClass {" + "\n" +
+	"\n" +
+	"\t" + "public String toString() {" + "\n" +
+	"\t" + "\t" + "return \"I am SampleJavaClass\";" + "\n" +
+	"\t" + 	"}" + "\n" +
+	"\n" +
+	"}";
+
+Class<?> compiledClass = classCompilerService.getClassCompiler(DefaultCodeType.JAVA).compile(code);
+Object obj = compiledClass.newInstance();
+		
+System.out.println(obj.toString());
+
 ~~~~~
 
 4.12. In Memory Groovy Compiler
 -------
 
 ~~~~~ java
+
+ClassCompilerService classCompilerService = 
+			ClassCompilerServiceFactory.getClassCompilerService();
+			
+String code = 
+	"package tr.com.serkanozal.jillegal.compiler.demo;"+ "\n" +
+	"\n" +
+	"public class SampleGroovyClass {" + "\n" +
+	"\n" +
+	"\t" + "public String toString() {" + "\n" +
+	"\t" + "\t" + "def str = \"I am SampleGroovyClass\";" + "\n" +
+	"\t" + "\t" + "return str;" + "\n" +
+	"\t" + 	"}" + "\n" +
+	"\n" +
+	"}";
+
+Class<?> compiledClass = classCompilerService.getClassCompiler(DefaultCodeType.GROOVY).compile(code);
+Object obj = compiledClass.newInstance();
+		
+System.out.println(obj.toString());
 
 ~~~~~
 
