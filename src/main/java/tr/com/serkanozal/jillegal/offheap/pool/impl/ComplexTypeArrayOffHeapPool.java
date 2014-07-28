@@ -8,7 +8,6 @@
 package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
 import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ArrayOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
@@ -82,9 +81,13 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 						JvmUtil.toJvmAddress((objStartAddress + (l * objectSize))));
 			}
 	
+			long sourceAddress = sampleObjectAddress + 4;
+			long copySize = objectSize - 4;
 			// Copy sample object to allocated memory region for each object
 			for (long l = 0; l < length; l++) {
-				directMemoryService.copyMemory(sampleObjectAddress, objStartAddress + (l * objectSize), objectSize);
+				long targetAddress = objStartAddress + (l * objectSize);
+				directMemoryService.putInt(targetAddress, 0);
+				directMemoryService.copyMemory(sourceAddress, targetAddress + 4, copySize);
 			}
 		}
 		else {
@@ -209,40 +212,24 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 		this.directMemoryService = directMemoryService;
 		this.objectSize = directMemoryService.sizeOfClass(elementType);
 		this.arraySize = JvmUtil.sizeOfArray(elementType, length);
-		this.allocationSize = 
-				arraySize + (length * objectSize) + JvmUtil.getAddressSize(); // Extra memory for possible aligning
+		if (initializeElements) {
+			this.allocationSize = 
+					arraySize + (length * objectSize) + JvmUtil.getAddressSize(); // Extra memory for possible aligning
+		}
+		else {
+			this.allocationSize = 
+					arraySize + JvmUtil.getAddressSize(); // Extra memory for possible aligning
+		}
 		this.allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
 		this.allocationEndAddress = allocationStartAddress + allocationSize;
-		boolean sampleObjectCreated = false;
-		try {
-			Constructor<T> defaultConstructor = elementType.getConstructor();
-			if (defaultConstructor != null) {
-				defaultConstructor.setAccessible(true);
-				this.sampleObject = defaultConstructor.newInstance();
-				sampleObjectCreated = true;
-			}
-		} 
-		catch (Throwable t) {
-			//logger.error("Unable to create a sample object for class " + elementType.getName(), t);
-		} 
-		if (sampleObjectCreated == false) {
-			try {
-				this.sampleObject = elementType.newInstance();
-				sampleObjectCreated = true;
-			}	
-			catch (Throwable t) {
-				//logger.error("Unable to create a sample object for class " + elementType.getName(), t);
-			} 
-		}
-		if (sampleObjectCreated == false) {
-			this.sampleObject = (T) directMemoryService.allocateInstance(elementType);
-		}
-		if (sampleObject == null) {
-			throw new IllegalStateException("Unable to create a sample object for class " + elementType.getName());
-		}
+		this.sampleObject = JvmUtil.getSampleInstance(elementType);
 		this.sampleArray = (A) Array.newInstance(elementType, 0);
-		this.sampleObjectAddress = directMemoryService.addressOf(sampleObject);
-		
+		if (initializeElements) {
+			if (sampleObject == null) {
+				throw new IllegalStateException("Unable to create a sample object for class " + elementType.getName());
+			}
+			this.sampleObjectAddress = directMemoryService.addressOf(sampleObject);
+		}
 		init();
 		makeAvaiable();
 	}

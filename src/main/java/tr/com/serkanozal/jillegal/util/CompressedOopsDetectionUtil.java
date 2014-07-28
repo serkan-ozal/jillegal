@@ -15,7 +15,6 @@ import org.apache.log4j.Logger;
 
 import sun.misc.Unsafe;
 
-@SuppressWarnings("restriction")
 public class CompressedOopsDetectionUtil {
 	
 	public static final String DETECTION_SUCCESSFUL = "OK";

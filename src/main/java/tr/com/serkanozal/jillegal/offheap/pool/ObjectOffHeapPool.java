@@ -13,5 +13,7 @@ public interface ObjectOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> e
 
 	T get();
 	long getAsAddress();
+	boolean free(T obj);
+	boolean freeFromAddress(long objAddress);
 	
 }

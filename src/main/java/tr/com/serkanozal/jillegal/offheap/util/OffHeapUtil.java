@@ -31,7 +31,6 @@ import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 import tr.com.serkanozal.jillegal.util.ReflectionUtil;
 
-@SuppressWarnings("restriction")
 public class OffHeapUtil {
 	
 	private static final Logger logger = Logger.getLogger(OffHeapUtil.class);

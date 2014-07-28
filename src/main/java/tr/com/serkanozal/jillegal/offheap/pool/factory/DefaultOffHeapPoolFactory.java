@@ -7,6 +7,8 @@
 
 package tr.com.serkanozal.jillegal.offheap.pool.factory;
 
+import java.lang.reflect.Modifier;
+
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ArrayOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.BaseOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ExtendableArrayOffHeapPoolCreateParameter;
@@ -108,17 +110,12 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 		Class elementType = arrayType.getComponentType();
 		if (elementType.isPrimitive()) {
 			return 
-				(O) new ExtendableArrayOffHeapPool<T, A>(
-							elementType, 
-							new PrimitiveTypeArrayOffHeapPool<T, A>(elementType, arrayLength, directMemoryService), 
-							directMemoryService);
+				(O) new PrimitiveTypeArrayOffHeapPool<T, A>(elementType, arrayLength, directMemoryService);
 		}
 		else {
-			return 
-				(O) new ExtendableArrayOffHeapPool<T, A>(
-							elementType, 
-							new ComplexTypeArrayOffHeapPool<T, A>(elementType, arrayLength, true, directMemoryService), 
-							directMemoryService);
+			boolean initializeElements = !elementType.isInterface() && !Modifier.isAbstract(elementType.getModifiers());
+			return
+				(O) new ComplexTypeArrayOffHeapPool<T, A>(elementType, arrayLength, initializeElements, directMemoryService);
 		}
 	}
 

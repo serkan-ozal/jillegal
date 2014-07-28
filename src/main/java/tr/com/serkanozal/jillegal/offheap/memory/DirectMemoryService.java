@@ -11,6 +11,7 @@ public interface DirectMemoryService {
 
 	long allocateMemory(long size);
 	void freeMemory(long address);
+	<T> void freeObject(T obj);
 	Object allocateInstance(Class<?> clazz);
 	void copyMemory(long sourceAddress, long destinationAddress, long size);
 	
@@ -23,6 +24,9 @@ public interface DirectMemoryService {
     
     Object getObjectField(Object obj, String fieldName);
     void setObjectField(Object rootObj, String fieldName, Object fieldObj);
+    
+    Object getArrayElement(Object array, int elementIndex);
+    void setArrayElement(Object array, int elementIndex, Object element);
     
     <T> T getObject(long address);
     <T> void setObject(long address, T obj);

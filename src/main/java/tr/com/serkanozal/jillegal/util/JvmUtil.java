@@ -14,6 +14,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -59,7 +60,6 @@ import com.google.common.collect.Multiset;
  * 
  * Note: Use "-XX:-UseCompressedOops" for 64 bit JVM to disable CompressedOops
  */
-@SuppressWarnings("restriction")
 public class JvmUtil {
 	
 	public static final String JAVA_6 = "1.6";
@@ -1039,6 +1039,10 @@ public class JvmUtil {
 		return options.referenceSize;
 	}
 	
+	public static long getArrayBaseAddress(Object array) {
+		return getArrayBaseAddress(array, array.getClass().getComponentType());
+	}
+	
 	public static long getArrayBaseAddress(Object array, Class<?> elementType) {
 		Class<?> arrayClass = array.getClass();
 		if (arrayClass.isArray() == false) {
@@ -1046,6 +1050,22 @@ public class JvmUtil {
 		}
 		long arrayStartAddress = JvmUtil.addressOf(array);
 		return arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+	}
+	
+	public static long getArrayElementAddress(Object array, int elementIndex) {
+		return getArrayElementAddress(array, array.getClass().getComponentType(), elementIndex);
+	}
+	
+	public static long getArrayElementAddress(Object array, Class<?> elementType, int elementIndex) {
+		Class<?> arrayClass = array.getClass();
+		if (arrayClass.isArray() == false) {
+			return INVALID_ADDRESS;
+		}
+		long arrayStartAddress = JvmUtil.addressOf(array);
+		return 
+			arrayStartAddress + 
+			JvmUtil.arrayBaseOffset(elementType) + 
+			(elementIndex * JvmUtil.arrayIndexScale(elementType));
 	}
 	
 	public static int getArrayLength(long arrayStartAddress, Class<?> elementType) {
@@ -1439,6 +1459,35 @@ public class JvmUtil {
 	public static Integer getProcessId() throws Exception {
 		return processId;
     }
+	
+	@SuppressWarnings("unchecked")
+	public static <T> T getSampleInstance(Class<T> clazz) {
+		if (!clazz.isInterface() && !Modifier.isAbstract(clazz.getModifiers())) {
+			try {
+				Constructor<T> defaultConstructor = clazz.getConstructor();
+				if (defaultConstructor != null) {
+					defaultConstructor.setAccessible(true);
+					return defaultConstructor.newInstance();
+				}
+			} 
+			catch (Throwable t) {
+				//logger.error("Unable to create a sample object for class " + clazz.getName(), t);
+			} 
+			try {
+				return clazz.newInstance();
+			}	
+			catch (Throwable t) {
+				//logger.error("Unable to create a sample object for class " + clazz.getName(), t);
+			} 
+			try {
+				return (T) unsafe.allocateInstance(clazz);
+			}	
+			catch (Throwable t) {
+				//logger.error("Unable to create a sample object for class " + clazz.getName(), t);
+			} 
+		}
+		return null;
+	}
 	
 	public static void runGC() {
 		for (int i = 0; i < 3; i++) {

@@ -47,18 +47,21 @@ public class ReflectionUtil {
 		return null;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public static List<Field> getAllFields(Class<?> cls) {
 		List<Field> fields = new ArrayList<Field>();
 		createFields(cls, fields);
 		return fields;
 	}
 
+	@SuppressWarnings("unchecked")
 	public static List<Field> getAllFields(Class<?> cls, Class<? extends Annotation> ... annotationFilters) {
 		List<Field> fields = new ArrayList<Field>();
 		createFields(cls, fields, annotationFilters);
 		return fields;
 	}
 	
+	@SuppressWarnings("unchecked")
 	private static void createFields(Class<?> cls, List<Field> fields, 
 			Class<? extends Annotation> ... annotationFilters) {
 		if (cls == null || cls.equals(Object.class)) {
@@ -149,18 +152,21 @@ public class ReflectionUtil {
 		return null;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public static List<Method> getAllMethods(Class<?> cls) {
 		List<Method> methods = new ArrayList<Method>();
 		createMethods(cls, methods);
 		return methods;
 	}
 	
+	@SuppressWarnings("unchecked")
 	public static List<Method> getAllMethods(Class<?> cls, Class<? extends Annotation> ... annotationFilters) {
 		List<Method> methods = new ArrayList<Method>();
 		createMethods(cls, methods, annotationFilters);
 		return methods;
 	}
 	
+	@SuppressWarnings("unchecked")
 	private static void createMethods(Class<?> cls, List<Method> methods, 
 			Class<? extends Annotation> ... annotationFilters) {
 		if (cls == null || cls.equals(Object.class)) {

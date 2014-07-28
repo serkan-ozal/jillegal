@@ -48,7 +48,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		init(estimatedStringCount, estimatedStringLength);
 	}
 	
-	@SuppressWarnings({ "restriction", "deprecation" })
+	@SuppressWarnings({ "deprecation" })
 	@Override
 	protected void init() {
 		try {

@@ -94,6 +94,36 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	}
 	
 	@Override
+	public synchronized boolean free(T obj) {
+		checkAvailability();
+		if (obj != null) {
+			return isMine(directMemoryService.addressOf(obj));
+		}	
+		else {
+			return false;
+		}
+	}
+	
+	@SuppressWarnings("rawtypes")
+	@Override
+	public synchronized boolean freeFromAddress(long objAddress) {
+		checkAvailability();
+		if (currentForkableOffHeapPool instanceof ContentAwareOffHeapPool) {
+			if (((ContentAwareOffHeapPool)currentForkableOffHeapPool).isMine(objAddress)) {
+				return currentForkableOffHeapPool.freeFromAddress(objAddress);
+			}
+		}
+		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
+			if (forkableOffHeapPool != currentForkableOffHeapPool && forkableOffHeapPool instanceof ContentAwareOffHeapPool) {
+				if (((ContentAwareOffHeapPool)forkableOffHeapPool).isMine(objAddress)) {
+					return currentForkableOffHeapPool.freeFromAddress(objAddress);
+				}
+			}
+		}
+		return false;
+	}
+	
+	@Override
 	public synchronized void reset() {
 		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
 			if (forkableOffHeapPool != rootForkableOffHeapPool) {

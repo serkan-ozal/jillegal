@@ -13,7 +13,7 @@ import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.agent.JillegalAgent;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
-@SuppressWarnings( { "unchecked", "restriction" } )
+@SuppressWarnings( { "unchecked" } )
 public class DirectMemoryServiceImpl implements DirectMemoryService {
 	
 	private final Logger logger = Logger.getLogger(getClass());
@@ -42,6 +42,13 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     @Override
     public void freeMemory(long address) {
     	unsafe.freeMemory(address);
+    }
+    
+    @Override
+    public <T> void freeObject(T obj) {
+    	if (obj != null) {
+    		unsafe.freeMemory(JvmUtil.addressOf(obj));
+    	}
     }
     
     @Override
@@ -111,10 +118,8 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     @Override
     public void setObjectField(Object rootObj, String fieldName, Object fieldObj) {
     	long fieldAddress = JvmUtil.addressOfField(rootObj, fieldName);
-    	long fieldObjAddress = JvmUtil.addressOf(fieldObj);
-
-    	fieldObjAddress = JvmUtil.toJvmAddress(fieldObjAddress);
-
+    	long fieldObjAddress = JvmUtil.toJvmAddress(JvmUtil.addressOf(fieldObj));
+    	
     	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
     		switch (JvmUtil.getAddressSize()) {
 	            case JvmUtil.SIZE_32_BIT:
@@ -128,6 +133,50 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
 	                 		break;
 	                 	case JvmUtil.ADDRESSING_8_BYTE:
 	                 		unsafe.putLong(fieldAddress, fieldObjAddress);
+	                 		break;
+	                 	/*		
+	                 	default:    
+	                        throw new AssertionError("Unsupported reference size: " + referenceSize);
+	                    */
+	            	}
+	            	break; 
+	            /*	
+	            default:
+	                throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
+	            */
+    		}      
+    	}
+    }
+    
+    @Override
+    public Object getArrayElement(Object array, int elementIndex) {
+    	long arrayElementAddress = JvmUtil.getArrayElementAddress(array, elementIndex);
+    	if (arrayElementAddress != 0 && arrayElementAddress != JvmUtil.INVALID_ADDRESS) {
+    		return getObject(arrayElementAddress);
+    	}
+    	else {
+    		return null;
+    	}
+    }
+    
+    @Override
+    public void setArrayElement(Object array, int elementIndex, Object element) {
+    	long arrayElementAddress = JvmUtil.getArrayElementAddress(array, elementIndex);
+    	long elementAddress = JvmUtil.toJvmAddress(JvmUtil.addressOf(element));
+
+    	if (elementAddress != 0 && elementAddress != JvmUtil.INVALID_ADDRESS) {
+    		switch (JvmUtil.getAddressSize()) {
+	            case JvmUtil.SIZE_32_BIT:
+	            	putAsIntAddress(arrayElementAddress, elementAddress);
+	                break;
+	            case JvmUtil.SIZE_64_BIT:
+	            	int referenceSize = JvmUtil.getReferenceSize();
+	            	switch (referenceSize) {
+	                 	case JvmUtil.ADDRESSING_4_BYTE:   
+	                 		putAsIntAddress(arrayElementAddress, elementAddress);
+	                 		break;
+	                 	case JvmUtil.ADDRESSING_8_BYTE:
+	                 		unsafe.putLong(arrayElementAddress, elementAddress);
 	                 		break;
 	                 	/*		
 	                 	default:    

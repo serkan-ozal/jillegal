@@ -23,7 +23,6 @@ import sun.jvm.hotspot.memory.Universe;
 import sun.jvm.hotspot.runtime.VM;
 import sun.management.VMManagement;
 
-@SuppressWarnings("restriction")
 public class HotspotJvmInfoUtil {
 
 	private static final Logger logger = Logger.getLogger(HotspotJvmInfoUtil.class);

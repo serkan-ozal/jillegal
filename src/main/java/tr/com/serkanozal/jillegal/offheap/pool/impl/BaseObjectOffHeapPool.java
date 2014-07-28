@@ -7,12 +7,11 @@
 
 package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
-import java.lang.reflect.Constructor;
-
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAllocationConfigType;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.pool.ContentAwareOffHeapPool;
+import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> 
 		extends BaseOffHeapPool<T, P> implements ContentAwareOffHeapPool<T, P> {
@@ -22,6 +21,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected long currentAddress;
 	protected T sampleObject;
 	protected long offHeapSampleObjectAddress;
+	protected int sampleHeader;
 	/*
 	protected long classPointerAddress;
 	protected long classPointerOffset;
@@ -42,7 +42,6 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		super.init();
 	}
 	
-	@SuppressWarnings("unchecked")
 	protected void init(Class<T> elementType, int objectCount, 
 			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
 			DirectMemoryService directMemoryService) {
@@ -63,33 +62,11 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		this.elementType = elementType;
 		this.objectCount = objectCount;
 		this.directMemoryService = directMemoryService;
-		boolean sampleObjectCreated = false;
-		try {
-			Constructor<T> defaultConstructor = elementType.getConstructor();
-			if (defaultConstructor != null) {
-				defaultConstructor.setAccessible(true);
-				this.sampleObject = defaultConstructor.newInstance();
-				sampleObjectCreated = true;
-			}
-		} 
-		catch (Throwable t) {
-			//logger.error("Unable to create a sample object for class " + elementType.getName(), t);
-		} 
-		if (sampleObjectCreated == false) {
-			try {
-				this.sampleObject = elementType.newInstance();
-				sampleObjectCreated = true;
-			}	
-			catch (Throwable t) {
-				//logger.error("Unable to create a sample object for class " + elementType.getName(), t);
-			} 
-		}
-		if (sampleObjectCreated == false) {
-			this.sampleObject = (T) directMemoryService.allocateInstance(elementType);
-		}
+		this.sampleObject = JvmUtil.getSampleInstance(elementType);
 		if (sampleObject == null) {
 			throw new IllegalStateException("Unable to create a sample object for class " + elementType.getName());
 		}
+		this.sampleHeader = directMemoryService.getInt(sampleObject, 0L);
 		long address = directMemoryService.addressOf(sampleObject);
 		this.objectSize = directMemoryService.sizeOfObject(sampleObject);
 		this.offHeapSampleObjectAddress = directMemoryService.allocateMemory(objectSize);
@@ -134,6 +111,16 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	@Override
 	public boolean isMine(long address) {
 		return isIn(address);
+	}
+	
+	protected synchronized T processObject(T obj) {
+		directMemoryService.putInt(obj, 0L, sampleHeader);
+		return super.processObject(obj);
+	}
+	
+	protected synchronized long processObject(long objAddress) {
+		directMemoryService.putInt(objAddress, sampleHeader);
+		return super.processObject(objAddress);
 	}
 	
 	/*

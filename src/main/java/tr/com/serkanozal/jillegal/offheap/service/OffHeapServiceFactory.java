@@ -7,8 +7,14 @@
 
 package tr.com.serkanozal.jillegal.offheap.service;
 
+import tr.com.serkanozal.jillegal.Jillegal;
+
 public class OffHeapServiceFactory {
 
+	static {
+		Jillegal.init();
+	}
+	
 	private static OffHeapService offHeapService = new OffHeapServiceImpl();
 	
 	private OffHeapServiceFactory() {

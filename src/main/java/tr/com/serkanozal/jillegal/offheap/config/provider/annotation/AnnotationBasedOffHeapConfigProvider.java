@@ -38,6 +38,7 @@ public class AnnotationBasedOffHeapConfigProvider implements OffHeapConfigProvid
 		return classConfig;
 	}
 	
+	@SuppressWarnings("unchecked")
 	protected OffHeapClassConfig findOffHeapClassConfig(Class<?> clazz) {
 		OffHeapAware offHeapAware = clazz.getAnnotation(OffHeapAware.class);
 		List<Field> fields = ReflectionUtil.getAllFields(clazz, OffHeapObject.class, OffHeapArray.class);
