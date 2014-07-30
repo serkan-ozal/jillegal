@@ -42,8 +42,10 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 	protected void init() {
 		super.init();
 		
-		this.currentAddress = allocationStartAddress - objectSize;
-
+		objectsStartAddress = allocationStartAddress;
+		objectsEndAddress = allocationEndAddress;
+		currentAddress = allocationStartAddress - objectSize;
+		
 		long sourceAddress = offHeapSampleObjectAddress + 4;
 		long copySize = objectSize - 4;
 		// Copy sample object to allocated memory region for each object
@@ -126,52 +128,6 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		return false;
 	}
 	
-	protected boolean getInUseBit(long objAddress) {
-		long objIndex = (objAddress - allocationStartAddress) / objectSize;
-		long blockOrder = objIndex / OBJECT_COUNT_AT_IN_USE_BLOCK;
-		long blockIndex = blockOrder / 8;
-		byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + blockIndex);
-		byte blockInternalOrder = (byte) (blockOrder % 8);
-		return getBit(blockIndexValue, blockInternalOrder) == 1;
-	}
-	
-	protected void setUnsetInUseBit(long objAddress, boolean set) {
-		long objIndex = (objAddress - allocationStartAddress) / objectSize;
-		long blockOrder = objIndex / OBJECT_COUNT_AT_IN_USE_BLOCK;
-		long blockIndex = blockOrder / 8;
-		byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + blockIndex);
-		byte blockInternalOrder = (byte) (blockOrder % 8);
-		byte newBlockIndexValue = 
-				set ? 
-					setBit(blockIndexValue, blockInternalOrder) : 
-					unsetBit(blockIndexValue, blockInternalOrder);
-		directMemoryService.putByte(inUseBlockAddress + blockIndex, newBlockIndexValue);
-	}
-	
-	/*
-	 * 1. Get object index from its address like "(objAddress - allocationStartAddress) / objectSize"
-	 * 
-	 * 2. Get block order from object index like "objectIndex / OBJECT_COUNT_AT_IN_USE_BLOCK"
-	 * 
-	 * 3. Since every byte contains 8 block information (each one is represented by a bit),
-	 *    block index can be calculated like "blockIndex = blockOrder / 8"
-	 *    
-	 * 4. Read block index value like "directMemoryService.getByte(inUseBlockAddress + blockIndex)"
-	 * 
-	 * 5. Calculate block internal order like "blockOrder % 8"
-	 * 
-	 * 6. Get block in-use bit like "getBit(blockIndexValue, blockInternalOrder)"
-	 * 
-	 * 		int getBit(byte value, byte bit) {
-	 * 			if (bit == 7) {
-	 * 				return (value < 0) ? 1 : 0;
-	 * 			}
-	 * 			else {
-	 *				return (value & (1 << bit)) == 0 ? 0 : 1;
-	 *			}
-	 * 		}
-	 */
-
 	@Override
 	public synchronized void free() {
 		checkAvailability();

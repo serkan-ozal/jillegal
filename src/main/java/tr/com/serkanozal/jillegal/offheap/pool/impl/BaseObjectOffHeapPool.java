@@ -22,6 +22,8 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected int objectCount;
 	protected long objectSize;
 	protected long currentAddress;
+	protected long objectsStartAddress;
+	protected long objectsEndAddress;
 	protected T sampleObject;
 	protected long offHeapSampleObjectAddress;
 	protected int sampleHeader;
@@ -112,6 +114,52 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected byte unsetBit(byte value, byte bit) {
 		return (byte) (value & (~(1 << bit)));
 	}
+	
+	protected boolean getInUseBit(long objAddress) {
+		long objIndex = (objAddress - objectsStartAddress) / objectSize;
+		long blockOrder = objIndex / OBJECT_COUNT_AT_IN_USE_BLOCK;
+		long blockIndex = blockOrder / 8;
+		byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + blockIndex);
+		byte blockInternalOrder = (byte) (blockOrder % 8);
+		return getBit(blockIndexValue, blockInternalOrder) == 1;
+	}
+	
+	protected void setUnsetInUseBit(long objAddress, boolean set) {
+		long objIndex = (objAddress - objectsStartAddress) / objectSize;
+		long blockOrder = objIndex / OBJECT_COUNT_AT_IN_USE_BLOCK;
+		long blockIndex = blockOrder / 8;
+		byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + blockIndex);
+		byte blockInternalOrder = (byte) (blockOrder % 8);
+		byte newBlockIndexValue = 
+				set ? 
+					setBit(blockIndexValue, blockInternalOrder) : 
+					unsetBit(blockIndexValue, blockInternalOrder);
+		directMemoryService.putByte(inUseBlockAddress + blockIndex, newBlockIndexValue);
+	}
+	
+	/*
+	 * 1. Get object index from its address like "(objAddress - allocationStartAddress) / objectSize"
+	 * 
+	 * 2. Get block order from object index like "objectIndex / OBJECT_COUNT_AT_IN_USE_BLOCK"
+	 * 
+	 * 3. Since every byte contains 8 block information (each one is represented by a bit),
+	 *    block index can be calculated like "blockIndex = blockOrder / 8"
+	 *    
+	 * 4. Read block index value like "directMemoryService.getByte(inUseBlockAddress + blockIndex)"
+	 * 
+	 * 5. Calculate block internal order like "blockOrder % 8"
+	 * 
+	 * 6. Get block in-use bit like "getBit(blockIndexValue, blockInternalOrder)"
+	 * 
+	 * 		int getBit(byte value, byte bit) {
+	 * 			if (bit == 7) {
+	 * 				return (value < 0) ? 1 : 0;
+	 * 			}
+	 * 			else {
+	 *				return (value & (1 << bit)) == 0 ? 0 : 1;
+	 *			}
+	 * 		}
+	 */
 	
 	@Override
 	public boolean isMine(T element) {
