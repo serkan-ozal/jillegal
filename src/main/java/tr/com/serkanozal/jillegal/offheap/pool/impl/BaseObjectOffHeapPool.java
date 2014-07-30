@@ -16,6 +16,9 @@ import tr.com.serkanozal.jillegal.util.JvmUtil;
 public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> 
 		extends BaseOffHeapPool<T, P> implements ContentAwareOffHeapPool<T, P> {
 
+	protected static final int OBJECT_COUNT_AT_IN_USE_BLOCK = 128;
+	protected long inUseBlockAddress;
+	
 	protected int objectCount;
 	protected long objectSize;
 	protected long currentAddress;
@@ -96,6 +99,18 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	            throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
 		}
 		*/
+	}
+	
+	protected byte getBit(byte value, byte bit) {
+		return (byte) ((value & (1 << bit)) == 0 ? 0 : 1);
+	}
+	
+	protected byte setBit(byte value, byte bit) {
+		return (byte) (value | (1 << bit));
+	}
+	
+	protected byte unsetBit(byte value, byte bit) {
+		return (byte) (value & (~(1 << bit)));
 	}
 	
 	@Override
