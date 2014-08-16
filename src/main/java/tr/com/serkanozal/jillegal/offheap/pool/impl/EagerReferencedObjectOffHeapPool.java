@@ -11,6 +11,7 @@ import java.lang.reflect.Array;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAllocationConfigType;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectOffHeapPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.exception.ObjectInUseException;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.pool.DeeplyForkableObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.LimitedObjectOffHeapPool;
@@ -73,7 +74,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 		}
 
 		// Set length of array object pool array
-		JvmUtil.setArrayLength(allocationStartAddress, elementType, objectCount);
+		JvmUtil.setArrayLength(allocationStartAddress, elementType, (int) objectCount);
 		
 		// All index is object pool array header point to allocated objects 
 		for (long l = 0; l < objectCount; l++) {
@@ -94,31 +95,31 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 		this.objectArray = (T[]) directMemoryService.getObject(allocationStartAddress);
 	}
 	
-	public int getObjectCount() {
+	public long getObjectCount() {
 		return objectCount;
 	}
 	
 	@Override
 	public synchronized T get() {
 		checkAvailability();
-		if (currentIndex >= objectCount) {
+		if (!nextAvailable()) {
 			return null;
 		}
 		// Address of class could be changed by GC at "Compact" phase.
-		//updateClassPointerOfObject(address);
-		return processObject(objectArray[currentIndex++]);
+		//updateClassPointerOfObject(currentAddress);
+		return takeObject(objectArray[currentIndex]);
 	}
 	
 	@Override
 	public synchronized long getAsAddress() {
 		checkAvailability();
-		if (currentIndex >= objectCount) {
-			return 0;
+		if (!nextAvailable()) {
+			return JvmUtil.NULL;
 		}
-		long address = objectsStartAddress + (currentIndex++ * objectSize);
+		long address = objectsStartAddress + (currentIndex * objectSize);
 		// Address of class could be changed by GC at "Compact" phase.
 		//updateClassPointerOfObject(address);
-		return processObject(address);
+		return takeObjectAsAddress(address);
 	}
 	
 	@Override
@@ -127,9 +128,13 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 		if (index < 0 || index >= objectCount) {
 			throw new IllegalArgumentException("Invalid index: " + index);
 		}	
+		if (getInUseFromObjectIndex(index) != OBJECT_IS_AVAILABLE) {
+			throw new ObjectInUseException(index);
+		}
 		// Address of class could be changed by GC at "Compact" phase.
+		//long address = objectsStartAddress + (index * objectSize);
 		//updateClassPointerOfObject(address);
-		return processObject(objectArray[index]);
+		return takeObject(objectArray[index]);
 	}
 	
 	public T[] getObjectArray() {
@@ -157,21 +162,13 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	@Override
 	public boolean free(T obj) {
 		checkAvailability();
-		return freeFromAddress(directMemoryService.addressOf(obj));
+		return releaseObject(directMemoryService.addressOf(obj));
 	}
 	
 	@Override
 	public boolean freeFromAddress(long objAddress) {
 		checkAvailability();
-		setUnsetInUseBit(objAddress, false);
-		return false;
-	}
-	
-	@Override
-	public synchronized void free() {
-		checkAvailability();
-		directMemoryService.freeMemory(allocationStartAddress);
-		makeUnavaiable();
+		return releaseObject(objAddress);
 	}
 
 	@Override

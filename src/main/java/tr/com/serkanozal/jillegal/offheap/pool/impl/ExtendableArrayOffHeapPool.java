@@ -121,12 +121,10 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	public synchronized void reset() {
 		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
 			if (forkableOffHeapPool != rootForkableOffHeapPool) {
-				forkableOffHeapPool.free();
+				forkableOffHeapPool.reset();
 			}	
 		}
-		if (currentForkableOffHeapPool != null && currentForkableOffHeapPool != rootForkableOffHeapPool) {
-			currentForkableOffHeapPool.free();
-		}
+		rootForkableOffHeapPool.reset();
 		init();
 		makeAvaiable();
 	}
@@ -135,11 +133,11 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	public synchronized void free() {
 		checkAvailability();
 		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
-			forkableOffHeapPool.free();
+			if (forkableOffHeapPool != rootForkableOffHeapPool) {
+				forkableOffHeapPool.free();
+			}	
 		}
-		if (currentForkableOffHeapPool != null) {
-			currentForkableOffHeapPool.free();
-		}
+		rootForkableOffHeapPool.free();
 		makeUnavaiable();
 	}
 

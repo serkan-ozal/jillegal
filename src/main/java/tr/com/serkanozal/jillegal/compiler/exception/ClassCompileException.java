@@ -10,8 +10,10 @@ package tr.com.serkanozal.jillegal.compiler.exception;
 import java.util.ArrayList;
 import java.util.List;
 
+import tr.com.serkanozal.jillegal.exception.JillegalException;
+
 @SuppressWarnings("serial")
-public class ClassCompileException extends Exception {
+public class ClassCompileException extends JillegalException {
 
 	private List<ClassCompileErrorBean> compileErrors;
 	

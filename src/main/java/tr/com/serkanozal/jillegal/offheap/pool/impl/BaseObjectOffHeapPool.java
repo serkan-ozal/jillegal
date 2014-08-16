@@ -16,17 +16,26 @@ import tr.com.serkanozal.jillegal.util.JvmUtil;
 public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> 
 		extends BaseOffHeapPool<T, P> implements ContentAwareOffHeapPool<T, P> {
 
-	protected static final int OBJECT_COUNT_AT_IN_USE_BLOCK = 128;
-	protected long inUseBlockAddress;
+	protected static final byte OBJECT_COUNT_AT_AN_IN_USE_BLOCK = 8;
+	protected static final byte OBJECT_IS_AVAILABLE = 0;
+	protected static final byte OBJECT_IS_IN_USE = 1;
+	protected static final byte BLOCK_IS_FULL = -1;
+	protected static final byte INDEX_NOT_YET_USED = -1;
+	protected static final byte INDEX_NOT_AVAILABLE = -2;
 	
-	protected int objectCount;
 	protected long objectSize;
+	protected long objectCount;
+	protected long inUseBlockCount;
 	protected long currentAddress;
+	protected long inUseBlockAddress;
+	protected long currentIndex;
+	protected long currentBlockIndex;
 	protected long objectsStartAddress;
 	protected long objectsEndAddress;
 	protected T sampleObject;
 	protected long offHeapSampleObjectAddress;
 	protected int sampleHeader;
+	protected volatile boolean full;
 	/*
 	protected long classPointerAddress;
 	protected long classPointerOffset;
@@ -66,6 +75,14 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		}
 		this.elementType = elementType;
 		this.objectCount = objectCount;
+		this.full = false;
+		this.currentIndex = INDEX_NOT_YET_USED;
+		this.currentBlockIndex = INDEX_NOT_YET_USED;
+		this.inUseBlockCount = objectCount / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
+		if (objectCount % OBJECT_COUNT_AT_AN_IN_USE_BLOCK != 0) {
+			this.inUseBlockCount++;
+		}
+		this.inUseBlockAddress = directMemoryService.allocateMemory(inUseBlockCount);
 		this.directMemoryService = directMemoryService;
 		this.sampleObject = JvmUtil.getSampleInstance(elementType);
 		if (sampleObject == null) {
@@ -103,40 +120,6 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		*/
 	}
 	
-	protected byte getBit(byte value, byte bit) {
-		return (byte) ((value & (1 << bit)) == 0 ? 0 : 1);
-	}
-	
-	protected byte setBit(byte value, byte bit) {
-		return (byte) (value | (1 << bit));
-	}
-	
-	protected byte unsetBit(byte value, byte bit) {
-		return (byte) (value & (~(1 << bit)));
-	}
-	
-	protected boolean getInUseBit(long objAddress) {
-		long objIndex = (objAddress - objectsStartAddress) / objectSize;
-		long blockOrder = objIndex / OBJECT_COUNT_AT_IN_USE_BLOCK;
-		long blockIndex = blockOrder / 8;
-		byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + blockIndex);
-		byte blockInternalOrder = (byte) (blockOrder % 8);
-		return getBit(blockIndexValue, blockInternalOrder) == 1;
-	}
-	
-	protected void setUnsetInUseBit(long objAddress, boolean set) {
-		long objIndex = (objAddress - objectsStartAddress) / objectSize;
-		long blockOrder = objIndex / OBJECT_COUNT_AT_IN_USE_BLOCK;
-		long blockIndex = blockOrder / 8;
-		byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + blockIndex);
-		byte blockInternalOrder = (byte) (blockOrder % 8);
-		byte newBlockIndexValue = 
-				set ? 
-					setBit(blockIndexValue, blockInternalOrder) : 
-					unsetBit(blockIndexValue, blockInternalOrder);
-		directMemoryService.putByte(inUseBlockAddress + blockIndex, newBlockIndexValue);
-	}
-	
 	/*
 	 * 1. Get object index from its address like "(objAddress - allocationStartAddress) / objectSize"
 	 * 
@@ -161,6 +144,127 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	 * 		}
 	 */
 	
+	protected byte getBit(byte value, byte bit) {
+		return (byte) ((value & (1 << bit)) == 0 ? 0 : 1);
+	}
+	
+	protected byte setBit(byte value, byte bit) {
+		return (byte) (value | (1 << bit));
+	}
+	
+	protected byte unsetBit(byte value, byte bit) {
+		return (byte) (value & (~(1 << bit)));
+	}
+	
+	protected byte getInUseFromObjectIndex(long objIndex) {
+		long blockIndex = objIndex / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
+		byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + blockIndex);
+		if (blockIndexValue == 0xFF) {
+			return BLOCK_IS_FULL;
+		}
+		else {
+			byte blockInternalOrder = (byte) (objIndex % OBJECT_COUNT_AT_AN_IN_USE_BLOCK);
+			return
+				getBit(blockIndexValue, blockInternalOrder) == 1 ? 
+						OBJECT_IS_IN_USE : OBJECT_IS_AVAILABLE;
+		}	
+	}
+	
+	protected byte getInUseFromObjectAddress(long objAddress) {
+		return getInUseFromObjectIndex((objAddress - objectsStartAddress) / objectSize);
+	}
+	
+	protected void setUnsetInUseFromObjectIndex(long objIndex, boolean set) {
+		long blockIndex = objIndex / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
+		byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + blockIndex);
+		byte blockInternalOrder = (byte) (objIndex % OBJECT_COUNT_AT_AN_IN_USE_BLOCK);
+		byte newBlockIndexValue = 
+				set ? 
+					setBit(blockIndexValue, blockInternalOrder) : 
+					unsetBit(blockIndexValue, blockInternalOrder);
+		directMemoryService.putByte(inUseBlockAddress + blockIndex, newBlockIndexValue);
+	}
+	
+	protected void setUnsetInUseFromObjectAddress(long objAddress, boolean set) {
+		setUnsetInUseFromObjectIndex((objAddress - objectsStartAddress) / objectSize, set);
+	}
+	
+	protected void allocateObjectFromObjectIndex(long objIndex) {
+		setUnsetInUseFromObjectIndex(objIndex, true);
+	}
+	
+	protected void freeObjectFromObjectIndex(long objIndex) {
+		setUnsetInUseFromObjectIndex(objIndex, false);
+		full = false;
+	}
+	
+	protected void allocateObjectFromObjectAddress(long objAddress) {
+		setUnsetInUseFromObjectAddress(objAddress, true);
+	}
+	
+	protected void freeObjectFromObjectAddress(long objAddress) {
+		setUnsetInUseFromObjectAddress(objAddress, false);
+		full = false;
+	}
+	
+	protected boolean nextAvailable() {
+		if (full) {
+			return false;
+		}
+		currentIndex++;
+		if (currentIndex >= objectCount) {
+			currentIndex = 0;
+		}
+		byte objectInUse = getInUseFromObjectAddress(currentIndex);
+		// Object on current index is not available
+		if (objectInUse != OBJECT_IS_AVAILABLE) {
+			// Current object is not available, so search in current block for available one
+			if (objectInUse != BLOCK_IS_FULL) {
+				byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + currentBlockIndex);
+				// Check objects in block
+				for (int i = 0; i < OBJECT_COUNT_AT_AN_IN_USE_BLOCK; i++) {
+					// If current object is not in use, use it
+					if (((blockIndexValue >> i) & 0x01) == 0) {
+						break;
+					}
+					currentIndex++;
+				}
+			}
+			else {
+				currentBlockIndex = currentIndex / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
+				byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + currentBlockIndex);
+				long checkedBlockCount;
+				for (	checkedBlockCount = 0; 
+						blockIndexValue == 0xFF && checkedBlockCount < inUseBlockCount; 
+						checkedBlockCount++) {
+					currentBlockIndex++;
+					if (currentBlockIndex >= inUseBlockCount) {
+						currentBlockIndex = 0;
+					}
+					currentIndex = currentBlockIndex * OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
+					blockIndexValue = directMemoryService.getByte(inUseBlockAddress + currentBlockIndex);
+				}
+				// All blocks are checked but there is no non-full block
+				if (checkedBlockCount >=  inUseBlockCount) {
+					currentIndex = INDEX_NOT_AVAILABLE;
+					currentBlockIndex = INDEX_NOT_AVAILABLE;
+					full = true;
+					return false;
+				}
+				// A non-full block found, check free object in block
+				for (int i = 0; i < OBJECT_COUNT_AT_AN_IN_USE_BLOCK; i++) {
+					// If current object is not in use, use it
+					if (((blockIndexValue >> i) & 0x01) == 0) {
+						break;
+					}
+					currentIndex++;
+				}
+			}	
+		}
+		currentAddress = currentIndex * objectSize;
+		return true;
+	}
+
 	@Override
 	public boolean isMine(T element) {
 		if (element == null) {
@@ -176,14 +280,56 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		return isIn(address);
 	}
 	
-	protected synchronized T processObject(T obj) {
+	protected synchronized T takeObject(T obj) {
+		long objAddress = directMemoryService.addressOf(obj);
+		obj = super.processObject(obj);
 		directMemoryService.putInt(obj, 0L, sampleHeader);
-		return super.processObject(obj);
+		allocateObjectFromObjectAddress(objAddress);
+		return obj;
 	}
 	
-	protected synchronized long processObject(long objAddress) {
+	@SuppressWarnings("unchecked")
+	protected synchronized T takeObject(long objAddress) {
+		T obj = (T) directMemoryService.getObject(objAddress);
+		obj = super.processObject(obj);
+		directMemoryService.putInt(obj, 0L, sampleHeader);
+		allocateObjectFromObjectAddress(objAddress);
+		return obj;
+	}
+	
+	protected synchronized long takeObjectAsAddress(long objAddress) {
+		long address = super.processObject(objAddress);
 		directMemoryService.putInt(objAddress, sampleHeader);
-		return super.processObject(objAddress);
+		allocateObjectFromObjectAddress(address);
+		return address;
+	}
+	
+	protected synchronized boolean releaseObject(T obj) {
+		long objAddress = directMemoryService.addressOf(obj);
+		if (!isIn(objAddress)) {
+			return false;
+		}
+		directMemoryService.putInt(obj, 0L, 0);
+		freeObjectFromObjectAddress(objAddress);
+		return true;
+	}
+	
+	protected synchronized boolean releaseObject(long objAddress) {
+		if (!isIn(objAddress)) {
+			return false;
+		}
+		directMemoryService.putInt(objAddress, 0);
+		freeObjectFromObjectAddress(objAddress);
+		return true;
+	}
+	
+	@Override
+	public synchronized void free() {
+		checkAvailability();
+		directMemoryService.freeMemory(offHeapSampleObjectAddress);
+		directMemoryService.freeMemory(inUseBlockAddress);
+		directMemoryService.freeMemory(allocationStartAddress);
+		makeUnavaiable();
 	}
 	
 	/*
@@ -236,15 +382,9 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		}
 		
 	}
-	*/
-	
-	/**
-	 * Get and copy class pointer to current object's class pointer field. 
-	 * Address of class could be changed by GC at "Compact" phase.
-	 * 
-	 * @param address
-	 */
-	/*
+
+	// Get and copy class pointer to current object's class pointer field. 
+	// Address of class could be changed by GC at "Compact" phase.
 	protected long updateClassPointerOfObject(long address) {
 		return jvmAwareClassPointerUpdater.updateClassPointerOfObject(address);
 	}

@@ -80,6 +80,8 @@ public interface OffHeapService {
 	<T> long newObjectAsAddress(Class<T> objectType);
 	<T> void freeObject(T obj);
 	void freeObjectWithAddress(long address);
+	<T> boolean isFreeObject(T obj);
+	boolean isFreeObjectWithAddress(long address);
 	
 	<A> A newArray(Class<A> arrayType, int length);
 	<A> long newArrayAsAddress(Class<A> arrayType, int length);

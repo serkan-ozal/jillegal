@@ -126,12 +126,10 @@ public class ExtendableStringOffHeapPool
 	public synchronized void reset() {
 		for (DeeplyForkableStringOffHeapPool forkableOffHeapPool : forkableOffHeapPoolList) {
 			if (forkableOffHeapPool != rootForkableOffHeapPool) {
-				forkableOffHeapPool.free();
+				forkableOffHeapPool.reset();
 			}	
 		}
-		if (currentForkableOffHeapPool != null && currentForkableOffHeapPool != rootForkableOffHeapPool) {
-			currentForkableOffHeapPool.free();
-		}
+		rootForkableOffHeapPool.reset();
 		init();
 		makeAvaiable();
 	}
@@ -140,11 +138,11 @@ public class ExtendableStringOffHeapPool
 	public synchronized void free() {
 		checkAvailability();
 		for (DeeplyForkableStringOffHeapPool forkableOffHeapPool : forkableOffHeapPoolList) {
-			forkableOffHeapPool.free();
+			if (forkableOffHeapPool != rootForkableOffHeapPool) {
+				forkableOffHeapPool.free();
+			}	
 		}
-		if (currentForkableOffHeapPool != null) {
-			currentForkableOffHeapPool.free();
-		}
+		currentForkableOffHeapPool.free();
 		makeUnavaiable();
 	}
 

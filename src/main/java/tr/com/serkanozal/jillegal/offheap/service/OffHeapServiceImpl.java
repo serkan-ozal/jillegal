@@ -38,6 +38,7 @@ public class OffHeapServiceImpl implements OffHeapService {
 
 	protected final Logger logger = Logger.getLogger(getClass());
 	
+	protected DirectMemoryService directMemoryService = DirectMemoryServiceFactory.getDirectMemoryService();
 	protected OffHeapPoolFactory defaultOffHeapPoolFactory = new DefaultOffHeapPoolFactory();
 	protected Map<Class<? extends OffHeapPoolCreateParameter<?>>, OffHeapPoolFactory> offHeapPoolFactoryMap = 
 			new ConcurrentHashMap<Class<? extends OffHeapPoolCreateParameter<?>>, OffHeapPoolFactory>();
@@ -190,6 +191,16 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@Override
 	public void freeObjectWithAddress(long address) {
 		throw new UnsupportedOperationException("\"void freeObjectWithAddress(long address)\" is not supported right now !");
+	}
+	
+	@Override
+	public <T> boolean isFreeObject(T obj) {
+		return isFreeObjectWithAddress(directMemoryService.addressOf(obj));
+	}
+	
+	@Override
+	public boolean isFreeObjectWithAddress(long address) {
+		return directMemoryService.getInt(address) == 0;
 	}
 
 	@SuppressWarnings("unchecked")

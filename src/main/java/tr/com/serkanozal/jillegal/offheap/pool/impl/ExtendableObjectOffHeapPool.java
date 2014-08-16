@@ -96,27 +96,29 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	@Override
 	public synchronized boolean free(T obj) {
 		checkAvailability();
-		if (obj != null) {
-			return isMine(directMemoryService.addressOf(obj));
-		}	
-		else {
-			return false;
+		if (currentForkableOffHeapPool.free(obj)) {
+			return true;
 		}
+		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
+			if (forkableOffHeapPool != currentForkableOffHeapPool) {
+				if (currentForkableOffHeapPool.free(obj)) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 	
-	@SuppressWarnings("rawtypes")
 	@Override
 	public synchronized boolean freeFromAddress(long objAddress) {
 		checkAvailability();
-		if (currentForkableOffHeapPool instanceof ContentAwareOffHeapPool) {
-			if (((ContentAwareOffHeapPool)currentForkableOffHeapPool).isMine(objAddress)) {
-				return currentForkableOffHeapPool.freeFromAddress(objAddress);
-			}
+		if (currentForkableOffHeapPool.freeFromAddress(objAddress)) {
+			return true;
 		}
 		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
-			if (forkableOffHeapPool != currentForkableOffHeapPool && forkableOffHeapPool instanceof ContentAwareOffHeapPool) {
-				if (((ContentAwareOffHeapPool)forkableOffHeapPool).isMine(objAddress)) {
-					return currentForkableOffHeapPool.freeFromAddress(objAddress);
+			if (forkableOffHeapPool != currentForkableOffHeapPool) {
+				if (currentForkableOffHeapPool.freeFromAddress(objAddress)) {
+					return true;
 				}
 			}
 		}
@@ -127,12 +129,10 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	public synchronized void reset() {
 		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
 			if (forkableOffHeapPool != rootForkableOffHeapPool) {
-				forkableOffHeapPool.free();
+				forkableOffHeapPool.reset();
 			}	
 		}
-		if (currentForkableOffHeapPool != null && currentForkableOffHeapPool != rootForkableOffHeapPool) {
-			currentForkableOffHeapPool.free();
-		}
+		rootForkableOffHeapPool.reset();
 		init();
 		makeAvaiable();
 	}
@@ -141,11 +141,11 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	public synchronized void free() {
 		checkAvailability();
 		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
-			forkableOffHeapPool.free();
+			if (forkableOffHeapPool != rootForkableOffHeapPool) {
+				forkableOffHeapPool.free();
+			}	
 		}
-		if (currentForkableOffHeapPool != null) {
-			currentForkableOffHeapPool.free();
-		}
+		rootForkableOffHeapPool.free();
 		makeUnavaiable();
 	}
 

@@ -92,6 +92,7 @@ public class JvmUtil {
     public static final byte ADDRESSING_8_BYTE = 8;
     public static final byte ADDRESSING_16_BYTE = 16;
 
+    public static final long NULL = 0L;
     public static final int NR_BITS = findNumberOfBits();
     public static final int BYTE = 8;
     public static final int WORD = NR_BITS / BYTE;

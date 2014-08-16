@@ -9,11 +9,8 @@ package tr.com.serkanozal.jillegal.offheap.pool;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 
-public interface ObjectOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> 
-		extends OffHeapPool<T, P>, FreeableOffHeapPool<T, P> {
+public interface FreeableOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> extends OffHeapPool<T, P> {
 
-	T get();
-	long getAsAddress();
 	boolean free(T obj);
 	boolean freeFromAddress(long objAddress);
 	
