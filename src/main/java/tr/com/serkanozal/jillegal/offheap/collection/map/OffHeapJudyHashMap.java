@@ -419,7 +419,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> {
 					// child = null; // Now it can be collected by GC
 				}
 			}
-			directMemoryService.freeObject(children);
+			offHeapService.freeArray(children); // directMemoryService.freeObject(children);
 			setChildren(null); // children = null; // Now it can be collected by GC
 		}
 		
@@ -535,7 +535,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> {
 		
 		@Override
 		void clear(byte level) {
-			directMemoryService.freeObject(entries);
+			offHeapService.freeArray(entries); // directMemoryService.freeObject(entries);
 			setEntries(null); // entries = null; // Now it can be collected by GC
 		}
 		
