@@ -414,7 +414,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> {
 				for (JudyNode<K, V> child : children) {
 					if (child != null) {
 						child.clear((byte) (level + 1));
-						//directMemoryService.freeObject(child);
+						offHeapService.freeObject(child);
 					}	
 					// child = null; // Now it can be collected by GC
 				}

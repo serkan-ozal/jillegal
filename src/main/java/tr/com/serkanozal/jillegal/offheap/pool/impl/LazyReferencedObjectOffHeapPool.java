@@ -118,6 +118,9 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 	@Override
 	public boolean free(T obj) {
 		checkAvailability();
+		if (obj == null) {
+			return false;
+		}
 		return releaseObject(obj);
 	}
 	

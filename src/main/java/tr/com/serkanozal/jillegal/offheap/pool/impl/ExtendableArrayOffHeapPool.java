@@ -118,6 +118,31 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	}
 	
 	@Override
+	public boolean isMe(A array) {
+		checkAvailability();
+		if (array == null) {
+			return false;
+		}
+		else {
+			return isMeAsAddress(directMemoryService.addressOf(array));
+		}	
+	}
+	
+	@Override
+	public boolean isMeAsAddress(long arrayAddress) {
+		checkAvailability();
+		if (currentForkableOffHeapPool.isMeAsAddress(arrayAddress)) {
+			return true;
+		}
+		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
+			if (forkableOffHeapPool.isMeAsAddress(arrayAddress)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	@Override
 	public synchronized void reset() {
 		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
 			if (forkableOffHeapPool != rootForkableOffHeapPool) {

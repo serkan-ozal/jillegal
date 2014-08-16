@@ -78,19 +78,19 @@ public interface OffHeapService {
 	
 	<T> T newObject(Class<T> objectType);
 	<T> long newObjectAsAddress(Class<T> objectType);
-	<T> void freeObject(T obj);
-	void freeObjectWithAddress(long address);
+	<T> boolean freeObject(T obj);
+	boolean freeObjectWithAddress(long address);
 	<T> boolean isFreeObject(T obj);
 	boolean isFreeObjectWithAddress(long address);
 	
 	<A> A newArray(Class<A> arrayType, int length);
 	<A> long newArrayAsAddress(Class<A> arrayType, int length);
-	<A> void freeArray(A array);
-	void freeArrayWithAddress(long address);
+	<A> boolean freeArray(A array);
+	boolean freeArrayWithAddress(long address);
 	
 	String newString(String str);
 	long newStringAsAddress(String str);
-	void freeString(String str);
-	void freeStringWithAddress(long address);
+	boolean freeString(String str);
+	boolean freeStringWithAddress(long address);
 	
 }

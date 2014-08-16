@@ -63,6 +63,18 @@ public class PrimitiveTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Arra
 	public int getLength() {
 		return length;
 	}
+	
+	@Override
+	public boolean isMe(A array) {
+		checkAvailability();
+		return primitiveArray == array;
+	}
+	
+	@Override
+	public boolean isMeAsAddress(long arrayAddress) {
+		checkAvailability();
+		return allocationStartAddress == arrayAddress;
+	}
 
 	@SuppressWarnings("unchecked")
 	@Override

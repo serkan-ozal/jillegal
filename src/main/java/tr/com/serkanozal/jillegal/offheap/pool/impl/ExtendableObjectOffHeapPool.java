@@ -96,6 +96,9 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	@Override
 	public synchronized boolean free(T obj) {
 		checkAvailability();
+		if (obj == null) {
+			return false;
+		}
 		if (currentForkableOffHeapPool.free(obj)) {
 			return true;
 		}

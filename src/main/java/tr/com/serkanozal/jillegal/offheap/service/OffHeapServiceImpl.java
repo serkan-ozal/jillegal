@@ -26,6 +26,7 @@ import tr.com.serkanozal.jillegal.instrument.service.InstrumentServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
+import tr.com.serkanozal.jillegal.offheap.pool.ArrayOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.factory.DefaultOffHeapPoolFactory;
@@ -38,13 +39,20 @@ public class OffHeapServiceImpl implements OffHeapService {
 
 	protected final Logger logger = Logger.getLogger(getClass());
 	
-	protected DirectMemoryService directMemoryService = DirectMemoryServiceFactory.getDirectMemoryService();
-	protected OffHeapPoolFactory defaultOffHeapPoolFactory = new DefaultOffHeapPoolFactory();
+	protected DirectMemoryService directMemoryService = 
+			DirectMemoryServiceFactory.getDirectMemoryService();
+	protected OffHeapPoolFactory defaultOffHeapPoolFactory = 
+			new DefaultOffHeapPoolFactory();
 	protected Map<Class<? extends OffHeapPoolCreateParameter<?>>, OffHeapPoolFactory> offHeapPoolFactoryMap = 
 			new ConcurrentHashMap<Class<? extends OffHeapPoolCreateParameter<?>>, OffHeapPoolFactory>();
-	protected Set<Class<?>> offHeapableClasses = Collections.synchronizedSet(new HashSet<Class<?>>());
+	protected Set<Class<?>> offHeapableClasses = 
+			Collections.synchronizedSet(new HashSet<Class<?>>());
 	@SuppressWarnings("rawtypes")
-	protected Map<Class<?>, ObjectOffHeapPool> objectOffHeapPoolMap = new ConcurrentHashMap<Class<?>, ObjectOffHeapPool>();
+	protected Map<Class<?>, ObjectOffHeapPool> objectOffHeapPoolMap = 
+			new ConcurrentHashMap<Class<?>, ObjectOffHeapPool>();
+	@SuppressWarnings("rawtypes")
+	protected Set<ArrayOffHeapPool> arrayOffHeapPoolSet = 
+			new HashSet<ArrayOffHeapPool>();
 	protected ExtendableStringOffHeapPool extendableStringOffHeapPool;
 					
 	public OffHeapServiceImpl() {
@@ -183,14 +191,26 @@ public class OffHeapServiceImpl implements OffHeapService {
 		return objectOffHeapPool.getAsAddress();
 	}
 
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
-	public <T> void freeObject(T obj) {
-		throw new UnsupportedOperationException("\"void freeObject(T obj)\" is not supported right now !");
+	public <T> boolean freeObject(T obj) {
+		for (Map.Entry<Class<?>, ObjectOffHeapPool> objectOffHeapPoolEntry : objectOffHeapPoolMap.entrySet()) {
+			if (objectOffHeapPoolEntry.getValue().free(obj)) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
+	@SuppressWarnings({ "rawtypes" })
 	@Override
-	public void freeObjectWithAddress(long address) {
-		throw new UnsupportedOperationException("\"void freeObjectWithAddress(long address)\" is not supported right now !");
+	public boolean freeObjectWithAddress(long address) {
+		for (Map.Entry<Class<?>, ObjectOffHeapPool> objectOffHeapPoolEntry : objectOffHeapPoolMap.entrySet()) {
+			if (objectOffHeapPoolEntry.getValue().freeFromAddress(address)) {
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	@Override
@@ -203,29 +223,64 @@ public class OffHeapServiceImpl implements OffHeapService {
 		return directMemoryService.getInt(address) == 0;
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public synchronized <A> A newArray(Class<A> arrayType, int length) {
-		return
-			(A) defaultOffHeapPoolFactory.
-					createArrayOffHeapPool(arrayType, length).getArray();
+		ArrayOffHeapPool arrayOffHeapPool =
+				defaultOffHeapPoolFactory.
+					createArrayOffHeapPool(arrayType, length);
+		arrayOffHeapPoolSet.add(arrayOffHeapPool);
+		return (A) arrayOffHeapPool.getArray();
 	}
 	
+	@SuppressWarnings("rawtypes")
 	@Override
 	public synchronized <A> long newArrayAsAddress(Class<A> arrayType, int length) {
-		return
-			defaultOffHeapPoolFactory.
-					createArrayOffHeapPool(arrayType, length).getArrayAsAddress();
+		ArrayOffHeapPool arrayOffHeapPool =
+				defaultOffHeapPoolFactory.
+					createArrayOffHeapPool(arrayType, length);
+		arrayOffHeapPoolSet.add(arrayOffHeapPool);
+		return arrayOffHeapPool.getArrayAsAddress();
 	}
 
+	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
-	public <A> void freeArray(A array) {
-		throw new UnsupportedOperationException("\"void freeArray(T array)\" is not supported right now !");
+	public synchronized <A> boolean freeArray(A array) {
+		ArrayOffHeapPool arrayOffHeapPoolToRemove = null;
+		for (ArrayOffHeapPool arrayOffHeapPool : arrayOffHeapPoolSet) {
+			if (arrayOffHeapPool.isMe(array)) {
+				arrayOffHeapPoolToRemove = arrayOffHeapPool;
+				break;
+			}
+		}
+		if (arrayOffHeapPoolToRemove != null) {
+			arrayOffHeapPoolToRemove.free();
+			arrayOffHeapPoolSet.remove(arrayOffHeapPoolToRemove);
+			return true;
+		}
+		else {
+			return false;
+		}	
 	}
 	
+	@SuppressWarnings("rawtypes")
 	@Override
-	public void freeArrayWithAddress(long address) {
-		throw new UnsupportedOperationException("\"void freeArrayWithAddress(long address)\" is not supported right now !");
+	public boolean freeArrayWithAddress(long address) {
+		ArrayOffHeapPool arrayOffHeapPoolToRemove = null;
+		for (ArrayOffHeapPool arrayOffHeapPool : arrayOffHeapPoolSet) {
+			if (arrayOffHeapPool.isMeAsAddress(address)) {
+				arrayOffHeapPoolToRemove = arrayOffHeapPool;
+				break;
+			}
+		}
+		if (arrayOffHeapPoolToRemove != null) {
+			arrayOffHeapPoolToRemove.free();
+			arrayOffHeapPoolSet.remove(arrayOffHeapPoolToRemove);
+			return true;
+		}
+		else {
+			return false;
+		}	
 	}
 	
 	@Override
@@ -247,13 +302,17 @@ public class OffHeapServiceImpl implements OffHeapService {
 	}
 	
 	@Override
-	public void freeString(String str) {
-		throw new UnsupportedOperationException("\"void freeString(String str)\" is not supported right now !");
+	public boolean freeString(String str) {
+		throw 
+			new UnsupportedOperationException(
+					"\"void freeString(String str)\" is not supported right now !");
 	}
 	
 	@Override
-	public void freeStringWithAddress(long address) {
-		throw new UnsupportedOperationException("\"void freeStringWithAddress(long address)\" is not supported right now !");
+	public boolean freeStringWithAddress(long address) {
+		throw 
+			new UnsupportedOperationException(
+					"\"void freeStringWithAddress(long address)\" is not supported right now !");
 	}
 	
 }

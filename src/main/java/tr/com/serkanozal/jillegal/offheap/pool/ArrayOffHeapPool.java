@@ -12,4 +12,7 @@ import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreatePar
 public interface ArrayOffHeapPool<T, A, P extends OffHeapPoolCreateParameter<T>> 
 		extends ExplicitArrayOffHeapPool<T, A, P> {
 	
+	boolean isMe(A array);
+	boolean isMeAsAddress(long arrayAddress);
+	
 }

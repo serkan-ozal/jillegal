@@ -147,6 +147,18 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 		return isIn(address);
 	}
 	
+	@Override
+	public boolean isMe(A array) {
+		checkAvailability();
+		return objectArray == array;
+	}
+	
+	@Override
+	public boolean isMeAsAddress(long arrayAddress) {
+		checkAvailability();
+		return allocationStartAddress == arrayAddress;
+	}
+	
 	@SuppressWarnings("unchecked")
 	@Override
 	public T getAt(int index) {
