@@ -66,6 +66,16 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     public void copyMemory(long sourceAddress, long destinationAddress, long size) {
     	unsafe.copyMemory(sourceAddress, destinationAddress, size);
     }
+    
+    @Override
+    public void setMemory(long sourceAddress, long bytes, byte val) {
+    	unsafe.setMemory(sourceAddress, bytes, val);
+    }
+    
+    @Override
+    public <T> void setMemory(T obj, long offset, long bytes, byte val) {
+    	unsafe.setMemory(obj, offset, bytes, val);
+    }
    
     public long sizeOfWithAgent(Object obj) {
         return JillegalAgent.sizeOf(obj);

@@ -26,7 +26,6 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 					DeeplyForkableObjectOffHeapPool<T, ObjectOffHeapPoolCreateParameter<T>> {
 
 	protected long arraySize;
-	protected int currentIndex;
 	protected T[] sampleArray;
 	protected T[] objectArray;
 	
@@ -36,7 +35,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 				parameter.getDirectMemoryService());
 	}
 	
-	public EagerReferencedObjectOffHeapPool(Class<T> elementType, int objectCount, 
+	public EagerReferencedObjectOffHeapPool(Class<T> elementType, long objectCount, 
 			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
 			DirectMemoryService directMemoryService) {
 		super(elementType, directMemoryService);
@@ -51,8 +50,6 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	protected void init() {
 		super.init();
 		
-		this.currentIndex = 0;
-		
 		int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
 		int arrayIndexScale = JvmUtil.arrayIndexScale(elementType);
 		long arrayIndexStartAddress = allocationStartAddress + JvmUtil.arrayBaseOffset(elementType);
@@ -60,9 +57,9 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 		objectsStartAddress = allocationStartAddress + JvmUtil.sizeOfArray(elementType, objectCount);
 		// Allocated objects must start aligned as address size from start address of allocated address
 		long diffBetweenArrayAndObjectStartAddresses = objectsStartAddress - allocationStartAddress;
-		long addressMod = diffBetweenArrayAndObjectStartAddresses % JvmUtil.getAddressSize();
+		long addressMod = diffBetweenArrayAndObjectStartAddresses % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
 		if (addressMod != 0) {
-			objectsStartAddress += (JvmUtil.getAddressSize() - addressMod);
+			objectsStartAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod);
 		}
 		objectsEndAddress = objectsStartAddress + (objectCount * objectSize);
 		
@@ -107,7 +104,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 		}
 		// Address of class could be changed by GC at "Compact" phase.
 		//updateClassPointerOfObject(currentAddress);
-		return takeObject(objectArray[currentIndex]);
+		return takeObject(objectArray[(int) currentIndex]);
 	}
 	
 	@Override
@@ -182,13 +179,19 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	}
 	
 	@SuppressWarnings("unchecked")
-	protected void init(Class<T> elementType, int objectCount, 
+	protected void init(Class<T> elementType, long objectCount, 
 			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
 			DirectMemoryService directMemoryService) {
+		if (objectCount > Integer.MAX_VALUE) {
+			throw 
+				new IllegalArgumentException(
+						"Maximum " + Integer.MAX_VALUE + " object are alloved for " + 
+						"EagerReferencedObjectOffHeapPool");
+		}
 		super.init(elementType, objectCount, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
 		this.arraySize = JvmUtil.sizeOfArray(elementType, objectCount);
 		this.allocationSize = 
-				arraySize + (objectCount * objectSize) + JvmUtil.getAddressSize(); // Extra memory for possible aligning;
+				arraySize + (objectCount * objectSize) + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning;
 		this.allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
 		this.allocationEndAddress = allocationStartAddress + (objectCount * objectSize) - objectSize;;
 		this.sampleArray = (T[]) Array.newInstance(elementType, 0);

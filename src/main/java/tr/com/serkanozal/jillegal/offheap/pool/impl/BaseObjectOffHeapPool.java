@@ -22,6 +22,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected static final byte BLOCK_IS_FULL = -1;
 	protected static final byte INDEX_NOT_YET_USED = -1;
 	protected static final byte INDEX_NOT_AVAILABLE = -2;
+	protected static final byte BLOCK_IS_FULL_VALUE = (byte)0xFF;
 	
 	protected long objectSize;
 	protected long objectCount;
@@ -35,6 +36,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected T sampleObject;
 	protected long offHeapSampleObjectAddress;
 	protected int sampleHeader;
+	protected byte fullValueOfLastBlock;
 	protected volatile boolean full;
 	/*
 	protected long classPointerAddress;
@@ -54,9 +56,13 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	@Override
 	protected void init() {
 		super.init();
+		full = false;
+		currentIndex = INDEX_NOT_YET_USED;
+		currentBlockIndex = INDEX_NOT_YET_USED;
+		directMemoryService.setMemory(inUseBlockAddress, inUseBlockCount, (byte)0);
 	}
 	
-	protected void init(Class<T> elementType, int objectCount, 
+	protected void init(Class<T> elementType, long objectCount, 
 			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
 			DirectMemoryService directMemoryService) {
 		super.init(elementType, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
@@ -75,15 +81,17 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		}
 		this.elementType = elementType;
 		this.objectCount = objectCount;
-		this.full = false;
-		this.currentIndex = INDEX_NOT_YET_USED;
-		this.currentBlockIndex = INDEX_NOT_YET_USED;
+		this.directMemoryService = directMemoryService;
 		this.inUseBlockCount = objectCount / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
-		if (objectCount % OBJECT_COUNT_AT_AN_IN_USE_BLOCK != 0) {
+		long blockCountMod = objectCount % OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
+		if (blockCountMod != 0) {
 			this.inUseBlockCount++;
+			this.fullValueOfLastBlock = (byte)(Math.pow(2, blockCountMod) - 1);
+		}
+		else {
+			this.fullValueOfLastBlock = BLOCK_IS_FULL_VALUE;
 		}
 		this.inUseBlockAddress = directMemoryService.allocateMemory(inUseBlockCount);
-		this.directMemoryService = directMemoryService;
 		this.sampleObject = JvmUtil.getSampleInstance(elementType);
 		if (sampleObject == null) {
 			throw new IllegalStateException("Unable to create a sample object for class " + elementType.getName());
@@ -133,15 +141,6 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	 * 5. Calculate block internal order like "blockOrder % 8"
 	 * 
 	 * 6. Get block in-use bit like "getBit(blockIndexValue, blockInternalOrder)"
-	 * 
-	 * 		int getBit(byte value, byte bit) {
-	 * 			if (bit == 7) {
-	 * 				return (value < 0) ? 1 : 0;
-	 * 			}
-	 * 			else {
-	 *				return (value & (1 << bit)) == 0 ? 0 : 1;
-	 *			}
-	 * 		}
 	 */
 	
 	protected byte getBit(byte value, byte bit) {
@@ -159,7 +158,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected byte getInUseFromObjectIndex(long objIndex) {
 		long blockIndex = objIndex / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
 		byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + blockIndex);
-		if (blockIndexValue == 0xFF) {
+		if (blockIndexValue == BLOCK_IS_FULL_VALUE) {
 			return BLOCK_IS_FULL;
 		}
 		else {
@@ -215,7 +214,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		if (currentIndex >= objectCount) {
 			currentIndex = 0;
 		}
-		byte objectInUse = getInUseFromObjectAddress(currentIndex);
+		byte objectInUse = getInUseFromObjectIndex(currentIndex);
 		// Object on current index is not available
 		if (objectInUse != OBJECT_IS_AVAILABLE) {
 			// Current object is not available, so search in current block for available one
@@ -235,7 +234,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 				byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + currentBlockIndex);
 				long checkedBlockCount;
 				for (	checkedBlockCount = 0; 
-						blockIndexValue == 0xFF && checkedBlockCount < inUseBlockCount; 
+						blockIndexValue == BLOCK_IS_FULL_VALUE && checkedBlockCount < inUseBlockCount; 
 						checkedBlockCount++) {
 					currentBlockIndex++;
 					if (currentBlockIndex >= inUseBlockCount) {
@@ -245,7 +244,8 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 					blockIndexValue = directMemoryService.getByte(inUseBlockAddress + currentBlockIndex);
 				}
 				// All blocks are checked but there is no non-full block
-				if (checkedBlockCount >=  inUseBlockCount) {
+				if (	checkedBlockCount >=  inUseBlockCount || 
+						(currentBlockIndex == (inUseBlockCount - 1) && blockIndexValue == fullValueOfLastBlock)) {
 					currentIndex = INDEX_NOT_AVAILABLE;
 					currentBlockIndex = INDEX_NOT_AVAILABLE;
 					full = true;
@@ -261,7 +261,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 				}
 			}	
 		}
-		currentAddress = currentIndex * objectSize;
+		currentAddress = objectsStartAddress + (currentIndex * objectSize);
 		return true;
 	}
 
@@ -283,7 +283,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected synchronized T takeObject(T obj) {
 		long objAddress = directMemoryService.addressOf(obj);
 		obj = super.processObject(obj);
-		directMemoryService.putInt(obj, 0L, sampleHeader);
+		directMemoryService.putInt(objAddress, sampleHeader);
 		allocateObjectFromObjectAddress(objAddress);
 		return obj;
 	}
@@ -292,7 +292,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected synchronized T takeObject(long objAddress) {
 		T obj = (T) directMemoryService.getObject(objAddress);
 		obj = super.processObject(obj);
-		directMemoryService.putInt(obj, 0L, sampleHeader);
+		directMemoryService.putInt(objAddress, sampleHeader);
 		allocateObjectFromObjectAddress(objAddress);
 		return obj;
 	}
@@ -305,20 +305,16 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	}
 	
 	protected synchronized boolean releaseObject(T obj) {
-		long objAddress = directMemoryService.addressOf(obj);
-		if (!isIn(objAddress)) {
-			return false;
-		}
-		directMemoryService.putInt(obj, 0L, 0);
-		freeObjectFromObjectAddress(objAddress);
-		return true;
+		return releaseObject(directMemoryService.addressOf(obj));
 	}
 	
 	protected synchronized boolean releaseObject(long objAddress) {
 		if (!isIn(objAddress)) {
 			return false;
 		}
+		// Reset free object
 		directMemoryService.putInt(objAddress, 0);
+		directMemoryService.copyMemory(offHeapSampleObjectAddress + 4, objAddress + 4, objectSize - 4);
 		freeObjectFromObjectAddress(objAddress);
 		return true;
 	}

@@ -50,7 +50,9 @@ public class ExtendableObjectOffHeapPoolTest {
 		
     	for (int i = 0; i < TOTAL_ELEMENT_COUNT; i++) {
     		SampleOffHeapClass obj = extendableObjectPool.get();
+    		Assert.assertEquals(0, obj.getOrder());
     		obj.setOrder(i);
+    		Assert.assertEquals(i, obj.getOrder());
     		objList.add(obj);
     	}
     	
@@ -80,7 +82,9 @@ public class ExtendableObjectOffHeapPoolTest {
 		
     	for (int i = 0; i < TOTAL_ELEMENT_COUNT; i++) {
     		SampleOffHeapClass obj = extendableObjectPool.get();
+    		Assert.assertEquals(0, obj.getOrder());
     		obj.setOrder(i);
+    		Assert.assertEquals(i, obj.getOrder());
     		objList.add(obj);
     	}
     	
@@ -102,7 +106,9 @@ public class ExtendableObjectOffHeapPoolTest {
 		
     	for (int i = 0; i < TOTAL_ELEMENT_COUNT; i++) {
     		SampleOffHeapClass obj = extendableObjectPool.get();
+    		Assert.assertEquals(0, obj.getOrder());
     		obj.setOrder(i);
+    		Assert.assertEquals(i, obj.getOrder());
     		objList.add(obj);
     	}
     	

@@ -97,6 +97,7 @@ public class JvmUtil {
     public static final int BYTE = 8;
     public static final int WORD = NR_BITS / BYTE;
     public static final int MIN_SIZE = 16; 
+    public static final byte OBJECT_ADDRESS_SENSIVITY = 8;
     
     public static final int ADDRESS_SHIFT_SIZE_FOR_BETWEEN_32GB_AND_64_GB = 3; 
     public static final int ADDRESS_SHIFT_SIZE_FOR_BIGGER_THAN_64_GB = 4; 

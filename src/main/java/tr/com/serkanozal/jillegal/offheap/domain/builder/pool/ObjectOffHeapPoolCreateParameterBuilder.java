@@ -15,7 +15,7 @@ import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectOffHeapPoolCre
 public class ObjectOffHeapPoolCreateParameterBuilder<T> implements Builder<ObjectOffHeapPoolCreateParameter<T>> {
 
 	private Class<T> type;
-	private int objectCount;
+	private long objectCount;
 	private ObjectPoolReferenceType referenceType = ObjectPoolReferenceType.LAZY_REFERENCED;
 	private boolean makeOffHeapableAsAuto = true;
 	private NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType = 
@@ -37,7 +37,7 @@ public class ObjectOffHeapPoolCreateParameterBuilder<T> implements Builder<Objec
 		return this;
 	}
 	
-	public ObjectOffHeapPoolCreateParameterBuilder<T> objectCount(int objectCount) {
+	public ObjectOffHeapPoolCreateParameterBuilder<T> objectCount(long objectCount) {
 		this.objectCount = objectCount;
 		return this;
 	}

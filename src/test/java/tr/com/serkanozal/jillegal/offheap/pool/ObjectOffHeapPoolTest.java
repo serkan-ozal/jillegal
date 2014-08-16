@@ -35,11 +35,17 @@ public class ObjectOffHeapPoolTest {
    
     	for (int i = 0; i < ELEMENT_COUNT; i++) {
     		SampleOffHeapClass obj = objectPool.get();
+    		Assert.assertEquals(0, obj.getOrder());
     		obj.setOrder(i);
+    		Assert.assertEquals(i, obj.getOrder());
     	}
+    	
+    	objectPool.reset();
     	
     	for (int i = 0; i < ELEMENT_COUNT; i++) {
     		SampleOffHeapClass obj = objectPool.getAt(i);
+    		Assert.assertEquals(0, obj.getOrder());
+    		obj.setOrder(i);
     		Assert.assertEquals(i, obj.getOrder());
     	}
 	}
@@ -56,11 +62,17 @@ public class ObjectOffHeapPoolTest {
    
     	for (int i = 0; i < ELEMENT_COUNT; i++) {
     		SampleOffHeapClass obj = objectPool.get();
+    		Assert.assertEquals(0, obj.getOrder());
     		obj.setOrder(i);
+    		Assert.assertEquals(i, obj.getOrder());
     	}
+    	
+    	objectPool.reset();
     	
     	for (int i = 0; i < ELEMENT_COUNT; i++) {
     		SampleOffHeapClass obj = objectPool.getAt(i);
+    		Assert.assertEquals(0, obj.getOrder());
+    		obj.setOrder(i);
     		Assert.assertEquals(i, obj.getOrder());
     	}
 	}

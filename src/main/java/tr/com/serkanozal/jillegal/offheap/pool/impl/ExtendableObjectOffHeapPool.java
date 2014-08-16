@@ -24,7 +24,7 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	protected DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> rootForkableOffHeapPool;
 	protected List<DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>>> forkableOffHeapPoolList = 
 					new ArrayList<DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>>>();
-	protected DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> currentForkableOffHeapPool;
+	protected volatile DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> currentForkableOffHeapPool;
 			
 	public ExtendableObjectOffHeapPool(ExtendableObjectOffHeapPoolCreateParameter<T> parameter) {
 		this(parameter.getElementType(), parameter.getForkableObjectOffHeapPool(), parameter.getDirectMemoryService());

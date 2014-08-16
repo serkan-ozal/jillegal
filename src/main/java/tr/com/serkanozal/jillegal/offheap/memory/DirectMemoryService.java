@@ -14,7 +14,9 @@ public interface DirectMemoryService {
 	<T> void freeObject(T obj);
 	Object allocateInstance(Class<?> clazz);
 	void copyMemory(long sourceAddress, long destinationAddress, long size);
-	
+	void setMemory(long sourceAddress, long bytes, byte val);
+	<T> void setMemory(T obj, long offset, long bytes, byte val);
+    
 	<T> long sizeOfObject(T obj);
 	long sizeOfClass(Class<?> objClass);
 	
