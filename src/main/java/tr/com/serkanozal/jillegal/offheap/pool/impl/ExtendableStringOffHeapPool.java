@@ -121,6 +121,41 @@ public class ExtendableStringOffHeapPool
 		}
 		return false;
 	}
+	
+	@Override
+	public synchronized boolean free(String str) {
+		checkAvailability();
+		if (str == null) {
+			return false;
+		}
+		if (currentForkableOffHeapPool.free(str)) {
+			return true;
+		}
+		for (DeeplyForkableStringOffHeapPool forkableOffHeapPool : forkableOffHeapPoolList) {
+			if (forkableOffHeapPool != currentForkableOffHeapPool) {
+				if (forkableOffHeapPool.free(str)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
+	@Override
+	public synchronized boolean freeFromAddress(long strAddress) {
+		checkAvailability();
+		if (currentForkableOffHeapPool.freeFromAddress(strAddress)) {
+			return true;
+		}
+		for (DeeplyForkableStringOffHeapPool forkableOffHeapPool : forkableOffHeapPoolList) {
+			if (forkableOffHeapPool != currentForkableOffHeapPool) {
+				if (forkableOffHeapPool.freeFromAddress(strAddress)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
 
 	@Override
 	public synchronized void reset() {

@@ -5,11 +5,10 @@
  *         GitHub: <a>https://github.com/serkan-ozal</a>
  */
 
-package tr.com.serkanozal.jillegal.offheap.collection;
+package tr.com.serkanozal.jillegal.offheap.domain.model.instance;
 
-public interface OffHeapCollection<E> {
-	
-	Class<E> getElementType();
-	E newElement();
+public interface InstanceRequest<T> {
+
+	Class<T> getInstanceType();
 	
 }

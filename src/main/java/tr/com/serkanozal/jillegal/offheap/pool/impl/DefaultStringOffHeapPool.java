@@ -19,6 +19,9 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 					DeeplyForkableStringOffHeapPool, 
 					ContentAwareOffHeapPool<String, StringOffHeapPoolCreateParameter> {
 
+	protected static final byte STRING_SEGMENT_COUNT_AT_AN_IN_USE_BLOCK = 8;
+	protected static final byte STRING_SEGMENT_SIZE = 8;
+	
 	protected int estimatedStringCount;
 	protected int estimatedStringLength;
 	protected int charArrayIndexScale;
@@ -34,9 +37,8 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	protected char[] sampleCharArray;
 	
 	public DefaultStringOffHeapPool() {
-		this(
-			OffHeapConstants.DEFAULT_ESTIMATED_STRING_COUNT, 
-			OffHeapConstants.DEFAULT_ESTIMATED_STRING_LENGTH);
+		this(	OffHeapConstants.DEFAULT_ESTIMATED_STRING_COUNT, 
+				OffHeapConstants.DEFAULT_ESTIMATED_STRING_LENGTH);
 	}
 	
 	public DefaultStringOffHeapPool(StringOffHeapPoolCreateParameter parameter) {
@@ -120,6 +122,21 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		return isIn(address);
 	}
 	
+	@Override
+	public boolean free(String str) {
+		checkAvailability();
+		if (str == null) {
+			return false;
+		}
+		return false;
+	}
+	
+	@Override
+	public boolean freeFromAddress(long strAddress) {
+		checkAvailability();
+		return false;
+	}
+	
 	protected long allocateStringFromOffHeap(String str) {
 		long addressOfStr = JvmUtil.addressOf(str);
 		char[] valueArray = (char[]) directMemoryService.getObject(str, valueArrayOffsetInString);
@@ -184,7 +201,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	@Override
 	public DeeplyForkableStringOffHeapPool fork() {
 		return 
-				new DefaultStringOffHeapPool(
+			new DefaultStringOffHeapPool(
 						estimatedStringCount, 
 						estimatedStringLength);
 	}

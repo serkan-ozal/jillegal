@@ -9,6 +9,7 @@ package tr.com.serkanozal.jillegal.offheap.pool;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.StringOffHeapPoolCreateParameter;
 
-public interface StringOffHeapPool extends ExplicitStringOffHeapPool<StringOffHeapPoolCreateParameter> {
+public interface StringOffHeapPool 
+	extends ExplicitStringOffHeapPool<StringOffHeapPoolCreateParameter> {
 	
 }

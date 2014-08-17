@@ -7,6 +7,7 @@
 
 package tr.com.serkanozal.jillegal.offheap.collection.map;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -14,20 +15,29 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import junit.framework.Assert;
 
+import org.apache.log4j.Logger;
 import org.junit.Test;
 
+import tr.com.serkanozal.jillegal.offheap.config.provider.annotation.OffHeapObject;
+import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
+import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 @SuppressWarnings("deprecation")
 public class OffHeapJudyHashMapTest {
 
+	private static final Logger logger = Logger.getLogger(OffHeapJudyHashMapTest.class);
+	
+	private static final OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
+	
 	@Test
 	public void sizeRetrievedSuccessfully() {
 		final int ENTRY_COUNT = Integer.SIZE - 1;
-		Map<Integer, String> map = new OffHeapJudyHashMap<Integer, String>();
+		OffHeapJudyHashMap<Integer, Person> map = 
+				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, i + " << " + i);
+			map.put(i << i, randomOffHeapPerson(i, map.newElement()));
 			Assert.assertEquals(i + 1, map.size());
 		}
 		
@@ -37,6 +47,7 @@ public class OffHeapJudyHashMapTest {
 		}
 	}
 	
+	/*
 	@Test
 	public void isEmptyConditionRetrievedSuccessfully() {
 		final int ENTRY_COUNT = Integer.SIZE - 1;
@@ -230,9 +241,9 @@ public class OffHeapJudyHashMapTest {
 		long hashMapFinishTime = System.nanoTime();
 		long hashMapExecutionTime = hashMapFinishTime - hashMapStartTime;
 		
-		System.out.println("Judy Map Execution Time for " + ENTRY_COUNT + 
+		logger.info("Judy Map Execution Time for " + ENTRY_COUNT + 
 							" put operation: " + (judyMapExecutionTime / 1000) + " milliseconds ...");
-		System.out.println("Hash Map Execution Time for " + ENTRY_COUNT + 
+		logger.info("Hash Map Execution Time for " + ENTRY_COUNT + 
 							" put operation: " + (hashMapExecutionTime / 1000) + " milliseconds ...");
 	}
 	
@@ -271,9 +282,9 @@ public class OffHeapJudyHashMapTest {
 		long hashMapFinishTime = System.nanoTime();
 		long hashMapExecutionTime = hashMapFinishTime - hashMapStartTime;
 		
-		System.out.println("Judy Map Execution Time for " + ENTRY_COUNT + 
+		logger.info("Judy Map Execution Time for " + ENTRY_COUNT + 
 							" get operation: " + (judyMapExecutionTime / 1000) + " milliseconds ...");
-		System.out.println("Hash Map Execution Time for " + ENTRY_COUNT + 
+		logger.info("Hash Map Execution Time for " + ENTRY_COUNT + 
 							" get operation: " + (hashMapExecutionTime / 1000) + " milliseconds ...");
 	}
 	
@@ -306,9 +317,9 @@ public class OffHeapJudyHashMapTest {
 		long concurrentHashMapFinishTime = System.nanoTime();
 		long concurrentHashMapExecutionTime = concurrentHashMapFinishTime - concurrentHashMapStartTime;
 		
-		System.out.println("Judy Map Execution Time for " + ENTRY_COUNT + 
+		logger.info("Judy Map Execution Time for " + ENTRY_COUNT + 
 							" put operation: " + (judyMapExecutionTime / 1000) + " milliseconds ...");
-		System.out.println("Concurrent Hash Map Execution Time for " + ENTRY_COUNT + 
+		logger.info("Concurrent Hash Map Execution Time for " + ENTRY_COUNT + 
 							" put operation: " + (concurrentHashMapExecutionTime / 1000) + " milliseconds ...");
 	}
 	
@@ -347,10 +358,115 @@ public class OffHeapJudyHashMapTest {
 		long concurrentHashMapFinishTime = System.nanoTime();
 		long concurrentHashMapExecutionTime = concurrentHashMapFinishTime - concurrentHashMapStartTime;
 		
-		System.out.println("Judy Map Execution Time for " + ENTRY_COUNT + 
+		logger.info("Judy Map Execution Time for " + ENTRY_COUNT + 
 							" get operation: " + (judyMapExecutionTime / 1000) + " milliseconds ...");
-		System.out.println("Concurrent Hash Map Execution Time for " + ENTRY_COUNT + 
+		logger.info("Concurrent Hash Map Execution Time for " + ENTRY_COUNT + 
 							" get operation: " + (concurrentHashMapExecutionTime / 1000) + " milliseconds ...");
+	}
+	*/
+	private static Person randomOffHeapPerson(int key, Person person) {
+		person.id = key;
+		person.username = offHeapService.newString("Username-" + key);
+		person.firstName = offHeapService.newString("Firstname-" + key);
+		person.lastName = offHeapService.newString("Lastname-" + key);
+		person.birthDate.setYear((int) (Math.random() * 100)); // Note that 1900 is added by java.lang.Date internally
+		person.birthDate.setMonth((int) (Math.random() * 11));
+		person.birthDate.setDate((int) (1 + Math.random() * 20));
+		person.accountNo = (int) (Math.random() * 1000000);
+		person.debt = Math.random() * 1000;
+		return person;
+	}
+	
+	public static class Person {
+		
+		private long id;
+		private String username;
+		private String firstName;
+		private String lastName;
+		@OffHeapObject
+		private Date birthDate;
+		private int accountNo;
+		private double debt;
+		
+		public Person() {
+			
+		}
+		
+		public Person(long id, String username, String firstName,
+				String lastName, Date birthDate, int accountNo, double debt) {
+			this.id = id;
+			this.username = username;
+			this.firstName = firstName;
+			this.lastName = lastName;
+			this.birthDate = birthDate;
+			this.accountNo = accountNo;
+			this.debt = debt;
+		}
+
+		public long getId() {
+			return id;
+		}
+		
+		public void setId(long id) {
+			this.id = id;
+		}
+		
+		public String getUsername() {
+			return username;
+		}
+		
+		public void setUsername(String username) {
+			this.username = username;
+		}
+		
+		public String getFirstName() {
+			return firstName;
+		}
+		
+		public void setFirstName(String firstName) {
+			this.firstName = firstName;
+		}
+		
+		public String getLastName() {
+			return lastName;
+		}
+		
+		public void setLastName(String lastName) {
+			this.lastName = lastName;
+		}
+		
+		public Date getBirthDate() {
+			return birthDate;
+		}
+		
+		public void setBirthDate(Date birthDate) {
+			this.birthDate = birthDate;
+		}
+		
+		public int getAccountNo() {
+			return accountNo;
+		}
+		
+		public void setAccountNo(int accountNo) {
+			this.accountNo = accountNo;
+		}
+		
+		public double getDebt() {
+			return debt;
+		}
+		
+		public void setDebt(double debt) {
+			this.debt = debt;
+		}
+
+		@Override
+		public String toString() {
+			return "Person [id=" + id + ", username=" + username
+					+ ", firstName=" + firstName + ", lastName=" + lastName
+					+ ", birthDate=" + birthDate + ", accountNo=" + accountNo
+					+ ", debt=" + debt + "]";
+		}
+	
 	}
 	
 }

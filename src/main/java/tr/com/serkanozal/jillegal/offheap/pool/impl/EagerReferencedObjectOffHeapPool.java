@@ -157,7 +157,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	}
 	
 	@Override
-	public boolean free(T obj) {
+	public synchronized boolean free(T obj) {
 		checkAvailability();
 		if (obj == null) {
 			return false;
@@ -166,7 +166,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	}
 	
 	@Override
-	public boolean freeFromAddress(long objAddress) {
+	public synchronized boolean freeFromAddress(long objAddress) {
 		checkAvailability();
 		return releaseObject(objAddress);
 	}

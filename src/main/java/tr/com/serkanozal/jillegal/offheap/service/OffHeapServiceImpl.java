@@ -23,6 +23,10 @@ import tr.com.serkanozal.jillegal.instrument.Instrumenter;
 import tr.com.serkanozal.jillegal.instrument.domain.model.GeneratedClass;
 import tr.com.serkanozal.jillegal.instrument.service.InstrumentService;
 import tr.com.serkanozal.jillegal.instrument.service.InstrumentServiceFactory;
+import tr.com.serkanozal.jillegal.offheap.domain.model.instance.ArrayInstanceRequest;
+import tr.com.serkanozal.jillegal.offheap.domain.model.instance.InstanceRequest;
+import tr.com.serkanozal.jillegal.offheap.domain.model.instance.ObjectInstanceRequest;
+import tr.com.serkanozal.jillegal.offheap.domain.model.instance.StringInstanceRequest;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
@@ -164,6 +168,86 @@ public class OffHeapServiceImpl implements OffHeapService {
 							elementType.getName(), t);
 		}
 	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T> T newInstance(InstanceRequest<T> request) {
+		if (request instanceof ObjectInstanceRequest) {
+			ObjectInstanceRequest<T> objectInstanceRequest = (ObjectInstanceRequest<T>)request;
+			return newObject(objectInstanceRequest.getObjectType());
+		}
+		else if (request instanceof ArrayInstanceRequest) {
+			ArrayInstanceRequest<T> arrayInstanceRequest = (ArrayInstanceRequest<T>)request;
+			return newArray(arrayInstanceRequest.getArrayType(), arrayInstanceRequest.getLength());
+		}
+		else if (request instanceof StringInstanceRequest) {
+			StringInstanceRequest stringInstanceRequest = (StringInstanceRequest)request;
+			return (T) newString(stringInstanceRequest.getString());
+		}
+		else {
+			throw 
+				new IllegalArgumentException(
+						"Unsupported instance request type: " + request.getClass().getName());
+		}
+	}
+	
+	@Override
+	public <T> long newInstanceAsAddress(InstanceRequest<T> request) {
+		if (request instanceof ObjectInstanceRequest) {
+			ObjectInstanceRequest<T> objectInstanceRequest = (ObjectInstanceRequest<T>)request;
+			return newObjectAsAddress(objectInstanceRequest.getObjectType());
+		}
+		else if (request instanceof ArrayInstanceRequest) {
+			ArrayInstanceRequest<T> arrayInstanceRequest = (ArrayInstanceRequest<T>)request;
+			return newArrayAsAddress(arrayInstanceRequest.getArrayType(), arrayInstanceRequest.getLength());
+		}
+		else if (request instanceof StringInstanceRequest) {
+			StringInstanceRequest stringInstanceRequest = (StringInstanceRequest)request;
+			return newStringAsAddress(stringInstanceRequest.getString());
+		}
+		else {
+			throw 
+				new IllegalArgumentException(
+						"Unsupported instance request type: " + request.getClass().getName());
+		}
+	}
+	
+	@Override
+	public <T> boolean freeInstance(T instance) {
+		if (instance.getClass().isArray()) {
+			return freeArray(instance);
+		}
+		else if (instance.getClass().equals(String.class)) {
+			return freeString((String)instance);
+		}
+		else {
+			return freeObject(instance);
+		}
+	}
+	
+	@Override
+	public boolean freeInstanceWithAddress(long address) {
+		Object instance = directMemoryService.getObject(address);
+		if (instance.getClass().isArray()) {
+			return freeArrayWithAddress(address);
+		}
+		else if (instance.getClass().equals(String.class)) {
+			return freeStringWithAddress(address);
+		}
+		else {
+			return freeObjectWithAddress(address);
+		}
+	}
+	
+	@Override
+	public <T> boolean isFreeInstance(T instance) {
+		return isFreeInstanceWithAddress(directMemoryService.addressOf(instance));
+	}
+	
+	@Override
+	public boolean isFreeInstanceWithAddress(long address) {
+		return directMemoryService.getInt(address) == 0;
+	}
 
 	@SuppressWarnings("unchecked")
 	@Override
@@ -213,16 +297,6 @@ public class OffHeapServiceImpl implements OffHeapService {
 		return false;
 	}
 	
-	@Override
-	public <T> boolean isFreeObject(T obj) {
-		return isFreeObjectWithAddress(directMemoryService.addressOf(obj));
-	}
-	
-	@Override
-	public boolean isFreeObjectWithAddress(long address) {
-		return directMemoryService.getInt(address) == 0;
-	}
-
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public synchronized <A> A newArray(Class<A> arrayType, int length) {

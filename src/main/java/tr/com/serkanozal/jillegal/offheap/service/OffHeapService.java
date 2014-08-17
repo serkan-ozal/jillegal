@@ -7,6 +7,7 @@
 
 package tr.com.serkanozal.jillegal.offheap.service;
 
+import tr.com.serkanozal.jillegal.offheap.domain.model.instance.InstanceRequest;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.factory.OffHeapPoolFactory;
@@ -76,12 +77,17 @@ public interface OffHeapService {
 	
 	<T> void makeOffHeapable(Class<T> elementType);
 	
+	<T> T newInstance(InstanceRequest<T> request);
+	<T> long newInstanceAsAddress(InstanceRequest<T> request);
+	<T> boolean freeInstance(T instance);
+	boolean freeInstanceWithAddress(long address);
+	<T> boolean isFreeInstance(T instance);
+	boolean isFreeInstanceWithAddress(long address);
+	
 	<T> T newObject(Class<T> objectType);
 	<T> long newObjectAsAddress(Class<T> objectType);
 	<T> boolean freeObject(T obj);
 	boolean freeObjectWithAddress(long address);
-	<T> boolean isFreeObject(T obj);
-	boolean isFreeObjectWithAddress(long address);
 	
 	<A> A newArray(Class<A> arrayType, int length);
 	<A> long newArrayAsAddress(Class<A> arrayType, int length);

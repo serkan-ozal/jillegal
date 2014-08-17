@@ -31,7 +31,7 @@ import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
  * In Judy tree based indexing structure, there are 4 levels for 4 byte of hash code as integer.
  * Last level (level 4 or leaf node) is hold as values.
  */
-public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> {
+public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHeapMap<K, V> {
 
 	private final static int BITS_IN_BYTE = 8;
 	private final static int MAX_LEVEL = (Integer.SIZE / BITS_IN_BYTE) - 1; 
@@ -41,9 +41,29 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> {
 	private static final DirectMemoryService directMemoryService = DirectMemoryServiceFactory.getDirectMemoryService();
 	
 	private JudyTree<K, V> root = new JudyTree<K, V>();
+	private Class<V> elementType;
 	
 	public OffHeapJudyHashMap() {
 
+	}
+	
+	public OffHeapJudyHashMap(Class<V> elementType) {
+		this.elementType = elementType;
+	}
+	
+	@Override
+	public Class<V> getElementType() {
+		return elementType;
+	}
+	
+	@Override
+	public V newElement() {
+		if (elementType != null) {
+			return offHeapService.newObject(elementType);
+		}
+		else {
+			return null;
+		}
 	}
 	
 	@Override

@@ -11,7 +11,8 @@ import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreatePar
 import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 
 public interface ExplicitStringOffHeapPool<P extends OffHeapPoolCreateParameter<String>> 
-		extends OffHeapPool<String, P> {
+		extends OffHeapPool<String, P>, 
+				FreeableOffHeapPool<String, P> {
 
 	String get(String str);
 	long getAsAddress(String str);
