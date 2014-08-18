@@ -43,14 +43,6 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 	protected void init() {
 		super.init();
 		
-		objectsStartAddress = allocationStartAddress;
-		// Allocated objects must start aligned as address size from start address of allocated address
-		long addressMod = objectsStartAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
-		if (addressMod != 0) {
-			objectsStartAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod);
-		}
-		objectsEndAddress = objectsStartAddress + (objectCount * objectSize);
-
 		long sourceAddress = offHeapSampleObjectAddress + 4;
 		long copySize = objectSize - 4;
 		// Copy sample object to allocated memory region for each object
@@ -144,13 +136,31 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 	protected void init(Class<T> elementType, long objectCount, 
 			NonPrimitiveFieldAllocationConfigType allocateNonPrimitiveFieldsAtOffHeapConfigType, 
 			DirectMemoryService directMemoryService) {
-		super.init(elementType, objectCount, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
-		this.allocationSize = 
-				objectSize * objectCount + JvmUtil.getAddressSize(); // Extra memory for possible aligning)
-		this.allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
-		this.allocationEndAddress = allocationStartAddress + (objectCount * objectSize) - objectSize;
-		init();
-		makeAvaiable();
+		try {
+			super.init(elementType, objectCount, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
+			allocationSize = 
+					objectSize * objectCount + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning)
+			allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
+			allocationEndAddress = allocationStartAddress + (objectCount * objectSize) - objectSize;
+			objectsStartAddress = allocationStartAddress;
+			// Allocated objects must start aligned as address size from start address of allocated address
+			long addressMod = objectsStartAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
+			if (addressMod != 0) {
+				objectsStartAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod);
+			}
+			objectsEndAddress = objectsStartAddress + (objectCount * objectSize);
+	
+			init();
+			
+			makeAvaiable();
+		}
+		catch (IllegalArgumentException e) {
+			throw e;
+		}
+		catch (Throwable t) {
+			logger.error("Error occured while initializing \"LazyReferencedObjectOffHeapPool\"", t);
+			throw new IllegalStateException(t);
+		}		
 	}
 
 	@Override

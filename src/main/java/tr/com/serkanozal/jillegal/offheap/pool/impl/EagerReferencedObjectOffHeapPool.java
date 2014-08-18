@@ -26,6 +26,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 					DeeplyForkableObjectOffHeapPool<T, ObjectOffHeapPoolCreateParameter<T>> {
 
 	protected long arraySize;
+	protected long arrayStartAddress;
 	protected T[] sampleArray;
 	protected T[] objectArray;
 	
@@ -50,30 +51,10 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 	protected void init() {
 		super.init();
 		
-		int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
 		int arrayIndexScale = JvmUtil.arrayIndexScale(elementType);
-		long arrayIndexStartAddress = allocationStartAddress + JvmUtil.arrayBaseOffset(elementType);
-		
-		objectsStartAddress = allocationStartAddress + JvmUtil.sizeOfArray(elementType, objectCount);
-		// Allocated objects must start aligned as address size from start address of allocated address
-		long diffBetweenArrayAndObjectStartAddresses = objectsStartAddress - allocationStartAddress;
-		long addressMod = diffBetweenArrayAndObjectStartAddresses % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
-		if (addressMod != 0) {
-			objectsStartAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod);
-		}
-		objectsEndAddress = objectsStartAddress + (objectCount * objectSize);
-		
-		// Copy sample array header to object pool array header
-		for (int i = 0; i < arrayHeaderSize; i++) {
-			directMemoryService.putByte(
-					allocationStartAddress + i, 
-					directMemoryService.getByte(sampleArray, i));
-		}
+		long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
 
-		// Set length of array object pool array
-		JvmUtil.setArrayLength(allocationStartAddress, elementType, (int) objectCount);
-		
-		// All index is object pool array header point to allocated objects 
+		// All index in object pool array header point to allocated objects 
 		for (long l = 0; l < objectCount; l++) {
 			directMemoryService.putLong(
 					arrayIndexStartAddress + (l * arrayIndexScale), 
@@ -89,7 +70,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 			directMemoryService.copyMemory(sourceAddress, targetAddress + 4, copySize);
 		}
 
-		this.objectArray = (T[]) directMemoryService.getObject(allocationStartAddress);
+		this.objectArray = (T[]) directMemoryService.getObject(arrayStartAddress);
 	}
 	
 	public long getObjectCount() {
@@ -188,16 +169,55 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 						"Maximum " + Integer.MAX_VALUE + " object are alloved for " + 
 						"EagerReferencedObjectOffHeapPool");
 		}
-		super.init(elementType, objectCount, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
-		this.arraySize = JvmUtil.sizeOfArray(elementType, objectCount);
-		this.allocationSize = 
-				arraySize + (objectCount * objectSize) + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning;
-		this.allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
-		this.allocationEndAddress = allocationStartAddress + (objectCount * objectSize) - objectSize;;
-		this.sampleArray = (T[]) Array.newInstance(elementType, 0);
-		init();
-		
-		makeAvaiable();
+		try {
+			super.init(elementType, objectCount, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
+			arraySize = JvmUtil.sizeOfArray(elementType, objectCount);
+			allocationSize = 
+					arraySize + (objectCount * objectSize) + 
+					2 * JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning;
+			allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
+			allocationEndAddress = allocationStartAddress + (objectCount * objectSize) - objectSize;;
+			sampleArray = (T[]) Array.newInstance(elementType, 0);
+			
+			long addressMod;
+			
+			arrayStartAddress = allocationStartAddress;
+			addressMod = arrayStartAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
+			if (addressMod != 0) {
+				arrayStartAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod);
+			}
+			
+			objectsStartAddress = arrayStartAddress + JvmUtil.sizeOfArray(elementType, objectCount);
+			// Allocated objects must start aligned as address size from start address of allocated address
+			long diffBetweenArrayAndObjectStartAddresses = objectsStartAddress - arrayStartAddress;
+			addressMod = diffBetweenArrayAndObjectStartAddresses % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
+			if (addressMod != 0) {
+				objectsStartAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod);
+			}
+			objectsEndAddress = objectsStartAddress + (objectCount * objectSize);
+			
+			int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
+			// Copy sample array header to object pool array header
+			for (int i = 0; i < arrayHeaderSize; i++) {
+				directMemoryService.putByte(
+						arrayStartAddress + i, 
+						directMemoryService.getByte(sampleArray, i));
+			}
+
+			// Set length of array object pool array
+			JvmUtil.setArrayLength(arrayStartAddress, elementType, (int) objectCount);
+			
+			init();
+			
+			makeAvaiable();
+		}
+		catch (IllegalArgumentException e) {
+			throw e;
+		}
+		catch (Throwable t) {
+			logger.error("Error occured while initializing \"EagerReferencedObjectOffHeapPool\"", t);
+			throw new IllegalStateException(t);
+		}	
 	}
 	
 	@Override

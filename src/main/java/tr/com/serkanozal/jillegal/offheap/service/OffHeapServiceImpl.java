@@ -377,16 +377,12 @@ public class OffHeapServiceImpl implements OffHeapService {
 	
 	@Override
 	public boolean freeString(String str) {
-		throw 
-			new UnsupportedOperationException(
-					"\"void freeString(String str)\" is not supported right now !");
+		return extendableStringOffHeapPool.free(str);
 	}
 	
 	@Override
 	public boolean freeStringWithAddress(long address) {
-		throw 
-			new UnsupportedOperationException(
-					"\"void freeStringWithAddress(long address)\" is not supported right now !");
+		return extendableStringOffHeapPool.freeFromAddress(address);
 	}
 	
 }

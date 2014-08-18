@@ -143,18 +143,6 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	 * 6. Get block in-use bit like "getBit(blockIndexValue, blockInternalOrder)"
 	 */
 	
-	protected byte getBit(byte value, byte bit) {
-		return (byte) ((value & (1 << bit)) == 0 ? 0 : 1);
-	}
-	
-	protected byte setBit(byte value, byte bit) {
-		return (byte) (value | (1 << bit));
-	}
-	
-	protected byte unsetBit(byte value, byte bit) {
-		return (byte) (value & (~(1 << bit)));
-	}
-	
 	protected byte getInUseFromObjectIndex(long objIndex) {
 		long blockIndex = objIndex / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
 		byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + blockIndex);
@@ -233,6 +221,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 				currentBlockIndex = currentIndex / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
 				byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + currentBlockIndex);
 				long checkedBlockCount;
+				// Search for non-full block
 				for (	checkedBlockCount = 0; 
 						blockIndexValue == BLOCK_IS_FULL_VALUE && checkedBlockCount < inUseBlockCount; 
 						checkedBlockCount++) {

@@ -37,7 +37,7 @@ public class OffHeapJudyHashMapTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, randomOffHeapPerson(i, map.newElement()));
+			map.put(i << i, randomizeOffHeapPerson(i, map.newElement()));
 			Assert.assertEquals(i + 1, map.size());
 		}
 		
@@ -364,7 +364,7 @@ public class OffHeapJudyHashMapTest {
 							" get operation: " + (concurrentHashMapExecutionTime / 1000) + " milliseconds ...");
 	}
 	*/
-	private static Person randomOffHeapPerson(int key, Person person) {
+	private static Person randomizeOffHeapPerson(int key, Person person) {
 		person.id = key;
 		person.username = offHeapService.newString("Username-" + key);
 		person.firstName = offHeapService.newString("Firstname-" + key);

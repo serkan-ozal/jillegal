@@ -23,6 +23,7 @@ public class PrimitiveTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Arra
 	protected int elementSize;
 	protected long arraySize;
 	protected long arrayIndexStartAddress;
+	protected long arrayStartAddress;
 	protected int arrayIndexScale;
 	protected A sampleArray;
 	protected A primitiveArray;
@@ -43,20 +44,11 @@ public class PrimitiveTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Arra
 	@Override
 	protected void init() {
 		super.init();
-		
-		int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
-		arrayIndexScale = JvmUtil.arrayIndexScale(elementType);
-		arrayIndexStartAddress = allocationStartAddress + JvmUtil.arrayBaseOffset(elementType);
 
-		// Copy sample array header to object pool array header
-		for (int i = 0; i < arrayHeaderSize; i++) {
-			directMemoryService.putByte(allocationStartAddress + i, directMemoryService.getByte(sampleArray, i));
-		}
+		// Clear array content
+		directMemoryService.setMemory(arrayIndexStartAddress, arrayIndexScale * length, (byte) 0);
 		
-		// Set length of array object pool array
-		JvmUtil.setArrayLength(allocationStartAddress, elementType, length);
-
-		this.primitiveArray = (A) directMemoryService.getObject(allocationStartAddress);
+		primitiveArray = (A) directMemoryService.getObject(arrayStartAddress);
 	}
 	
 	@Override
@@ -168,19 +160,49 @@ public class PrimitiveTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Arra
 	
 	@SuppressWarnings("unchecked")
 	protected void init(Class<T> elementType, int length, DirectMemoryService directMemoryService) {
-		this.elementType = elementType;
-		this.length = length;
-		this.directMemoryService = directMemoryService;
-		this.elementSize = JvmUtil.sizeOfType(elementType);
-		this.arraySize = JvmUtil.sizeOfArray(elementType, length);
-		this.allocationSize = 
-				arraySize + (length * elementSize) + JvmUtil.getAddressSize(); // Extra memory for possible aligning
-		this.allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
-		this.allocationEndAddress = allocationStartAddress + allocationSize;
-		this.sampleArray = (A) Array.newInstance(JvmUtil.primitiveTypeOf(elementType), 0);
-		
-		init();
-		makeAvaiable();
+		try {
+			this.elementType = elementType;
+			this.length = length;
+			this.directMemoryService = directMemoryService;
+			
+			elementSize = JvmUtil.sizeOfType(elementType);
+			arraySize = JvmUtil.sizeOfArray(elementType, length);
+			allocationSize = 
+					arraySize + (length * elementSize) + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
+			allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
+			allocationEndAddress = allocationStartAddress + allocationSize;
+			
+			arrayStartAddress = allocationStartAddress;
+			long addressMod = arrayStartAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
+			if (addressMod != 0) {
+				arrayStartAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod);
+			}
+			
+			sampleArray = (A) Array.newInstance(JvmUtil.primitiveTypeOf(elementType), 0);
+			
+			int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
+			arrayIndexScale = JvmUtil.arrayIndexScale(elementType);
+			arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+	
+			// Copy sample array header to object pool array header
+			for (int i = 0; i < arrayHeaderSize; i++) {
+				directMemoryService.putByte(arrayStartAddress + i, directMemoryService.getByte(sampleArray, i));
+			}
+			
+			// Set length of array object pool array
+			JvmUtil.setArrayLength(arrayStartAddress, elementType, length);
+
+			init();
+			
+			makeAvaiable();
+		}
+		catch (IllegalArgumentException e) {
+			throw e;
+		}
+		catch (Throwable t) {
+			logger.error("Error occured while initializing \"PrimitiveTypeArrayOffHeapPool\"", t);
+			throw new IllegalStateException(t);
+		}		
 	}
 
 	@Override

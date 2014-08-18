@@ -97,6 +97,18 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 		}
 	}
 	
+	protected byte getBit(byte value, byte bit) {
+		return (byte) ((value & (1 << bit)) == 0 ? 0 : 1);
+	}
+	
+	protected byte setBit(byte value, byte bit) {
+		return (byte) (value | (1 << bit));
+	}
+	
+	protected byte unsetBit(byte value, byte bit) {
+		return (byte) (value & (~(1 << bit)));
+	}
+	
 	@Override
 	public Class<T> getElementType() {
 		return elementType;

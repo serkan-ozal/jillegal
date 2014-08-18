@@ -20,7 +20,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 					ContentAwareOffHeapPool<String, StringOffHeapPoolCreateParameter> {
 
 	protected static final byte STRING_SEGMENT_COUNT_AT_AN_IN_USE_BLOCK = 8;
-	protected static final byte STRING_SEGMENT_SIZE = 8;
+	protected static final byte STRING_SEGMENT_SIZE = 16;
 	
 	protected int estimatedStringCount;
 	protected int estimatedStringLength;
@@ -31,6 +31,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	protected long allocationStartAddress;
 	protected long allocationEndAddress;
 	protected long allocationSize;
+	protected long stringsStartAddress;
 	protected long currentAddress;
 	protected String sampleStr;
 	protected long sampleStrAddress;
@@ -61,10 +62,16 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 			valueArrayOffsetInString = JvmUtil.getUnsafe().fieldOffset(String.class.getDeclaredField("value"));
 			stringSize = (int) JvmUtil.sizeOf(String.class);
 			int estimatedStringSize = (int) (stringSize + JvmUtil.sizeOfArray(char.class, estimatedStringLength));
-			allocationSize = (estimatedStringSize * estimatedStringCount) + JvmUtil.getAddressSize(); // Extra memory for possible aligning
+			allocationSize = (estimatedStringSize * estimatedStringCount) + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
 			allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
 			allocationEndAddress = allocationStartAddress + allocationSize;
-			currentAddress = allocationStartAddress;
+			// Allocated objects must start aligned as address size from start address of allocated address
+			stringsStartAddress = allocationStartAddress;
+			long addressMod = stringsStartAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
+			if (addressMod != 0) {
+				stringsStartAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod);
+			}
+			currentAddress = stringsStartAddress;
 			sampleStr = new String();
 			sampleStrAddress = JvmUtil.addressOf(sampleStr);
 			sampleCharArray = new char[0];
@@ -75,11 +82,37 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		}
 	}
 	
+	@SuppressWarnings("deprecation")
 	protected void init(int estimatedStringCount, int estimatedStringLength) {
-		this.estimatedStringCount = estimatedStringCount;
-		this.estimatedStringLength = estimatedStringLength;
-		init();
-		makeAvaiable();
+		try {
+			this.estimatedStringCount = estimatedStringCount;
+			this.estimatedStringLength = estimatedStringLength;
+			
+			charArrayIndexScale = JvmUtil.arrayIndexScale(char.class);
+			charArrayIndexStartOffset = JvmUtil.arrayBaseOffset(char.class);
+			valueArrayOffsetInString = JvmUtil.getUnsafe().fieldOffset(String.class.getDeclaredField("value"));
+			stringSize = (int) JvmUtil.sizeOf(String.class);
+			int estimatedStringSize = (int) (stringSize + JvmUtil.sizeOfArray(char.class, estimatedStringLength));
+			allocationSize = (estimatedStringSize * estimatedStringCount) + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
+			allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
+			allocationEndAddress = allocationStartAddress + allocationSize;
+			// Allocated objects must start aligned as address size from start address of allocated address
+			stringsStartAddress = allocationStartAddress;
+			long addressMod = stringsStartAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
+			if (addressMod != 0) {
+				stringsStartAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod);
+			}
+			currentAddress = stringsStartAddress;
+			sampleStr = new String();
+			sampleStrAddress = JvmUtil.addressOf(sampleStr);
+			sampleCharArray = new char[0];
+			init();
+			makeAvaiable();
+		}
+		catch (Throwable t) {
+			logger.error("Error occured while initializing \"StringOffHeapPool\"", t);
+			throw new IllegalStateException(t);
+		}	
 	}
 	
 	@Override
@@ -128,12 +161,15 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		if (str == null) {
 			return false;
 		}
-		return false;
+		return freeFromAddress(directMemoryService.addressOf(str));
 	}
 	
 	@Override
 	public boolean freeFromAddress(long strAddress) {
 		checkAvailability();
+		if (!isIn(strAddress)) {
+			return false;
+		}
 		return false;
 	}
 	

@@ -28,6 +28,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	protected A objectArray;
 	protected long sampleObjectAddress;
 	protected long objStartAddress;
+	protected long arrayStartAddress;
 	protected long arrayIndexStartAddress;
 	protected int arrayIndexScale;
 	protected JvmAwareArrayElementAddressFinder jvmAwareArrayElementAddressFinder;
@@ -54,26 +55,6 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	protected void init() {
 		super.init();
 		
-		int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
-		arrayIndexScale = JvmUtil.arrayIndexScale(elementType);
-		arrayIndexStartAddress = allocationStartAddress + JvmUtil.arrayBaseOffset(elementType);
-		objStartAddress = allocationStartAddress + JvmUtil.sizeOfArray(elementType, length);
-		
-		// Allocated objects must start aligned as address size from start address of allocated address
-		long diffBetweenArrayAndObjectStartAddresses = objStartAddress - allocationStartAddress;
-		long addressMod = diffBetweenArrayAndObjectStartAddresses % JvmUtil.getAddressSize();
-		if (addressMod != 0) {
-			objStartAddress += (JvmUtil.getAddressSize() - addressMod);
-		}
-
-		// Copy sample array header to object pool array header
-		for (int i = 0; i < arrayHeaderSize; i++) {
-			directMemoryService.putByte(allocationStartAddress + i, directMemoryService.getByte(sampleArray, i));
-		}
-		
-		// Set length of array object pool array
-		JvmUtil.setArrayLength(allocationStartAddress, elementType, length);
-
 		if (initializeElements) {
 			// All index is object pool array header point to allocated objects 
 			for (long l = 0; l < length; l++) {
@@ -97,28 +78,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 			}
 		}
 		
-		this.objectArray = (A) directMemoryService.getObject(allocationStartAddress);
-		
-		switch (JvmUtil.getAddressSize()) {
-	        case JvmUtil.SIZE_32_BIT:
-	        	jvmAwareArrayElementAddressFinder = new Address32BitJvmAwareArrayElementAddressFinder();
-	            break;
-	        case JvmUtil.SIZE_64_BIT:
-	        	int referenceSize = JvmUtil.getReferenceSize();
-	        	switch (referenceSize) {
-	             	case JvmUtil.ADDRESSING_4_BYTE:   
-	             		jvmAwareArrayElementAddressFinder = new Address64BitWithCompressedOopsJvmAwareArrayElementAddressFinder();
-	             		break;
-	             	case JvmUtil.ADDRESSING_8_BYTE:
-	             		jvmAwareArrayElementAddressFinder = new Address64BitWithCompressedOopsJvmAwareArrayElementAddressFinder();
-	             		break;
-	             	default:    
-	                    throw new AssertionError("Unsupported reference size: " + referenceSize);
-	        	}
-	        	break;    
-	        default:
-	            throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
-		} 
+		this.objectArray = (A) directMemoryService.getObject(arrayStartAddress);
 	}
 	
 	public boolean isInitializeElements() {
@@ -218,32 +178,96 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	
 	@SuppressWarnings("unchecked")
 	protected void init(Class<T> elementType, int length, boolean initializeElements, DirectMemoryService directMemoryService) {
-		this.elementType = elementType;
-		this.length = length;
-		this.initializeElements = initializeElements;
-		this.directMemoryService = directMemoryService;
-		this.objectSize = directMemoryService.sizeOfClass(elementType);
-		this.arraySize = JvmUtil.sizeOfArray(elementType, length);
-		if (initializeElements) {
-			this.allocationSize = 
-					arraySize + (length * objectSize) + JvmUtil.getAddressSize(); // Extra memory for possible aligning
-		}
-		else {
-			this.allocationSize = 
-					arraySize + JvmUtil.getAddressSize(); // Extra memory for possible aligning
-		}
-		this.allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
-		this.allocationEndAddress = allocationStartAddress + allocationSize;
-		this.sampleObject = JvmUtil.getSampleInstance(elementType);
-		this.sampleArray = (A) Array.newInstance(elementType, 0);
-		if (initializeElements) {
-			if (sampleObject == null) {
-				throw new IllegalStateException("Unable to create a sample object for class " + elementType.getName());
+		try {
+			this.elementType = elementType;
+			this.length = length;
+			this.initializeElements = initializeElements;
+			this.directMemoryService = directMemoryService;
+			
+			objectSize = directMemoryService.sizeOfClass(elementType);
+			arraySize = JvmUtil.sizeOfArray(elementType, length);
+			if (initializeElements) {
+				this.allocationSize = 
+						arraySize + (length * objectSize) + 
+						2 * JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
 			}
-			this.sampleObjectAddress = directMemoryService.addressOf(sampleObject);
+			else {
+				this.allocationSize = 
+						arraySize + 
+						2 * JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
+			}
+			allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
+			allocationEndAddress = allocationStartAddress + allocationSize;
+			sampleObject = JvmUtil.getSampleInstance(elementType);
+			sampleArray = (A) Array.newInstance(elementType, 0);
+			if (initializeElements) {
+				if (sampleObject == null) {
+					throw new IllegalStateException("Unable to create a sample object for class " + elementType.getName());
+				}
+				this.sampleObjectAddress = directMemoryService.addressOf(sampleObject);
+			}
+			
+			long addressMod;
+			
+			arrayStartAddress = allocationStartAddress;
+			addressMod = arrayStartAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
+			if (addressMod != 0) {
+				arrayStartAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod);
+			}
+			
+			int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
+			arrayIndexScale = JvmUtil.arrayIndexScale(elementType);
+			arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
+			objStartAddress = arrayStartAddress + JvmUtil.sizeOfArray(elementType, length);
+			
+			// Allocated objects must start aligned as address size from start address of allocated address
+			long diffBetweenArrayAndObjectStartAddresses = objStartAddress - arrayStartAddress;
+			addressMod = diffBetweenArrayAndObjectStartAddresses % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
+			if (addressMod != 0) {
+				objStartAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod);
+			}
+
+			// Copy sample array header to object pool array header
+			for (int i = 0; i < arrayHeaderSize; i++) {
+				directMemoryService.putByte(arrayStartAddress + i, directMemoryService.getByte(sampleArray, i));
+			}
+			
+			// Set length of array object pool array
+			JvmUtil.setArrayLength(arrayStartAddress, elementType, length);
+
+			
+			switch (JvmUtil.getAddressSize()) {
+		        case JvmUtil.SIZE_32_BIT:
+		        	jvmAwareArrayElementAddressFinder = new Address32BitJvmAwareArrayElementAddressFinder();
+		            break;
+		        case JvmUtil.SIZE_64_BIT:
+		        	int referenceSize = JvmUtil.getReferenceSize();
+		        	switch (referenceSize) {
+		             	case JvmUtil.ADDRESSING_4_BYTE:   
+		             		jvmAwareArrayElementAddressFinder = new Address64BitWithCompressedOopsJvmAwareArrayElementAddressFinder();
+		             		break;
+		             	case JvmUtil.ADDRESSING_8_BYTE:
+		             		jvmAwareArrayElementAddressFinder = new Address64BitWithCompressedOopsJvmAwareArrayElementAddressFinder();
+		             		break;
+		             	default:    
+		                    throw new AssertionError("Unsupported reference size: " + referenceSize);
+		        	}
+		        	break;    
+		        default:
+		            throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
+			} 
+			
+			init();
+			
+			makeAvaiable();
 		}
-		init();
-		makeAvaiable();
+		catch (IllegalArgumentException e) {
+			throw e;
+		}
+		catch (Throwable t) {
+			logger.error("Error occured while initializing \"ComplexTypeArrayOffHeapPool\"", t);
+			throw new IllegalStateException(t);
+		}		
 	}
 	
 	@Override
