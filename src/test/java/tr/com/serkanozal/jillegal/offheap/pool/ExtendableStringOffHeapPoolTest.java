@@ -7,6 +7,9 @@
 
 package tr.com.serkanozal.jillegal.offheap.pool;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -33,6 +36,8 @@ public class ExtendableStringOffHeapPoolTest {
 								estimatedStringLength(ESTIMATED_STRING_LENGTH).
 							build());
    
+		List<String> strList = new ArrayList<String>();
+		
 		ExtendableStringOffHeapPool extendableStringPool =
 				offHeapService.createOffHeapPool(
 						new ExtendableStringOffHeapPoolCreateParameterBuilder().
@@ -40,7 +45,14 @@ public class ExtendableStringOffHeapPoolTest {
 							build());
 		
 		for (int i = 0; i < TOTAL_STRING_COUNT; i++) {
-			Assert.assertEquals("String " + i, extendableStringPool.get("String " + i));
+			String str = extendableStringPool.get("String " + i);
+			Assert.assertEquals("String " + i, str);
+			strList.add(str);
+    	}
+		
+		for (int i = 0; i < TOTAL_STRING_COUNT; i++) {
+			String str = strList.get(i);
+			Assert.assertEquals("String " + i, str);
     	}
 	}
 	

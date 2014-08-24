@@ -33,6 +33,12 @@ public class StringOffHeapPoolTest {
     	for (int i = 0; i < STRING_COUNT; i++) {
     		Assert.assertEquals("String " + i, stringPool.get("String " + i));
     	}
+    	
+    	stringPool.reset();
+    	
+    	for (int i = 0; i < STRING_COUNT; i++) {
+    		Assert.assertEquals("String " + (STRING_COUNT + i), stringPool.get("String " + (STRING_COUNT + i)));
+    	}
 	}
 	
 }

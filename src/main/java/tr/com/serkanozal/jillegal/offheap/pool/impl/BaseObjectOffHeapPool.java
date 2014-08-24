@@ -198,11 +198,14 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		if (full) {
 			return false;
 		}
+		
 		currentIndex++;
 		if (currentIndex >= objectCount) {
 			currentIndex = 0;
 		}
+		
 		byte objectInUse = getInUseFromObjectIndex(currentIndex);
+		
 		// Object on current index is not available
 		if (objectInUse != OBJECT_IS_AVAILABLE) {
 			// Current object is not available, so search in current block for available one
@@ -221,6 +224,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 				currentBlockIndex = currentIndex / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
 				byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + currentBlockIndex);
 				long checkedBlockCount;
+				
 				// Search for non-full block
 				for (	checkedBlockCount = 0; 
 						blockIndexValue == BLOCK_IS_FULL_VALUE && checkedBlockCount < inUseBlockCount; 
@@ -232,7 +236,8 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 					currentIndex = currentBlockIndex * OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
 					blockIndexValue = directMemoryService.getByte(inUseBlockAddress + currentBlockIndex);
 				}
-				// All blocks are checked but there is no non-full block
+				
+				// All blocks are checked but there is no available block
 				if (	checkedBlockCount >=  inUseBlockCount || 
 						(currentBlockIndex == (inUseBlockCount - 1) && blockIndexValue == fullValueOfLastBlock)) {
 					currentIndex = INDEX_NOT_AVAILABLE;
@@ -240,6 +245,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 					full = true;
 					return false;
 				}
+				
 				// A non-full block found, check free object in block
 				for (int i = 0; i < OBJECT_COUNT_AT_AN_IN_USE_BLOCK; i++) {
 					// If current object is not in use, use it
@@ -250,7 +256,10 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 				}
 			}	
 		}
+		
 		currentAddress = objectsStartAddress + (currentIndex * objectSize);
+		
+		
 		return true;
 	}
 
