@@ -82,24 +82,24 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		this.elementType = elementType;
 		this.objectCount = objectCount;
 		this.directMemoryService = directMemoryService;
-		this.inUseBlockCount = objectCount / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
+		inUseBlockCount = objectCount / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
 		long blockCountMod = objectCount % OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
 		if (blockCountMod != 0) {
-			this.inUseBlockCount++;
-			this.fullValueOfLastBlock = (byte)(Math.pow(2, blockCountMod) - 1);
+			inUseBlockCount++;
+			fullValueOfLastBlock = (byte)(Math.pow(2, blockCountMod) - 1);
 		}
 		else {
-			this.fullValueOfLastBlock = BLOCK_IS_FULL_VALUE;
+			fullValueOfLastBlock = BLOCK_IS_FULL_VALUE;
 		}
-		this.inUseBlockAddress = directMemoryService.allocateMemory(inUseBlockCount);
-		this.sampleObject = JvmUtil.getSampleInstance(elementType);
+		inUseBlockAddress = directMemoryService.allocateMemory(inUseBlockCount);
+		sampleObject = JvmUtil.getSampleInstance(elementType);
 		if (sampleObject == null) {
 			throw new IllegalStateException("Unable to create a sample object for class " + elementType.getName());
 		}
-		this.sampleHeader = directMemoryService.getInt(sampleObject, 0L);
+		sampleHeader = directMemoryService.getInt(sampleObject, 0L);
 		long address = directMemoryService.addressOf(sampleObject);
-		this.objectSize = directMemoryService.sizeOfObject(sampleObject);
-		this.offHeapSampleObjectAddress = directMemoryService.allocateMemory(objectSize);
+		objectSize = directMemoryService.sizeOfObject(sampleObject);
+		offHeapSampleObjectAddress = directMemoryService.allocateMemory(objectSize);
 		directMemoryService.copyMemory(address, offHeapSampleObjectAddress, objectSize);
 		/*
 		this.classPointerAddress = JvmUtil.jvmAddressOfClass(sampleObject);
