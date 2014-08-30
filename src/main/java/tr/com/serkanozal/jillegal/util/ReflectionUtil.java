@@ -247,9 +247,6 @@ public class ReflectionUtil {
 		else if (cls.equals(double.class) || cls.equals(Double.class)) {
 			return true;
 		}
-		else if (cls.equals(String.class)) {
-			return true;
-		}
 		else {
 			return false;
 		}	
@@ -264,24 +261,7 @@ public class ReflectionUtil {
 	}
 
 	public static boolean isComplexType(Class<?> cls) {
-		if (isPrimitiveType(cls)) {
-			return false;
-		}
-		else if (cls.isEnum()) {
-			return false;
-		}
-		else if (cls.equals(String.class)) {
-			return false;
-		}
-		else if (isCollectionType(cls)) {
-			return false;
-		}
-		else if (List.class.isAssignableFrom(cls)) {
-			return false;
-		}
-		else {
-			return true;
-		}
+		return !isPrimitiveType(cls);
 	}
 	
 	public static boolean isCollectionType(Class<?> cls) {
@@ -369,7 +349,6 @@ public class ReflectionUtil {
 	}
 	
 	public static boolean isDecimalType(Class<?> cls) {
-		
 		if (cls.equals(byte.class) || cls.equals(Byte.class)) {
 			return true;
 		}	

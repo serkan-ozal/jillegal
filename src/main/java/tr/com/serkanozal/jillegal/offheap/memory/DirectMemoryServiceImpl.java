@@ -115,7 +115,53 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     }
     
     @Override
-    public Object getObjectField(Object obj, String fieldName) {
+    public <O, F> F getObjectField(O obj, int fieldOffset) {
+    	long objAddress = JvmUtil.addressOf(obj);
+    	long fieldAddress = objAddress + fieldOffset;
+    	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
+    		return getObject(fieldAddress);
+    	}
+    	else {
+    		return null;
+    	}
+    }
+    
+    @Override
+    public <O, F> void setObjectField(O rootObj, int fieldOffset, F fieldObj) {
+    	long objAddress = JvmUtil.addressOf(rootObj);
+    	long fieldAddress = objAddress + fieldOffset;
+    	long fieldObjAddress = JvmUtil.toJvmAddress(JvmUtil.addressOf(fieldObj));
+    	
+      	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
+    		switch (JvmUtil.getAddressSize()) {
+	            case JvmUtil.SIZE_32_BIT:
+	            	putAsIntAddress(fieldAddress, fieldObjAddress);
+	                break;
+	            case JvmUtil.SIZE_64_BIT:
+	            	int referenceSize = JvmUtil.getReferenceSize();
+	            	switch (referenceSize) {
+	                 	case JvmUtil.ADDRESSING_4_BYTE:   
+	                 		putAsIntAddress(fieldAddress, fieldObjAddress);
+	                 		break;
+	                 	case JvmUtil.ADDRESSING_8_BYTE:
+	                 		unsafe.putLong(fieldAddress, fieldObjAddress);
+	                 		break;
+	                 	/*		
+	                 	default:    
+	                        throw new AssertionError("Unsupported reference size: " + referenceSize);
+	                    */
+	            	}
+	            	break; 
+	            /*	
+	            default:
+	                throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
+	            */
+    		}      
+    	}
+    }
+    
+    @Override
+    public <O, F> F getObjectField(O obj, String fieldName) {
     	long fieldAddress = JvmUtil.addressOfField(obj, fieldName);
     	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
     		return getObject(fieldAddress);
@@ -126,10 +172,10 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     }
     
     @Override
-    public void setObjectField(Object rootObj, String fieldName, Object fieldObj) {
+    public <O, F> void setObjectField(O rootObj, String fieldName, F fieldObj) {
     	long fieldAddress = JvmUtil.addressOfField(rootObj, fieldName);
     	long fieldObjAddress = JvmUtil.toJvmAddress(JvmUtil.addressOf(fieldObj));
-    	
+
     	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
     		switch (JvmUtil.getAddressSize()) {
 	            case JvmUtil.SIZE_32_BIT:

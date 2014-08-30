@@ -24,8 +24,10 @@ public interface DirectMemoryService {
     long addressOfField(Object obj, String fieldName) throws SecurityException, NoSuchFieldException;
     long addressOfClass(Class<?> clazz);
     
-    Object getObjectField(Object obj, String fieldName);
-    void setObjectField(Object rootObj, String fieldName, Object fieldObj);
+    <O, F> F getObjectField(O obj, int fieldOffset);
+    <O, F> void setObjectField(O rootObj, int fieldOffset, F fieldObj);
+    <O, F> F getObjectField(O obj, String fieldName);
+    <O, F> void setObjectField(O rootObj, String fieldName, F fieldObj);
     
     Object getArrayElement(Object array, int elementIndex);
     void setArrayElement(Object array, int elementIndex, Object element);

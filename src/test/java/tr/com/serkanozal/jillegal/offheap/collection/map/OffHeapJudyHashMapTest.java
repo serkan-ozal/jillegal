@@ -366,10 +366,10 @@ public class OffHeapJudyHashMapTest {
 	*/
 	private static Person randomizeOffHeapPerson(int key, Person person) {
 		person.id = key;
-		person.username = offHeapService.newString("Username-" + key);
-		person.firstName = offHeapService.newString("Firstname-" + key);
-		person.lastName = offHeapService.newString("Lastname-" + key);
-		person.birthDate.setYear((int) (Math.random() * 100)); // Note that 1900 is added by java.lang.Date internally
+		person.setUsername(offHeapService.newString("Username-" + key));
+		person.setFirstName(offHeapService.newString("Firstname-" + key));
+		person.setLastName(offHeapService.newString("Lastname-" + key));
+		person.birthDate.setYear((int) (Math.random() * 100)); // Note that 1900 is added by java.util.Date internally
 		person.birthDate.setMonth((int) (Math.random() * 11));
 		person.birthDate.setDate((int) (1 + Math.random() * 20));
 		person.accountNo = (int) (Math.random() * 1000000);
@@ -459,14 +459,14 @@ public class OffHeapJudyHashMapTest {
 			this.debt = debt;
 		}
 
-		@Override
-		public String toString() {
-			return "Person [id=" + id + ", username=" + username
-					+ ", firstName=" + firstName + ", lastName=" + lastName
-					+ ", birthDate=" + birthDate + ", accountNo=" + accountNo
-					+ ", debt=" + debt + "]";
-		}
-	
+//		@Override
+//		public String toString() {
+//			return "Person [id=" + id + ", username=" + username
+//					+ ", firstName=" + firstName + ", lastName=" + lastName
+//					+ ", birthDate=" + birthDate + ", accountNo=" + accountNo
+//					+ ", debt=" + debt + "]";
+//		}
+//	
 	}
 	
 }

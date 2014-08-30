@@ -30,14 +30,22 @@ public class StringOffHeapPoolTest {
 								estimatedStringLength(ESTIMATED_STRING_LENGTH).
 							build());
    
-    	for (int i = 0; i < STRING_COUNT; i++) {
-    		Assert.assertEquals("String " + i, stringPool.get("String " + i));
+    	for (int i = 0; true; i++) {
+    		String str = stringPool.get("String " + i);
+    		if (str == null) {
+    			break;
+    		}
+    		Assert.assertEquals("String " + i, str);
     	}
     	
     	stringPool.reset();
     	
-    	for (int i = 0; i < STRING_COUNT; i++) {
-    		Assert.assertEquals("String " + (STRING_COUNT + i), stringPool.get("String " + (STRING_COUNT + i)));
+    	for (int i = 0; true; i++) {
+    		String str = stringPool.get("String " + (STRING_COUNT + i));
+    		if (str == null) {
+    			break;
+    		}
+    		Assert.assertEquals("String " + (STRING_COUNT + i), str);
     	}
 	}
 	

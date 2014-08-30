@@ -3,7 +3,7 @@
   	<modelVersion>4.0.0</modelVersion>
   	<groupId>tr.com.serkanozal</groupId>
   	<artifactId>jillegal</artifactId>
-  	<version>2.1-SNAPSHOT</version>
+  	<version>3.0-SNAPSHOT</version>
     <name>Jillegal</name>
     <url>https://github.com/serkan-ozal/jillegal</url>
     
@@ -24,6 +24,7 @@
         <guava.version>13.0</guava.version>
         <commons.lang.version>2.6</commons.lang.version>
         <javassist.version>3.17.1-GA</javassist.version>
+        <asm.version>5.0.3</asm.version>
         <cglib.version>2.2</cglib.version>
         <reflections.version>0.9.9-RC1</reflections.version>
         <groovy.version>1.8.4</groovy.version>
@@ -151,6 +152,11 @@
 			<groupId>org.javassist</groupId>
 			<artifactId>javassist</artifactId>
 			<version>${javassist.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.ow2.asm</groupId>
+			<artifactId>asm</artifactId>
+			<version>${asm.version}</version>
 		</dependency>
 		<dependency>
    			<groupId>org.reflections</groupId>

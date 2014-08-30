@@ -434,12 +434,12 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 				for (JudyNode<K, V> child : children) {
 					if (child != null) {
 						child.clear((byte) (level + 1));
-						offHeapService.freeObject(child);
+						//offHeapService.freeObject(child);
 					}	
 					// child = null; // Now it can be collected by GC
 				}
 			}
-			offHeapService.freeArray(children); // directMemoryService.freeObject(children);
+			//offHeapService.freeArray(children); // directMemoryService.freeObject(children);
 			setChildren(null); // children = null; // Now it can be collected by GC
 		}
 		
@@ -555,7 +555,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		
 		@Override
 		void clear(byte level) {
-			offHeapService.freeArray(entries); // directMemoryService.freeObject(entries);
+			//offHeapService.freeArray(entries); // directMemoryService.freeObject(entries);
 			setEntries(null); // entries = null; // Now it can be collected by GC
 		}
 		

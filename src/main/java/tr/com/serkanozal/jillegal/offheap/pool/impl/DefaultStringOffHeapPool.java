@@ -113,7 +113,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 			}
 			inUseBlockAddress = directMemoryService.allocateMemory(inUseBlockCount);
 			sampleHeader = directMemoryService.getInt(new String(), 0L);
-
+			
 			init();
 			makeAvaiable();
 		}

@@ -47,10 +47,12 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	
 	public BaseObjectOffHeapPool(Class<T> objectType) {
 		super(objectType);
+		offHeapService.makeOffHeapable(objectType);
 	}
 	
 	public BaseObjectOffHeapPool(Class<T> objectType, DirectMemoryService directMemoryService) {
 		super(objectType, directMemoryService);
+		offHeapService.makeOffHeapable(objectType);
 	}
 	
 	@Override

@@ -7,6 +7,8 @@
 
 package tr.com.serkanozal.jillegal.offheap.initializer;
 
+import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
+
 public class OffHeapInitializer {
 
 	private OffHeapInitializer() {
@@ -14,7 +16,7 @@ public class OffHeapInitializer {
 	}
 	
 	public static void init() {
-		
+		DirectMemoryServiceFactory.init();
 	}
 	
 }
