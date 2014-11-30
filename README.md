@@ -10,7 +10,7 @@ Currently it has three main modules: **OffHeap**, **Instrumentation** and **In M
 Design and logic of Jillegal OffHeap module different from all of the other offheap frameworks. It doesn't serilalize/deserialize objects to/from allocated offheap memory region. Because objects already lives on offheap and GC doesn't track them :). With this feature, all objects in pool are exist as sequential at memory, so sequential accessing to them is faster. Because, they will be fetched to CPU cache together as limited size of CPU cache.
 
 <a name="NOTE"></a>
-
+[NOTE: ](#NOTE)
 Try with **Serial** collector (`-XX:+UseSerialGC`), **CMS** collector (`-XX:+UseConcMarkSweepGC`) and **G1** (`-XX:+UseG1GC`) collection for Hotspot JVM. Don't try with **Default** or **Parallel** collector (`-XX:+UseParallelGC` or `-XX:+UseParallelOldGC`). In addition, offheap module needs to disabled compressed-oops (`-XX:-UseCompressedOops`) since there is no quarantee that allocated native memory space can be represented with compressed-oops with huge memory sizes.
 
 1.2. Instrumentation Module
