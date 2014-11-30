@@ -11,7 +11,7 @@ Design and logic of Jillegal OffHeap module different from all of the other offh
 
 <a name="NOTE"></a>
 [NOTE: ](#NOTE)
-Try with **Serial** collector (`-XX:+UseSerialGC`), **CMS** collector (`-XX:+UseConcMarkSweepGC`) and **G1** collector (`-XX:+UseG1GC`) for Hotspot JVM. Don't try with **Default** or **Parallel** collector (`-XX:+UseParallelGC` or `-XX:+UseParallelOldGC`) since there is a crash with that collectors and still I don't know its real reason and workaround to handle it :). In addition, offheap module needs to disabled compressed-oops (`-XX:-UseCompressedOops`) since there is no quarantee that allocated native memory space can be represented with compressed-oops with huge memory sizes.
+Try with **Serial** collector (`-XX:+UseSerialGC`), **CMS** collector (`-XX:+UseConcMarkSweepGC`) and **G1** collector (`-XX:+UseG1GC`) for Hotspot JVM. Don't try with **Default** or **Parallel** collector (`-XX:+UseParallelGC` or `-XX:+UseParallelOldGC`) since there is a crash with these collectors and still I don't know its real reason and workaround to handle it :). In addition, offheap module needs to disabled compressed-oops (`-XX:-UseCompressedOops`) since there is no quarantee that allocated native memory space can be represented with compressed-oops with huge memory sizes.
 
 1.2. Instrumentation Module
 -------
