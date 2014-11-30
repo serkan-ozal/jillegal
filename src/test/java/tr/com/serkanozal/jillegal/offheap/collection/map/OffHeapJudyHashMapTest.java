@@ -46,7 +46,6 @@ public class OffHeapJudyHashMapTest {
 		}
 	}
 	
-	
 	@Test
 	public void isEmptyConditionRetrievedSuccessfully() {
 		final int ENTRY_COUNT = Integer.SIZE - 1;
