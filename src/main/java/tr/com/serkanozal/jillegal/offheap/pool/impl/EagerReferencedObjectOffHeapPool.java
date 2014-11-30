@@ -46,21 +46,31 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 		init(elementType, objectCount, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	protected void init() {
 		super.init();
 		
+		int arrayHeaderSize = JvmUtil.getArrayHeaderSize();
+		// Copy sample array header to object pool array header
+		for (int i = 0; i < arrayHeaderSize; i++) {
+			directMemoryService.putByte(
+					arrayStartAddress + i, 
+					directMemoryService.getByte(sampleArray, i));
+		}
+
+		// Set length of array object pool array
+		JvmUtil.setArrayLength(arrayStartAddress, elementType, (int) objectCount);
+		
 		int arrayIndexScale = JvmUtil.arrayIndexScale(elementType);
 		long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
-
+		
 		// All index in object pool array header point to allocated objects 
 		for (long l = 0; l < objectCount; l++) {
 			directMemoryService.putLong(
 					arrayIndexStartAddress + (l * arrayIndexScale), 
 					JvmUtil.toJvmAddress((objectsStartAddress + (l * objectSize))));
 		}
-
+		
 		long sourceAddress = offHeapSampleObjectAddress + 4;
 		long copySize = objectSize - 4;
 		// Copy sample object to allocated memory region for each object
@@ -70,7 +80,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 			directMemoryService.copyMemory(sourceAddress, targetAddress + 4, copySize);
 		}
 
-		this.objectArray = (T[]) directMemoryService.getObject(arrayStartAddress);
+		directMemoryService.setObjectField(this, "objectArray", directMemoryService.getObject(arrayStartAddress));
 	}
 	
 	public long getObjectCount() {
@@ -82,6 +92,9 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 		checkAvailability();
 		if (!nextAvailable()) {
 			return null;
+		}
+		if (currentIndex == 0) {
+			System.out.println(directMemoryService.addressOf(objectArray) + ", " + arrayStartAddress);
 		}
 		// Address of class could be changed by GC at "Compact" phase.
 		//updateClassPointerOfObject(currentAddress);
@@ -108,6 +121,9 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 		}	
 		if (getInUseFromObjectIndex(index) != OBJECT_IS_AVAILABLE) {
 			throw new ObjectInUseException(index);
+		}
+		if (index == 0) {
+			System.out.println(directMemoryService.addressOf(objectArray) + ", " + arrayStartAddress);
 		}
 		// Address of class could be changed by GC at "Compact" phase.
 		//long address = objectsStartAddress + (index * objectSize);
@@ -176,7 +192,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 					arraySize + (objectCount * objectSize) + 
 					2 * JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning;
 			allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
-			allocationEndAddress = allocationStartAddress + (objectCount * objectSize) - objectSize;;
+			allocationEndAddress = allocationStartAddress + (objectCount * objectSize) - objectSize;
 			sampleArray = (T[]) Array.newInstance(elementType, 0);
 			
 			long addressMod;

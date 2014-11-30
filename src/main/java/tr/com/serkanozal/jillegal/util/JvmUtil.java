@@ -43,7 +43,8 @@ import org.apache.log4j.Logger;
 
 import sun.management.VMManagement;
 import sun.misc.Unsafe;
-import tr.com.serkanozal.jillegal.util.HotspotJvmInfoUtil.HotspotJvmInfo;
+import tr.com.serkanozal.jillegal.util.compressedoops.CompressedOopsInfo;
+import tr.com.serkanozal.jillegal.util.compressedoops.hotspot.HotspotCompressedOopsInfoUtil;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
@@ -97,7 +98,7 @@ public class JvmUtil {
     public static final int BYTE = 8;
     public static final int WORD = NR_BITS / BYTE;
     public static final int MIN_SIZE = 16; 
-    public static final byte OBJECT_ADDRESS_SENSIVITY = 8;
+    public static final int OBJECT_ADDRESS_SENSIVITY = 8;
     
     public static final int ADDRESS_SHIFT_SIZE_FOR_BETWEEN_32GB_AND_64_GB = 3; 
     public static final int ADDRESS_SHIFT_SIZE_FOR_BIGGER_THAN_64_GB = 4; 
@@ -116,9 +117,9 @@ public class JvmUtil {
     public static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITH_COMPRESSED_REF_FOR_JAVA_7 = 84;
     public static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITHOUT_COMPRESSED_REF_FOR_JAVA_7 = 160;
     
-    public static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT_FOR_JAVA_8 = 80; 
-    public static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITH_COMPRESSED_REF_FOR_JAVA_8 = 84;
-    public static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITHOUT_COMPRESSED_REF_FOR_JAVA_8 = 160;
+    public static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT_FOR_JAVA_8 = 64; 
+    public static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITH_COMPRESSED_REF_FOR_JAVA_8 = 64;
+    public static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITHOUT_COMPRESSED_REF_FOR_JAVA_8 = 120;
     
     public static final int SIZE_FIELD_OFFSET_IN_CLASS_32_BIT = 12;
     public static final int SIZE_FIELD_OFFSET_IN_CLASS_64_BIT = 24;
@@ -279,7 +280,7 @@ public class JvmUtil {
                 break;
             default:
             	throw new AssertionError("Unsupported address size: " + addressSize); 
-        }        
+        }  
     }
 	
 	public static Unsafe getUnsafe() {
@@ -461,7 +462,7 @@ public class JvmUtil {
 			if (obj == null) {
 	            return 0;
 	        }
-	        objArray[0] = obj;
+			unsafe.putObject(objArray, baseOffset, obj); // objArray[0] = obj;
 	        return unsafe.getInt(objArray, baseOffset);
 		}
 
@@ -572,7 +573,7 @@ public class JvmUtil {
 			if (obj == null) {
 	            return 0;
 	        }
-	        objArray[0] = obj;
+			unsafe.putObject(objArray, baseOffset, obj); // objArray[0] = obj;
 	        return JvmUtil.toNativeAddress(normalize(unsafe.getInt(objArray, baseOffset)));
 		}
 
@@ -587,7 +588,7 @@ public class JvmUtil {
 			if (obj == null) {
 	            return 0;
 	        }
-	        objArray[0] = obj;
+			unsafe.putObject(objArray, baseOffset, obj); // objArray[0] = obj;
 	        return normalize(unsafe.getInt(objArray, baseOffset));
 		}
 
@@ -614,12 +615,7 @@ public class JvmUtil {
 		@Override
 		public long addressOfClassInternal(Class<?> clazz) {
 			long addressOfClass = addressOf(clazz);
-			if (isJava_8()) {
-	    		return addressOfClass;
-	    	}
-			else {
-				return JvmUtil.toNativeAddress(normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass)));
-			}	
+			return JvmUtil.toNativeAddress(normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass)));
 		}
 
     }
@@ -667,7 +663,7 @@ public class JvmUtil {
 			if (obj == null) {
 	            return 0;
 	        }
-	        objArray[0] = obj;
+	        unsafe.putObject(objArray, baseOffset, obj); // objArray[0] = obj;
 	        return unsafe.getLong(objArray, baseOffset);
 		}
 
@@ -744,11 +740,15 @@ public class JvmUtil {
     }
     
     public synchronized static long addressOf(Object obj) {
-    	return jvmAwareUtil.addressOf(obj);
+    	long address = jvmAwareUtil.addressOf(obj);
+    	unsafe.putObject(objArray, baseOffset, null); // objArray[0] = null;
+    	return address;
     }
     
     public synchronized static long jvmAddressOf(Object obj) {
-    	return jvmAwareUtil.jvmAddressOf(obj);
+    	long address = jvmAwareUtil.jvmAddressOf(obj);
+    	unsafe.putObject(objArray, baseOffset, null); // objArray[0] = null;
+    	return address;
     }
   
     public static Field getField(Class<?> clazz, String fieldName) {
@@ -1634,10 +1634,18 @@ public class JvmUtil {
         	if (oopSize == unsafe.addressSize()) {
         		return new VMOptions("HotSpot");
         	}
-        	
-        	HotspotJvmInfo jvmInfo = HotspotJvmInfoUtil.getJvmInfo();
-	    	if (jvmInfo != null) {
-	    		return new VMOptions("Auto-detected", jvmInfo.narrowOopShift, jvmInfo.narrowOopBase);
+
+	    	final int objectAlignment = guessAlignment(oopSize);
+	    	final CompressedOopsInfo compressedOopsInfo = 
+	    			HotspotCompressedOopsInfoUtil.
+	    				getCompressedOopsInfo(unsafe, oopSize, oopSize, objectAlignment, true);
+	    	
+	    	if (compressedOopsInfo != null) {
+	    		return 
+	    			new VMOptions(
+	    				"Auto-detected", 
+	    				compressedOopsInfo.getShiftSizeForObjectPointers(), 
+	    				compressedOopsInfo.getBaseAddressForObjectPointers());
 	    	}
         	
             MBeanServer server = ManagementFactory.getPlatformMBeanServer();
@@ -1645,14 +1653,20 @@ public class JvmUtil {
             try {
                 ObjectName mbean = new ObjectName("com.sun.management:type=HotSpotDiagnostic");
                 CompositeDataSupport compressedOopsValue = 
-                		(CompositeDataSupport) server.invoke(mbean, "getVMOption", 
-                				new Object[]{"UseCompressedOops"}, new String[]{"java.lang.String"});
+                		(CompositeDataSupport) server.invoke(
+                				mbean, 
+                				"getVMOption", 
+                				new Object[] { "UseCompressedOops" }, 
+                				new String[] { "java.lang.String" });
                 boolean compressedOops = Boolean.valueOf(compressedOopsValue.get("value").toString());
                 if (compressedOops) {
                     // If compressed oops are enabled, then this option is also accessible
                     CompositeDataSupport alignmentValue = 
-                    		(CompositeDataSupport) server.invoke(mbean, "getVMOption", 
-                    				new Object[]{"ObjectAlignmentInBytes"}, new String[]{"java.lang.String"});
+                    		(CompositeDataSupport) server.invoke(
+                    				mbean, 
+                    				"getVMOption", 
+                    				new Object[] { "ObjectAlignmentInBytes" }, 
+                    				new String[] { "java.lang.String" });
                     int align = Integer.valueOf(alignmentValue.get("value").toString());
                     return new VMOptions("HotSpot", log2p(align));
                 } 
@@ -1680,11 +1694,18 @@ public class JvmUtil {
         	}
         	
             MBeanServer server = ManagementFactory.getPlatformMBeanServer();
-            String str = (String) server.invoke(new ObjectName("oracle.jrockit.management:type=DiagnosticCommand"), "execute", new Object[]{"print_vm_state"}, new String[]{"java.lang.String"});
+            String str = 
+            		(String) server.invoke(
+            				new ObjectName(
+            						"oracle.jrockit.management:type=DiagnosticCommand"), 
+            						"execute", 
+            						new Object[] { "print_vm_state" }, 
+            						new String[] { "java.lang.String" });
             String[] split = str.split("\n");
             for (String s : split) {
                 if (s.contains("CompRefs")) {
-                    Pattern pattern = Pattern.compile("(.*?)References are compressed, with heap base (.*?) and shift (.*?)\\.");
+                    Pattern pattern = 
+                    		Pattern.compile("(.*?)References are compressed, with heap base (.*?) and shift (.*?)\\.");
                     Matcher matcher = pattern.matcher(s);
                     if (matcher.matches()) {
                         return new VMOptions("JRockit", Integer.valueOf(matcher.group(3)));

@@ -16,7 +16,7 @@ public class DirectMemoryServiceFactory {
 	
 	private static DirectMemoryService directMemoryService = new DirectMemoryServiceImpl();
 	private static DirectMemoryService_setObjectField directMemoryService_setObjectField = 
-			new DirectMemoryService_setObjectField();
+				new DirectMemoryService_setObjectField();
 	
 	private DirectMemoryServiceFactory() {
 		

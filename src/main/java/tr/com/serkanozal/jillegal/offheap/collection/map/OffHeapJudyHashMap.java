@@ -254,7 +254,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 				return null;
 			}
 			else {
-				return entry.value;
+				return entry.getValue();
 			}
 		}
 
@@ -269,6 +269,8 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 
 		K key;
 		V value;
+		long keyAddress = -1;
+		long valueAddress = -1;
 		JudyEntry<K, V> prev;
 		JudyEntry<K, V> next;
 		
@@ -278,7 +280,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		
 		JudyEntry(K key, V value) {
 			this.key = key;
-			this.value = value;
+			valueAddress = directMemoryService.addressOf(value); // this.value = value;
 		}
 		
 		@Override
@@ -292,12 +294,16 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 
 		@Override
 		public V getValue() {
-			return value;
+			if (valueAddress != -1) {
+				return directMemoryService.getObject(valueAddress);
+			} else {
+				return value;
+			}
 		}
 
 		@Override
 		public V setValue(V value) {
-			directMemoryService.setObjectField(this, "value", value);
+			valueAddress = directMemoryService.addressOf(value); // directMemoryService.setObjectField(this, "value", value);
 			return value;
 		}
 		
@@ -434,12 +440,12 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 				for (JudyNode<K, V> child : children) {
 					if (child != null) {
 						child.clear((byte) (level + 1));
-						//offHeapService.freeObject(child);
+						offHeapService.freeObject(child);
 					}	
 					// child = null; // Now it can be collected by GC
 				}
 			}
-			//offHeapService.freeArray(children); // directMemoryService.freeObject(children);
+			offHeapService.freeArray(children); // directMemoryService.freeObject(children);
 			setChildren(null); // children = null; // Now it can be collected by GC
 		}
 		
@@ -480,7 +486,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
 			JudyEntry<K, V> entry = entries[index];
 			if (entry != null) {
-				return entry.value;
+				return entry.getValue();
 			}
 			return null;
 		}
@@ -539,7 +545,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 						entryToRemove.next.setPrev(entryToRemove.prev);
 					}	
 				}
-				return entryToRemove.value;
+				return entryToRemove.getValue();
 			}
 			return null;
 		}
@@ -555,7 +561,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		
 		@Override
 		void clear(byte level) {
-			//offHeapService.freeArray(entries); // directMemoryService.freeObject(entries);
+			offHeapService.freeArray(entries); // directMemoryService.freeObject(entries);
 			setEntries(null); // entries = null; // Now it can be collected by GC
 		}
 		

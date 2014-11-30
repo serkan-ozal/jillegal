@@ -21,6 +21,7 @@
         
         <jillegal.agent.version>1.1.0-RELEASE</jillegal.agent.version>
         <sa_jdi.version>1.8</sa_jdi.version> 
+        <sa-jdi-all.version>1.0</sa-jdi-all.version> 
         <guava.version>13.0</guava.version>
         <commons.lang.version>2.6</commons.lang.version>
         <javassist.version>3.17.1-GA</javassist.version>
@@ -142,6 +143,11 @@
             <groupId>com.sun.tools</groupId>
             <artifactId>sa_jdi</artifactId>
             <version>${sa_jdi.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.tools</groupId>
+            <artifactId>sa-jdi-all</artifactId>
+            <version>${sa-jdi-all.version}</version>
         </dependency>
 		<dependency>
             <groupId>cglib</groupId>

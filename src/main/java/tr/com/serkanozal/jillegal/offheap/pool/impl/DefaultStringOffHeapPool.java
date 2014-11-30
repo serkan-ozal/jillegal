@@ -72,7 +72,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		directMemoryService.setMemory(inUseBlockAddress, inUseBlockCount, (byte)0);
 	}
 	
-	@SuppressWarnings("deprecation")
+	@SuppressWarnings({ "deprecation" })
 	protected void init(int estimatedStringCount, int estimatedStringLength) {
 		try {
 			this.estimatedStringCount = estimatedStringCount;

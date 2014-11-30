@@ -62,6 +62,15 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 						JvmUtil.toJvmAddress((objStartAddress + (l * objectSize))));
 			}
 	
+			// Copy sample object to allocated memory region for each object
+			for (long l = 0; l < length; l++) {
+				directMemoryService.copyMemory(
+						sampleObjectAddress, 
+						objStartAddress + (l * objectSize), 
+						objectSize);
+			}
+			
+			/*
 			long sourceAddress = sampleObjectAddress + 4;
 			long copySize = objectSize - 4;
 			// Copy sample object to allocated memory region for each object
@@ -70,6 +79,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 				directMemoryService.putInt(targetAddress, 0);
 				directMemoryService.copyMemory(sourceAddress, targetAddress + 4, copySize);
 			}
+			*/
 		}
 		else {
 			// All index is object pool array header point to allocated objects 
@@ -204,9 +214,11 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 				if (sampleObject == null) {
 					throw new IllegalStateException("Unable to create a sample object for class " + elementType.getName());
 				}
-				this.sampleObjectAddress = directMemoryService.addressOf(sampleObject);
+				long address = directMemoryService.addressOf(sampleObject);
+				this.sampleObjectAddress = directMemoryService.allocateMemory(objectSize);
+				directMemoryService.copyMemory(address, sampleObjectAddress, objectSize);
 			}
-			
+
 			long addressMod;
 			
 			arrayStartAddress = allocationStartAddress;
@@ -235,7 +247,6 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 			// Set length of array object pool array
 			JvmUtil.setArrayLength(arrayStartAddress, elementType, length);
 
-			
 			switch (JvmUtil.getAddressSize()) {
 		        case JvmUtil.SIZE_32_BIT:
 		        	jvmAwareArrayElementAddressFinder = new Address32BitJvmAwareArrayElementAddressFinder();

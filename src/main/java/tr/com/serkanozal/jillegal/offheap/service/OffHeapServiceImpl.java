@@ -67,13 +67,35 @@ public class OffHeapServiceImpl implements OffHeapService {
 	protected Set<ArrayOffHeapPool> arrayOffHeapPoolSet = 
 			new HashSet<ArrayOffHeapPool>();
 	protected ExtendableStringOffHeapPool extendableStringOffHeapPool;
+	protected boolean enable = false;
 					
 	public OffHeapServiceImpl() {
 		init();
 	}
 	
 	protected void init() {
-		
+		findEnable();
+	}
+	
+	protected void findEnable() {
+		boolean jvmOk = false;
+		if (JvmUtil.isHotspotJvm()) {
+			jvmOk = JvmUtil.isJava_8();
+		} 
+		else if (JvmUtil.isJRockitJvm() || JvmUtil.isIBMJvm()) {
+			jvmOk = true;
+		}
+		boolean compressedOopsOk = !JvmUtil.isCompressedRef();
+		enable = jvmOk && compressedOopsOk;
+	}
+	
+	protected void checkEnable() {
+		if (!enable) {
+			throw new IllegalStateException(
+					"OffHeap module is noly available on Hotspot JDK/JRE 8, JRockit JVM and IBM JVM. " +
+					"In addition \"compressedRef\" must be disabled on 64 bit JVM. " + 
+					"You can use \"-XX:-UseCompressedOops\" as VM argument to disable compressed references on 64 bit JVM.");
+		}
 	}
 
 	protected <P extends OffHeapPoolCreateParameter<?>> OffHeapPoolFactory findOffHeapPoolFactory(Class<P> clazz) {
@@ -88,26 +110,37 @@ public class OffHeapServiceImpl implements OffHeapService {
 	
 	@Override
 	public OffHeapPoolFactory getDefaultOffHeapPoolFactory() {
+		checkEnable();
+		
 		return defaultOffHeapPoolFactory;
 	}
 
 	@Override
 	public void setOffHeapPoolFactory(OffHeapPoolFactory offHeapPoolFactory) {
+		checkEnable();
+		
 		defaultOffHeapPoolFactory = offHeapPoolFactory;
 	}
 
 	@Override
 	public <P extends OffHeapPoolCreateParameter<?>> OffHeapPoolFactory getOffHeapPoolFactory(Class<P> clazz) {
+		checkEnable();
+		
 		return offHeapPoolFactoryMap.get(clazz);
 	}
 
 	@Override
-	public <P extends OffHeapPoolCreateParameter<?>> void setOffHeapPoolFactory(OffHeapPoolFactory offHeapPoolFactory, Class<P> clazz) {
+	public <P extends OffHeapPoolCreateParameter<?>> void setOffHeapPoolFactory(
+			OffHeapPoolFactory offHeapPoolFactory, Class<P> clazz) {
+		checkEnable();
+		
 		offHeapPoolFactoryMap.put(clazz, offHeapPoolFactory);
 	}
 	
 	@Override
 	public <T, O extends OffHeapPool<T, ?>> O createOffHeapPool(OffHeapPoolCreateParameter<T> parameter) {
+		checkEnable();
+		
 		OffHeapPoolFactory offHeapPoolFactory = findOffHeapPoolFactory(parameter.getClass());
 		if (offHeapPoolFactory != null) {
 			if (parameter.isMakeOffHeapableAsAuto()) {
@@ -123,6 +156,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	
 	@Override
 	public synchronized <T> void makeOffHeapable(Class<T> elementType) {
+		checkEnable();
+		
 		if (!offHeapableClasses.contains(elementType)) {
 			instrumentNonPrimitiveFieldAssignments(elementType);
 			//implementNonPrimitiveFieldSetters(elementType);
@@ -180,7 +215,7 @@ public class OffHeapServiceImpl implements OffHeapService {
 	}
 	
 	@SuppressWarnings("unchecked")
-	protected <T> void instrumentNonPrimitiveFieldAssignments(Class<T> elementType) {
+	protected <T> void instrumentNonPrimitiveFieldAssignments(final Class<T> elementType) {
 		try {
 			Jillegal.init();
 
@@ -204,104 +239,104 @@ public class OffHeapServiceImpl implements OffHeapService {
 					MethodVisitor mv =  super.visitMethod(access, name, desc, signature, exceptions);
 					return
 						new MethodAdapter(mv) {
-						public void visitFieldInsn(final int opcode, final String owner,
-								final String name, final String desc) {
-							if (	opcode == Opcodes.PUTFIELD && 
-									ownerClassDescSet.contains(owner) && 
-									(desc.startsWith("L") && desc.endsWith(";"))) {
-								int fieldOffset = 
-										(int) JvmUtil.getUnsafe().
-									objectFieldOffset(ReflectionUtil.getField(elementType, name));
-								
-								// Current operand stack snapshot: ..., <this>, <value_to_set>
-								super.visitInsn(Opcode.SWAP); 
-								
-								// Current operand stack snapshot:
-								//		..., <value_to_set>, <this>
-								
-								super.visitInsn(Opcodes.POP);
-								
-								// Current operand stack snapshot: 
-								// 		..., <value_to_set>
-								
-								super.visitMethodInsn( // Call "getProperties" method of "java.lang.System" class
-										Opcodes.INVOKESTATIC, 
-										"java/lang/System",
-							            "getProperties", 
-							            "()Ljava/util/Properties;");
-								
-								super.visitLdcInsn(
-										DirectMemoryServiceFactory.
-											DIRECT_MEMORY_SERVICE_$_SET_OBJECT_FIELD_ACCESSOR); 
-								
-								super.visitMethodInsn( // Call "get" method of "java/util/Properties" instance
-										Opcodes.INVOKEVIRTUAL, 
-										"java/util/Properties",
-							            "get", 
-							            "(Ljava/lang/Object;)Ljava/lang/Object;");
-
-								// Current operand stack snapshot: 
-								// 		..., <value_to_set>, <DirectMemoryService_setObjectField>
-								
-								super.visitTypeInsn(
-										Opcode.CHECKCAST, 
-										PropertyChangeSupport.class.getName().replace(".", "/"));
-								
-								// Current operand stack snapshot: 
-								// 		..., <value_to_set>, <DirectMemoryService_setObjectField>
-								
-								super.visitInsn(Opcode.SWAP);
-								
-								// Current operand stack snapshot: 
-								// 		..., <DirectMemoryService_setObjectField>, <value_to_set>
-								
-								super.visitInsn(Opcode.ACONST_NULL);
-								
-								// Current operand stack snapshot: 
-								// 		..., <DirectMemoryService_setObjectField>, <value_to_set>, <null>
-
-								super.visitInsn(Opcode.SWAP);
-								
-								// Current operand stack snapshot: 
-								// 		..., <DirectMemoryService_setObjectField>, <null>, <value_to_set> 
-								
-								super.visitLdcInsn(fieldOffset); // offset of field
-								
-								// Current operand stack snapshot:
-								// 		..., <DirectMemoryService_setObjectField>, <null>, <value_to_set>, <field_offset>
-								
-								super.visitInsn(Opcode.SWAP);
-								
-								// Current operand stack snapshot:
-								// 		..., <DirectMemoryService_setObjectField>, <null>, <field_offset>, <value_to_set>
-								
-								super.visitVarInsn(Opcodes.ALOAD, 0); // this
-								
-								// Current operand stack snapshot:
-						 		// 		..., <DirectMemoryService_setObjectField>, <null>, <field_offset>, <value_to_set>, <this>
-								
-								super.visitInsn(Opcode.SWAP);
-								
-								// Current operand stack snapshot:
-						 		// 		..., <DirectMemoryService_setObjectField>, <null>, <field_offset>, <this>, <value_to_set>, 
-								
-								// Now <field_offset>, <this>, <value_to_set> are the parameters in this order 
-								// to be passed for "setObjectField" method "DirectMemoryService" instance
-								
-								super.visitMethodInsn( // Call "fireIndexedPropertyChange" method of "java/beans/PropertyChangeSupport" instance
-										Opcodes.INVOKEVIRTUAL, 
-										PropertyChangeSupport.class.getName().replace(".", "/"),
-							            "fireIndexedPropertyChange", 
-							            "(Ljava/lang/String;ILjava/lang/Object;Ljava/lang/Object;)V");
-								
-								logger.debug("Instrumenting assignment to field \"" + name  + 
-										"\" in class " + elementType.getName());
+							public void visitFieldInsn(final int opcode, final String owner,
+									final String name, final String desc) {
+								if (	opcode == Opcodes.PUTFIELD && 
+										ownerClassDescSet.contains(owner) && 
+										(desc.startsWith("L") && desc.endsWith(";"))) {
+									int fieldOffset = 
+											(int) JvmUtil.getUnsafe().
+													objectFieldOffset(ReflectionUtil.getField(elementType, name));
+									
+									// Current operand stack snapshot: ..., <this>, <value_to_set>
+									super.visitInsn(Opcode.SWAP); 
+									
+									// Current operand stack snapshot:
+									//		..., <value_to_set>, <this>
+									
+									super.visitInsn(Opcodes.POP);
+									
+									// Current operand stack snapshot: 
+									// 		..., <value_to_set>
+									
+									super.visitMethodInsn( // Call "getProperties" method of "java.lang.System" class
+											Opcodes.INVOKESTATIC, 
+											"java/lang/System",
+								            "getProperties", 
+								            "()Ljava/util/Properties;");
+									
+									super.visitLdcInsn(
+											DirectMemoryServiceFactory.
+												DIRECT_MEMORY_SERVICE_$_SET_OBJECT_FIELD_ACCESSOR); 
+									
+									super.visitMethodInsn( // Call "get" method of "java/util/Properties" instance
+											Opcodes.INVOKEVIRTUAL, 
+											"java/util/Properties",
+								            "get", 
+								            "(Ljava/lang/Object;)Ljava/lang/Object;");
+	
+									// Current operand stack snapshot: 
+									// 		..., <value_to_set>, <DirectMemoryService_setObjectField>
+									
+									super.visitTypeInsn(
+											Opcode.CHECKCAST, 
+											PropertyChangeSupport.class.getName().replace(".", "/"));
+									
+									// Current operand stack snapshot: 
+									// 		..., <value_to_set>, <DirectMemoryService_setObjectField>
+									
+									super.visitInsn(Opcode.SWAP);
+									
+									// Current operand stack snapshot: 
+									// 		..., <DirectMemoryService_setObjectField>, <value_to_set>
+									
+									super.visitInsn(Opcode.ACONST_NULL);
+									
+									// Current operand stack snapshot: 
+									// 		..., <DirectMemoryService_setObjectField>, <value_to_set>, <null>
+	
+									super.visitInsn(Opcode.SWAP);
+									
+									// Current operand stack snapshot: 
+									// 		..., <DirectMemoryService_setObjectField>, <null>, <value_to_set> 
+									
+									super.visitLdcInsn(fieldOffset); // offset of field
+									
+									// Current operand stack snapshot:
+									// 		..., <DirectMemoryService_setObjectField>, <null>, <value_to_set>, <field_offset>
+									
+									super.visitInsn(Opcode.SWAP);
+									
+									// Current operand stack snapshot:
+									// 		..., <DirectMemoryService_setObjectField>, <null>, <field_offset>, <value_to_set>
+									
+									super.visitVarInsn(Opcodes.ALOAD, 0); // this
+									
+									// Current operand stack snapshot:
+							 		// 		..., <DirectMemoryService_setObjectField>, <null>, <field_offset>, <value_to_set>, <this>
+									
+									super.visitInsn(Opcode.SWAP);
+									
+									// Current operand stack snapshot:
+							 		// 		..., <DirectMemoryService_setObjectField>, <null>, <field_offset>, <this>, <value_to_set>, 
+									
+									// Now <field_offset>, <this>, <value_to_set> are the parameters in this order 
+									// to be passed for "setObjectField" method "DirectMemoryService" instance
+									
+									super.visitMethodInsn( // Call "fireIndexedPropertyChange" method of "java/beans/PropertyChangeSupport" instance
+											Opcodes.INVOKEVIRTUAL, 
+											PropertyChangeSupport.class.getName().replace(".", "/"),
+								            "fireIndexedPropertyChange", 
+								            "(Ljava/lang/String;ILjava/lang/Object;Ljava/lang/Object;)V");
+									
+									logger.debug("Instrumenting assignment to field \"" + name  + 
+											"\" in class " + elementType.getName());
+								}
+								else {
+									super.visitFieldInsn(opcode, owner, name, desc);
+								}
 							}
-							else {
-								super.visitFieldInsn(opcode, owner, name, desc);
-							}
-						}
-					};
+						};
 				}
 			};
 			cr.accept(cw, ClassReader.SKIP_DEBUG);
@@ -322,6 +357,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T newInstance(InstanceRequest<T> request) {
+		checkEnable();
+		
 		if (request instanceof ObjectInstanceRequest) {
 			ObjectInstanceRequest<T> objectInstanceRequest = (ObjectInstanceRequest<T>)request;
 			return newObject(objectInstanceRequest.getObjectType());
@@ -343,6 +380,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	
 	@Override
 	public <T> long newInstanceAsAddress(InstanceRequest<T> request) {
+		checkEnable();
+		
 		if (request instanceof ObjectInstanceRequest) {
 			ObjectInstanceRequest<T> objectInstanceRequest = (ObjectInstanceRequest<T>)request;
 			return newObjectAsAddress(objectInstanceRequest.getObjectType());
@@ -364,6 +403,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	
 	@Override
 	public <T> boolean freeInstance(T instance) {
+		checkEnable();
+		
 		if (instance.getClass().isArray()) {
 			return freeArray(instance);
 		}
@@ -377,6 +418,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	
 	@Override
 	public boolean freeInstanceWithAddress(long address) {
+		checkEnable();
+		
 		Object instance = directMemoryService.getObject(address);
 		if (instance.getClass().isArray()) {
 			return freeArrayWithAddress(address);
@@ -391,17 +434,23 @@ public class OffHeapServiceImpl implements OffHeapService {
 	
 	@Override
 	public <T> boolean isFreeInstance(T instance) {
+		checkEnable();
+		
 		return isFreeInstanceWithAddress(directMemoryService.addressOf(instance));
 	}
 	
 	@Override
 	public boolean isFreeInstanceWithAddress(long address) {
+		checkEnable();
+		
 		return directMemoryService.getInt(address) == 0;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public synchronized <T> T newObject(Class<T> objectType) {
+		checkEnable();
+		
 		ObjectOffHeapPool<T, ?> objectOffHeapPool = objectOffHeapPoolMap.get(objectType);
 		if (objectOffHeapPool == null) {
 			objectOffHeapPool = 
@@ -415,6 +464,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@SuppressWarnings("unchecked")
 	@Override
 	public synchronized <T> long newObjectAsAddress(Class<T> objectType) {
+		checkEnable();
+		
 		ObjectOffHeapPool<T, ?> objectOffHeapPool = objectOffHeapPoolMap.get(objectType);
 		if (objectOffHeapPool == null) {
 			objectOffHeapPool = 
@@ -428,6 +479,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public <T> boolean freeObject(T obj) {
+		checkEnable();
+		
 		for (Map.Entry<Class<?>, ObjectOffHeapPool> objectOffHeapPoolEntry : objectOffHeapPoolMap.entrySet()) {
 			if (objectOffHeapPoolEntry.getValue().free(obj)) {
 				return true;
@@ -439,6 +492,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@SuppressWarnings({ "rawtypes" })
 	@Override
 	public boolean freeObjectWithAddress(long address) {
+		checkEnable();
+		
 		for (Map.Entry<Class<?>, ObjectOffHeapPool> objectOffHeapPoolEntry : objectOffHeapPoolMap.entrySet()) {
 			if (objectOffHeapPoolEntry.getValue().freeFromAddress(address)) {
 				return true;
@@ -450,6 +505,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public synchronized <A> A newArray(Class<A> arrayType, int length) {
+		checkEnable();
+		
 		ArrayOffHeapPool arrayOffHeapPool =
 				defaultOffHeapPoolFactory.
 					createArrayOffHeapPool(arrayType, length);
@@ -460,6 +517,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@SuppressWarnings("rawtypes")
 	@Override
 	public synchronized <A> long newArrayAsAddress(Class<A> arrayType, int length) {
+		checkEnable();
+		
 		ArrayOffHeapPool arrayOffHeapPool =
 				defaultOffHeapPoolFactory.
 					createArrayOffHeapPool(arrayType, length);
@@ -470,6 +529,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	@Override
 	public synchronized <A> boolean freeArray(A array) {
+		checkEnable();
+		
 		ArrayOffHeapPool arrayOffHeapPoolToRemove = null;
 		for (ArrayOffHeapPool arrayOffHeapPool : arrayOffHeapPoolSet) {
 			if (arrayOffHeapPool.isMe(array)) {
@@ -490,6 +551,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@SuppressWarnings("rawtypes")
 	@Override
 	public boolean freeArrayWithAddress(long address) {
+		checkEnable();
+		
 		ArrayOffHeapPool arrayOffHeapPoolToRemove = null;
 		for (ArrayOffHeapPool arrayOffHeapPool : arrayOffHeapPoolSet) {
 			if (arrayOffHeapPool.isMeAsAddress(address)) {
@@ -509,6 +572,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	
 	@Override
 	public String newString(String str) {
+		checkEnable();
+		
 		if (extendableStringOffHeapPool == null) {
 			extendableStringOffHeapPool = 
 					new ExtendableStringOffHeapPool(new DefaultStringOffHeapPool());
@@ -518,6 +583,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	
 	@Override
 	public long newStringAsAddress(String str) {
+		checkEnable();
+		
 		if (extendableStringOffHeapPool == null) {
 			extendableStringOffHeapPool = 
 					new ExtendableStringOffHeapPool(new DefaultStringOffHeapPool());
@@ -527,11 +594,15 @@ public class OffHeapServiceImpl implements OffHeapService {
 	
 	@Override
 	public boolean freeString(String str) {
+		checkEnable();
+		
 		return extendableStringOffHeapPool.free(str);
 	}
 	
 	@Override
 	public boolean freeStringWithAddress(long address) {
+		checkEnable();
+		
 		return extendableStringOffHeapPool.freeFromAddress(address);
 	}
 	

@@ -35,7 +35,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected long objectsEndAddress;
 	protected T sampleObject;
 	protected long offHeapSampleObjectAddress;
-	protected int sampleHeader;
+	protected long sampleHeader;
 	protected byte fullValueOfLastBlock;
 	protected volatile boolean full;
 	/*
@@ -93,16 +93,18 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		else {
 			fullValueOfLastBlock = BLOCK_IS_FULL_VALUE;
 		}
+		
 		inUseBlockAddress = directMemoryService.allocateMemory(inUseBlockCount);
 		sampleObject = JvmUtil.getSampleInstance(elementType);
 		if (sampleObject == null) {
 			throw new IllegalStateException("Unable to create a sample object for class " + elementType.getName());
 		}
-		sampleHeader = directMemoryService.getInt(sampleObject, 0L);
+		sampleHeader = directMemoryService.getLong(sampleObject, 0L);
 		long address = directMemoryService.addressOf(sampleObject);
 		objectSize = directMemoryService.sizeOfObject(sampleObject);
 		offHeapSampleObjectAddress = directMemoryService.allocateMemory(objectSize);
 		directMemoryService.copyMemory(address, offHeapSampleObjectAddress, objectSize);
+
 		/*
 		this.classPointerAddress = JvmUtil.jvmAddressOfClass(sampleObject);
 		this.classPointerOffset = JvmUtil.getClassDefPointerOffsetInObject();
@@ -261,7 +263,6 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		
 		currentAddress = objectsStartAddress + (currentIndex * objectSize);
 		
-		
 		return true;
 	}
 
@@ -283,7 +284,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected synchronized T takeObject(T obj) {
 		long objAddress = directMemoryService.addressOf(obj);
 		obj = super.processObject(obj);
-		directMemoryService.putInt(objAddress, sampleHeader);
+		directMemoryService.putLong(objAddress, sampleHeader);
 		allocateObjectFromObjectAddress(objAddress);
 		return obj;
 	}
@@ -292,14 +293,14 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected synchronized T takeObject(long objAddress) {
 		T obj = (T) directMemoryService.getObject(objAddress);
 		obj = super.processObject(obj);
-		directMemoryService.putInt(objAddress, sampleHeader);
+		directMemoryService.putLong(objAddress, sampleHeader);
 		allocateObjectFromObjectAddress(objAddress);
 		return obj;
 	}
 	
 	protected synchronized long takeObjectAsAddress(long objAddress) {
 		long address = super.processObject(objAddress);
-		directMemoryService.putInt(objAddress, sampleHeader);
+		directMemoryService.putLong(objAddress, sampleHeader);
 		allocateObjectFromObjectAddress(address);
 		return address;
 	}
@@ -313,8 +314,8 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 			return false;
 		}
 		// Reset free object
-		directMemoryService.putInt(objAddress, 0);
-		directMemoryService.copyMemory(offHeapSampleObjectAddress + 4, objAddress + 4, objectSize - 4);
+		directMemoryService.putLong(objAddress, 0);
+		directMemoryService.copyMemory(offHeapSampleObjectAddress + 8, objAddress + 8, objectSize - 8);
 		freeObjectFromObjectAddress(objAddress);
 		return true;
 	}

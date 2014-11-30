@@ -21,7 +21,6 @@ import org.junit.Test;
 import tr.com.serkanozal.jillegal.offheap.config.provider.annotation.OffHeapObject;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
-import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 @SuppressWarnings("deprecation")
 public class OffHeapJudyHashMapTest {
@@ -37,7 +36,7 @@ public class OffHeapJudyHashMapTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, randomizeOffHeapPerson(i, map.newElement()));
+			map.put(i << i, randomizePerson(i, map.newElement()));
 			Assert.assertEquals(i + 1, map.size());
 		}
 		
@@ -47,16 +46,17 @@ public class OffHeapJudyHashMapTest {
 		}
 	}
 	
-	/*
+	
 	@Test
 	public void isEmptyConditionRetrievedSuccessfully() {
 		final int ENTRY_COUNT = Integer.SIZE - 1;
-		Map<Integer, String> map = new OffHeapJudyHashMap<Integer, String>();
+		OffHeapJudyHashMap<Integer, Person> map = 
+				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		Assert.assertTrue(map.isEmpty());
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, i + " << " + i);
+			map.put(i << i, randomizePerson(i, map.newElement()));
 		}
 		
 		Assert.assertFalse(map.isEmpty());
@@ -71,10 +71,11 @@ public class OffHeapJudyHashMapTest {
 	@Test
 	public void containsKeyConditionRetrievedSuccessfully() {
 		final int ENTRY_COUNT = Integer.SIZE - 1;
-		Map<Integer, String> map = new OffHeapJudyHashMap<Integer, String>();
+		OffHeapJudyHashMap<Integer, Person> map = 
+				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, i + " << " + i);
+			map.put(i << i, randomizePerson(i, map.newElement()));
 			Assert.assertTrue(map.containsKey(i << i));
 		}
 		
@@ -86,26 +87,29 @@ public class OffHeapJudyHashMapTest {
 	
 	@Test(expected = UnsupportedOperationException.class)
 	public void containsValueThrowsUnspportedOperationExceptionAsExpected() {
-		Map<Integer, String> map = new OffHeapJudyHashMap<Integer, String>();
+		OffHeapJudyHashMap<Integer, Person> map = 
+				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		int randomNumber = new Random().nextInt();
+		Person randomPerson = randomizePerson(randomNumber, map.newElement());
 		
-		map.put(randomNumber, "Random number is " + randomNumber);
+		map.put(randomNumber, randomPerson);
 		
-		map.containsValue("Random number is " + randomNumber);
+		map.containsValue(randomPerson);
 	}
 	
 	@Test
 	public void putGotAndRemovedSuccessfully() {
 		final int ENTRY_COUNT = Integer.SIZE - 1;
-		Map<Integer, String> map = new OffHeapJudyHashMap<Integer, String>();
+		OffHeapJudyHashMap<Integer, Person> map = 
+				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, i + " << " + i);
+			map.put(i << i, randomizePerson(i, map.newElement()));
 		}
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			Assert.assertEquals(i + " << " + i, map.get(i << i));
+			Assert.assertEquals(i, map.get(i << i).getId());
 		}
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
@@ -117,16 +121,17 @@ public class OffHeapJudyHashMapTest {
 	@Test
 	public void putAllAndRetrievedSuccessfully() {
 		final int ENTRY_COUNT = Integer.SIZE - 1;
-		Map<Integer, String> delegatedMap = new HashMap<Integer, String>();
-		Map<Integer, String> map = new OffHeapJudyHashMap<Integer, String>();
+		Map<Integer, Person> delegatedMap = new HashMap<Integer, Person>();
+		OffHeapJudyHashMap<Integer, Person> map = 
+				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			delegatedMap.put(i << i, i + " << " + i);
+			delegatedMap.put(i << i, randomizePerson(i, map.newElement()));
 		}
 		map.putAll(delegatedMap);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			Assert.assertEquals(i + " << " + i, map.get(i << i));
+			Assert.assertEquals(i, map.get(i << i).getId());
 		}
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
@@ -138,12 +143,13 @@ public class OffHeapJudyHashMapTest {
 	@Test
 	public void clearedSuccessfully() {
 		final int ENTRY_COUNT = Integer.SIZE - 1;
-		Map<Integer, String> map = new OffHeapJudyHashMap<Integer, String>();
+		OffHeapJudyHashMap<Integer, Person> map = 
+				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		Assert.assertTrue(map.isEmpty());
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, i + " << " + i);
+			map.put(i << i, randomizePerson(i, map.newElement()));
 		}
 		
 		Assert.assertFalse(map.isEmpty());
@@ -162,10 +168,11 @@ public class OffHeapJudyHashMapTest {
 	@Test
 	public void keySetRetrievedSuccessfully() {
 		final int ENTRY_COUNT = Integer.SIZE - 1;
-		Map<Integer, String> map = new OffHeapJudyHashMap<Integer, String>();
+		OffHeapJudyHashMap<Integer, Person> map = 
+				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, i + " << " + i);
+			map.put(i << i, randomizePerson(i, map.newElement()));
 		}
 		
 		int i = 0;
@@ -179,82 +186,75 @@ public class OffHeapJudyHashMapTest {
 	@Test
 	public void valuesRetrievedSuccessfully() {
 		final int ENTRY_COUNT = Integer.SIZE - 1;
-		Map<Integer, String> map = new OffHeapJudyHashMap<Integer, String>();
+		OffHeapJudyHashMap<Integer, Person> map = 
+				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, i + " << " + i);
+			map.put(i << i, randomizePerson(i, map.newElement()));
 		}
 		
 		int i = 0;
-		for (String value : map.values()) {
-			String expectedValue = i + " << " + i;
+		for (Person value : map.values()) {
+			Assert.assertEquals(i, value.getId());
 			i++;
-			Assert.assertEquals(expectedValue, value);
 		}
 	}
 	
 	@Test
 	public void entrySetRetrievedSuccessfully() {
 		final int ENTRY_COUNT = Integer.SIZE - 1;
-		Map<Integer, String> map = new OffHeapJudyHashMap<Integer, String>();
+		OffHeapJudyHashMap<Integer, Person> map = 
+				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, i + " << " + i);
+			map.put(i << i, randomizePerson(i, map.newElement()));
 		}
 		
 		int i = 0;
-		for (Map.Entry<Integer, String> entry : map.entrySet()) {
-			Integer expectedKey = i << i;
-			String expectedValue = i + " << " + i;
+		for (Map.Entry<Integer, Person> entry : map.entrySet()) {
+			Assert.assertEquals((Integer)(i << i), entry.getKey());
+			Assert.assertEquals(i, entry.getValue().getId());
 			i++;
-			Assert.assertEquals(expectedKey, entry.getKey());
-			Assert.assertEquals(expectedValue, entry.getValue());
 		}
 	}
 	
 	@Test
 	public void judyHashMapVsHashMapForPutOperation() {
-		final int ENTRY_COUNT = 1000000;
+		final int ENTRY_COUNT = 100000;
 		
-		Map<Integer, String> judyMap = new OffHeapJudyHashMap<Integer, String>();
+		OffHeapJudyHashMap<Integer, Person> judyMap = 
+				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		long judyMapStartTime = System.nanoTime();
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			judyMap.put(i, String.valueOf(i));
+			judyMap.put(i, randomizePerson(i, judyMap.newElement()));
 		}
 		long judyMapFinishTime = System.nanoTime();
 		long judyMapExecutionTime = judyMapFinishTime - judyMapStartTime;
 		
-		JvmUtil.runGC();
-		
-		try {
-			Thread.sleep(3000); // Wait a few seconds
-		} 
-		catch (InterruptedException e) {
-			e.printStackTrace();
-		} 
-		
-		Map<Integer, String> hashMap = new HashMap<Integer, String>();
+		Map<Integer, Person> hashMap = new HashMap<Integer, Person>();
 		long hashMapStartTime = System.nanoTime();
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			hashMap.put(i, String.valueOf(i));
+			hashMap.put(i, randomizePerson(i, new Person()));
 		}
 		long hashMapFinishTime = System.nanoTime();
 		long hashMapExecutionTime = hashMapFinishTime - hashMapStartTime;
 		
-		logger.info("Judy Map Execution Time for " + ENTRY_COUNT + 
+		System.out.println("Judy Map Execution Time for " + ENTRY_COUNT + 
 							" put operation: " + (judyMapExecutionTime / 1000) + " milliseconds ...");
-		logger.info("Hash Map Execution Time for " + ENTRY_COUNT + 
+		System.out.println("Hash Map Execution Time for " + ENTRY_COUNT + 
 							" put operation: " + (hashMapExecutionTime / 1000) + " milliseconds ...");
 	}
 	
 	@Test
 	public void judyHashMapVsHashMapForGetOperation() {
-		final int ENTRY_COUNT = 1000000;
+		final int ENTRY_COUNT = 100000;
 		
-		Map<Integer, String> judyMap = new OffHeapJudyHashMap<Integer, String>();
+		OffHeapJudyHashMap<Integer, Person> judyMap = 
+				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			judyMap.put(i, String.valueOf(i));
+			judyMap.put(i, randomizePerson(i, judyMap.newElement()));
 		}
+
 		long judyMapStartTime = System.nanoTime();
 		for (int i = 0; i < ENTRY_COUNT; i++) {
 			judyMap.get(i);
@@ -262,19 +262,11 @@ public class OffHeapJudyHashMapTest {
 		long judyMapFinishTime = System.nanoTime();
 		long judyMapExecutionTime = judyMapFinishTime - judyMapStartTime;
 		
-		JvmUtil.runGC();
-		
-		try {
-			Thread.sleep(3000); // Wait a few seconds
-		} 
-		catch (InterruptedException e) {
-			e.printStackTrace();
-		} 
-		
-		Map<Integer, String> hashMap = new HashMap<Integer, String>();
+		Map<Integer, Person> hashMap = new HashMap<Integer, Person>();
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			hashMap.put(i, String.valueOf(i));
+			hashMap.put(i, randomizePerson(i, new Person()));
 		}
+
 		long hashMapStartTime = System.nanoTime();
 		for (int i = 0; i < ENTRY_COUNT; i++) {
 			hashMap.get(i);
@@ -290,29 +282,21 @@ public class OffHeapJudyHashMapTest {
 	
 	@Test
 	public void judyHashMapVsConcurrentHashMapForPutOperation() {
-		final int ENTRY_COUNT = 1000000;
+		final int ENTRY_COUNT = 100000;
 		
-		Map<Integer, String> judyMap = new OffHeapJudyHashMap<Integer, String>();
+		OffHeapJudyHashMap<Integer, Person> judyMap = 
+				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		long judyMapStartTime = System.nanoTime();
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			judyMap.put(i, String.valueOf(i));
+			judyMap.put(i, randomizePerson(i, judyMap.newElement()));
 		}
 		long judyMapFinishTime = System.nanoTime();
 		long judyMapExecutionTime = judyMapFinishTime - judyMapStartTime;
 		
-		JvmUtil.runGC();
-		
-		try {
-			Thread.sleep(3000); // Wait a few seconds
-		} 
-		catch (InterruptedException e) {
-			e.printStackTrace();
-		} 
-		
-		Map<Integer, String> concurrentHashMap = new ConcurrentHashMap<Integer, String>();
+		Map<Integer, Person> concurrentHashMap = new ConcurrentHashMap<Integer, Person>();
 		long concurrentHashMapStartTime = System.nanoTime();
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			concurrentHashMap.put(i, String.valueOf(i));
+			concurrentHashMap.put(i, randomizePerson(i, new Person()));
 		}
 		long concurrentHashMapFinishTime = System.nanoTime();
 		long concurrentHashMapExecutionTime = concurrentHashMapFinishTime - concurrentHashMapStartTime;
@@ -327,10 +311,12 @@ public class OffHeapJudyHashMapTest {
 	public void judyHashMapVsConcurrentHashMapForGetOperation() {
 		final int ENTRY_COUNT = 1000000;
 		
-		Map<Integer, String> judyMap = new OffHeapJudyHashMap<Integer, String>();
+		OffHeapJudyHashMap<Integer, Person> judyMap = 
+				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			judyMap.put(i, String.valueOf(i));
+			judyMap.put(i, randomizePerson(i, judyMap.newElement()));
 		}
+
 		long judyMapStartTime = System.nanoTime();
 		for (int i = 0; i < ENTRY_COUNT; i++) {
 			judyMap.get(i);
@@ -338,19 +324,11 @@ public class OffHeapJudyHashMapTest {
 		long judyMapFinishTime = System.nanoTime();
 		long judyMapExecutionTime = judyMapFinishTime - judyMapStartTime;
 		
-		JvmUtil.runGC();
-		
-		try {
-			Thread.sleep(3000); // Wait a few seconds
-		} 
-		catch (InterruptedException e) {
-			e.printStackTrace();
-		} 
-		
-		Map<Integer, String> concurrentHashMap = new ConcurrentHashMap<Integer, String>();
+		Map<Integer, Person> concurrentHashMap = new ConcurrentHashMap<Integer, Person>();
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			concurrentHashMap.put(i, String.valueOf(i));
+			concurrentHashMap.put(i, randomizePerson(i, new Person()));
 		}
+
 		long concurrentHashMapStartTime = System.nanoTime();
 		for (int i = 0; i < ENTRY_COUNT; i++) {
 			concurrentHashMap.get(i);
@@ -363,12 +341,15 @@ public class OffHeapJudyHashMapTest {
 		logger.info("Concurrent Hash Map Execution Time for " + ENTRY_COUNT + 
 							" get operation: " + (concurrentHashMapExecutionTime / 1000) + " milliseconds ...");
 	}
-	*/
-	private static Person randomizeOffHeapPerson(int key, Person person) {
+	
+	private static Person randomizePerson(int key, Person person) {
 		person.id = key;
 		person.setUsername(offHeapService.newString("Username-" + key));
 		person.setFirstName(offHeapService.newString("Firstname-" + key));
 		person.setLastName(offHeapService.newString("Lastname-" + key));
+		if (person.birthDate == null) {
+			person.birthDate = new Date();
+		}
 		person.birthDate.setYear((int) (Math.random() * 100)); // Note that 1900 is added by java.util.Date internally
 		person.birthDate.setMonth((int) (Math.random() * 11));
 		person.birthDate.setDate((int) (1 + Math.random() * 20));
@@ -459,14 +440,14 @@ public class OffHeapJudyHashMapTest {
 			this.debt = debt;
 		}
 
-//		@Override
-//		public String toString() {
-//			return "Person [id=" + id + ", username=" + username
-//					+ ", firstName=" + firstName + ", lastName=" + lastName
-//					+ ", birthDate=" + birthDate + ", accountNo=" + accountNo
-//					+ ", debt=" + debt + "]";
-//		}
-//	
+		@Override
+		public String toString() {
+			return "Person [id=" + id + ", username=" + username
+					+ ", firstName=" + firstName + ", lastName=" + lastName
+					+ ", birthDate=" + birthDate + ", accountNo=" + accountNo
+					+ ", debt=" + debt + "]";
+		}
+	
 	}
 	
 }
