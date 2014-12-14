@@ -107,7 +107,9 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 				return true;
 			}
 		}
-		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
+		for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
+			DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool = 
+					forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != currentForkableOffHeapPool && forkableOffHeapPool instanceof ContentAwareOffHeapPool) {
 				if (((ContentAwareOffHeapPool)forkableOffHeapPool).isMine(address)) {
 					return true;
@@ -134,7 +136,9 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 		if (currentForkableOffHeapPool.isMeAsAddress(arrayAddress)) {
 			return true;
 		}
-		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
+		for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
+			DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool = 
+					forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool.isMeAsAddress(arrayAddress)) {
 				return true;
 			}
@@ -144,7 +148,9 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	
 	@Override
 	public synchronized void reset() {
-		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
+		for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
+			DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool = 
+					forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != rootForkableOffHeapPool) {
 				forkableOffHeapPool.reset();
 			}	
@@ -157,7 +163,9 @@ public class ExtendableArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Extenda
 	@Override
 	public synchronized void free() {
 		checkAvailability();
-		for (DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
+		for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
+			DeeplyForkableArrayOffHeapPool<T, A, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool = 
+					forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != rootForkableOffHeapPool) {
 				forkableOffHeapPool.free();
 			}	

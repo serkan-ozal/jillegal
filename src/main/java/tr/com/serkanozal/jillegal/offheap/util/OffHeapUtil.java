@@ -9,6 +9,7 @@ package tr.com.serkanozal.jillegal.offheap.util;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -137,10 +138,10 @@ public class OffHeapUtil {
 				new HashSet<NonPrimitiveFieldInitializer<? extends OffHeapFieldConfig>>();
 		List<Field> fields = ReflectionUtil.getAllFields(clazz);
 		for (Field f : fields) {
-			if (!f.getType().isPrimitive() && !f.getType().isArray()) {
+			if (!f.getType().isPrimitive() && !f.getType().isArray() && !Modifier.isStatic(f.getModifiers())) {
 				nonPrimitiveFieldInitializers.add(new ComplexTypedFieldInitializer(f));
-				if (logger.isInfoEnabled()) {
-					logger.info(
+				if (logger.isDebugEnabled()) {
+					logger.debug(
 						"Created \"ComplexTypedFieldInitializer\" for field " + f.getName() + 
 						" in class " + clazz.getName());
 				}
@@ -159,8 +160,8 @@ public class OffHeapUtil {
 			if (objectFieldConfigs != null) {
 				for (OffHeapObjectFieldConfig objectFieldConfig : objectFieldConfigs) {
 					nonPrimitiveFieldInitializers.add(new ComplexTypedFieldInitializer(objectFieldConfig));
-					if (logger.isInfoEnabled()) {
-						logger.info(
+					if (logger.isDebugEnabled()) {
+						logger.debug(
 							"Created \"ComplexTypedFieldInitializer\" for field " + 
 							objectFieldConfig.getField().getName() + 
 							" in class " + clazz.getName());
@@ -171,8 +172,8 @@ public class OffHeapUtil {
 			if (arrayFieldConfigs != null) {
 				for (OffHeapArrayFieldConfig arrayFieldConfig : arrayFieldConfigs) {
 					nonPrimitiveFieldInitializers.add(new ArrayTypedFieldInitializer(arrayFieldConfig));
-					if (logger.isInfoEnabled()) {
-						logger.info(
+					if (logger.isDebugEnabled()) {
+						logger.debug(
 							"Created \"ArrayTypedFieldInitializer\" for field " + 
 							arrayFieldConfig.getField().getName() + 
 							" in class " + clazz.getName());
@@ -188,7 +189,7 @@ public class OffHeapUtil {
 		protected final sun.misc.Unsafe unsafe = JvmUtil.getUnsafe();
 		protected C fieldConfig;
 		protected final Field field;
-		protected final long fieldOffset;
+		protected long fieldOffset;
 		protected Class<?> fieldType;
 		
 		protected NonPrimitiveFieldInitializer(Field field) {

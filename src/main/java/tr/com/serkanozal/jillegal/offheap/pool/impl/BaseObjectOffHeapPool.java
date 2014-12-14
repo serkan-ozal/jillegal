@@ -11,10 +11,11 @@ import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAll
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.pool.ContentAwareOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> 
-		extends BaseOffHeapPool<T, P> implements ContentAwareOffHeapPool<T, P> {
+		extends BaseOffHeapPool<T, P> implements ObjectOffHeapPool<T, P>, ContentAwareOffHeapPool<T, P> {
 
 	protected static final byte OBJECT_COUNT_AT_AN_IN_USE_BLOCK = 8;
 	protected static final byte OBJECT_IS_AVAILABLE = 0;
@@ -174,6 +175,9 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 					setBit(blockIndexValue, blockInternalOrder) : 
 					unsetBit(blockIndexValue, blockInternalOrder);
 		directMemoryService.putByte(inUseBlockAddress + blockIndex, newBlockIndexValue);
+		if (full && !set) {
+			currentIndex = objIndex - 1;
+		}
 	}
 	
 	protected void setUnsetInUseFromObjectAddress(long objAddress, boolean set) {
@@ -264,6 +268,11 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		currentAddress = objectsStartAddress + (currentIndex * objectSize);
 		
 		return true;
+	}
+	
+	@Override
+	public boolean isFull() {
+		return full;
 	}
 
 	@Override

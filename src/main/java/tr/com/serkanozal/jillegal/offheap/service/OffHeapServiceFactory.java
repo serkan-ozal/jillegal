@@ -7,7 +7,11 @@
 
 package tr.com.serkanozal.jillegal.offheap.service;
 
+import java.util.Date;
+
 import tr.com.serkanozal.jillegal.Jillegal;
+import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.impl.specific.DateObjectOffHeapPool;
 
 public class OffHeapServiceFactory {
 
@@ -17,8 +21,23 @@ public class OffHeapServiceFactory {
 	
 	private static OffHeapService offHeapService = new OffHeapServiceImpl();
 	
+	static {
+		init();
+	}
+	
 	private OffHeapServiceFactory() {
 		
+	}
+	
+	private static void init() {
+		registerSpecificObjectOffHeapPools();
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private static void registerSpecificObjectOffHeapPools() {
+		if (offHeapService.isEnable()) {
+			offHeapService.setObjectOffHeapPool(Date.class, (ObjectOffHeapPool) new DateObjectOffHeapPool());
+		}
 	}
 	
 	public static OffHeapService getOffHeapService() {

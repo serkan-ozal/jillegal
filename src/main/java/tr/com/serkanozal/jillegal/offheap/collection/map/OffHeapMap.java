@@ -13,4 +13,6 @@ import tr.com.serkanozal.jillegal.offheap.collection.OffHeapCollection;
 
 public interface OffHeapMap<K, V> extends Map<K, V>, OffHeapCollection<V> {
 	
+	K newKey();
+	
 }

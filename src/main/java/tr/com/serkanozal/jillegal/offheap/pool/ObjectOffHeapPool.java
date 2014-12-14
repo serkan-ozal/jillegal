@@ -14,5 +14,6 @@ public interface ObjectOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>>
 
 	T get();
 	long getAsAddress();
+	boolean isFull();
 	
 }

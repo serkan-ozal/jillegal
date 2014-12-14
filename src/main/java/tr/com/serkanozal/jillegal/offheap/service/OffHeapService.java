@@ -9,6 +9,7 @@ package tr.com.serkanozal.jillegal.offheap.service;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.instance.InstanceRequest;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.factory.OffHeapPoolFactory;
 
@@ -67,11 +68,16 @@ import tr.com.serkanozal.jillegal.offheap.pool.factory.OffHeapPoolFactory;
 */
 public interface OffHeapService {
 
+	boolean isEnable();
+	
 	OffHeapPoolFactory getDefaultOffHeapPoolFactory();
 	void setOffHeapPoolFactory(OffHeapPoolFactory offHeapPoolFactory);
 	
 	<P extends OffHeapPoolCreateParameter<?>> OffHeapPoolFactory getOffHeapPoolFactory(Class<P> clazz);
-	<P extends OffHeapPoolCreateParameter<?>> void setOffHeapPoolFactory(OffHeapPoolFactory offHeapPoolFactory, Class<P> clazz);
+	<P extends OffHeapPoolCreateParameter<?>> void setOffHeapPoolFactory(Class<P> clazz, OffHeapPoolFactory offHeapPoolFactory);
+	
+	<T, P extends OffHeapPoolCreateParameter<T>> ObjectOffHeapPool<T, P> getObjectOffHeapPool(Class<T> clazz);
+	<T, P extends OffHeapPoolCreateParameter<T>> void setObjectOffHeapPool(Class<T> clazz, ObjectOffHeapPool<T, P> objectOffHeapPool);
 	
 	<T, O extends OffHeapPool<T, ?>> O createOffHeapPool(OffHeapPoolCreateParameter<T> parameter);
 	
@@ -98,5 +104,14 @@ public interface OffHeapService {
 	long newStringAsAddress(String str);
 	boolean freeString(String str);
 	boolean freeStringWithAddress(long address);
+	
+	Boolean getOffHeapBoolean(boolean b);
+	Byte getOffHeapByte(byte b);
+	Character getOffHeapCharacter(char c);
+	Short getOffHeapShort(short s);
+	Integer getOffHeapInteger(int i);
+	Float getOffHeapFloat(float f);
+	Long getOffHeapLong(long l);
+	Double getOffHeapDouble(double d);
 	
 }

@@ -7,7 +7,6 @@
 
 package tr.com.serkanozal.jillegal.offheap.collection.map;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -15,20 +14,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import junit.framework.Assert;
 
-import org.apache.log4j.Logger;
+import org.junit.Ignore;
 import org.junit.Test;
 
-import tr.com.serkanozal.jillegal.offheap.config.provider.annotation.OffHeapObject;
-import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
-import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
+import tr.com.serkanozal.jillegal.offheap.collection.BaseOffHeapCollectionTest;
+import tr.com.serkanozal.jillegal.offheap.collection.Person;
+import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 @SuppressWarnings("deprecation")
-public class OffHeapJudyHashMapTest {
+public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 
-	private static final Logger logger = Logger.getLogger(OffHeapJudyHashMapTest.class);
-	
-	private static final OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
-	
 	@Test
 	public void sizeRetrievedSuccessfully() {
 		final int ENTRY_COUNT = Integer.SIZE - 1;
@@ -36,7 +31,7 @@ public class OffHeapJudyHashMapTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
 			Assert.assertEquals(i + 1, map.size());
 		}
 		
@@ -55,7 +50,7 @@ public class OffHeapJudyHashMapTest {
 		Assert.assertTrue(map.isEmpty());
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
 		}
 		
 		Assert.assertFalse(map.isEmpty());
@@ -74,7 +69,7 @@ public class OffHeapJudyHashMapTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
 			Assert.assertTrue(map.containsKey(i << i));
 		}
 		
@@ -92,7 +87,7 @@ public class OffHeapJudyHashMapTest {
 		int randomNumber = new Random().nextInt();
 		Person randomPerson = randomizePerson(randomNumber, map.newElement());
 		
-		map.put(randomNumber, randomPerson);
+		map.put(getOffHeapIntegerKey(randomNumber), randomPerson);
 		
 		map.containsValue(randomPerson);
 	}
@@ -104,7 +99,7 @@ public class OffHeapJudyHashMapTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
 		}
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
@@ -125,7 +120,7 @@ public class OffHeapJudyHashMapTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			delegatedMap.put(i << i, randomizePerson(i, map.newElement()));
+			delegatedMap.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
 		}
 		map.putAll(delegatedMap);
 		
@@ -148,7 +143,7 @@ public class OffHeapJudyHashMapTest {
 		Assert.assertTrue(map.isEmpty());
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
 		}
 		
 		Assert.assertFalse(map.isEmpty());
@@ -171,7 +166,7 @@ public class OffHeapJudyHashMapTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
 		}
 		
 		int i = 0;
@@ -189,7 +184,7 @@ public class OffHeapJudyHashMapTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
 		}
 		
 		int i = 0;
@@ -206,7 +201,7 @@ public class OffHeapJudyHashMapTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(i << i, randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
 		}
 		
 		int i = 0;
@@ -225,7 +220,7 @@ public class OffHeapJudyHashMapTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		long judyMapStartTime = System.nanoTime();
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			judyMap.put(i, randomizePerson(i, judyMap.newElement()));
+			judyMap.put(getOffHeapIntegerKey(i), randomizePerson(i, judyMap.newElement()));
 		}
 		long judyMapFinishTime = System.nanoTime();
 		long judyMapExecutionTime = judyMapFinishTime - judyMapStartTime;
@@ -251,7 +246,7 @@ public class OffHeapJudyHashMapTest {
 		OffHeapJudyHashMap<Integer, Person> judyMap = 
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			judyMap.put(i, randomizePerson(i, judyMap.newElement()));
+			judyMap.put(getOffHeapIntegerKey(i), randomizePerson(i, judyMap.newElement()));
 		}
 
 		long judyMapStartTime = System.nanoTime();
@@ -287,7 +282,7 @@ public class OffHeapJudyHashMapTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		long judyMapStartTime = System.nanoTime();
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			judyMap.put(i, randomizePerson(i, judyMap.newElement()));
+			judyMap.put(getOffHeapIntegerKey(i), randomizePerson(i, judyMap.newElement()));
 		}
 		long judyMapFinishTime = System.nanoTime();
 		long judyMapExecutionTime = judyMapFinishTime - judyMapStartTime;
@@ -308,12 +303,12 @@ public class OffHeapJudyHashMapTest {
 	
 	@Test
 	public void judyHashMapVsConcurrentHashMapForGetOperation() {
-		final int ENTRY_COUNT = 1000000;
+		final int ENTRY_COUNT = 100000;
 		
 		OffHeapJudyHashMap<Integer, Person> judyMap = 
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			judyMap.put(i, randomizePerson(i, judyMap.newElement()));
+			judyMap.put(getOffHeapIntegerKey(i), randomizePerson(i, judyMap.newElement()));
 		}
 
 		long judyMapStartTime = System.nanoTime();
@@ -341,112 +336,79 @@ public class OffHeapJudyHashMapTest {
 							" get operation: " + (concurrentHashMapExecutionTime / 1000) + " milliseconds ...");
 	}
 	
-	private static Person randomizePerson(int key, Person person) {
-		person.id = key;
-		person.setUsername(offHeapService.newString("Username-" + key));
-		person.setFirstName(offHeapService.newString("Firstname-" + key));
-		person.setLastName(offHeapService.newString("Lastname-" + key));
-		if (person.birthDate == null) {
-			person.birthDate = new Date();
+	/**
+	 * This test is ignored by default since it is load test.
+	 */
+	@Test
+	@Ignore
+	public void stressTest() {
+		final int ENTRY_COUNT = 1000000;
+		final int ITERATION_COUNT = 100;
+
+		OffHeapJudyHashMap<Integer, Person> judyMap = 
+				new OffHeapJudyHashMap<Integer, Person>(Integer.class, Person.class);
+
+		System.out.println("********** ROUND    1 **********");
+		System.out.println("********************************");
+		
+		for (int i = 0; i < ENTRY_COUNT; i++) {
+			judyMap.put(getOffHeapIntegerKey(i), randomizePerson(i, judyMap.newElement())); // They will be added
 		}
-		person.birthDate.setYear((int) (Math.random() * 100)); // Note that 1900 is added by java.util.Date internally
-		person.birthDate.setMonth((int) (Math.random() * 11));
-		person.birthDate.setDate((int) (1 + Math.random() * 20));
-		person.accountNo = (int) (Math.random() * 1000000);
-		person.debt = Math.random() * 1000;
-		return person;
-	}
-	
-	public static class Person {
 		
-		private long id;
-		private String username;
-		private String firstName;
-		private String lastName;
-		@OffHeapObject
-		private Date birthDate;
-		private int accountNo;
-		private double debt;
+		System.out.println("********************************");
 		
-		public Person() {
+		JvmUtil.runGC();
+
+		for (int i = 0; i < ENTRY_COUNT; i++) {
+			Person p = judyMap.get(i);
+			if (i % 1000 == 0) {
+				System.out.println(p);
+			}	
+		}
+		
+		JvmUtil.runGC();
+		
+		// We must sure that there is no out of memory.
+		// Because new puts will be replaced with old ones and they will be free.
+		// So there must not be memory leak and out of memory error.
+		for (int i = 1; i < ITERATION_COUNT; i++) {
+			System.out.printf("********** ROUND %4d **********\n", (i + 1));
+			System.out.println("********************************");
 			
+			for (int j = 0; j < ENTRY_COUNT; j++) {
+				Person replaced = 
+					judyMap.put(getOffHeapIntegerKey(j), randomizePerson(j, judyMap.newElement())); // They will be replaced
+				// OffHeap map only disposes only keys, not values.
+				// So disposing elements is developer's responsibility.
+				if (replaced != null) {
+					// If there is an old value, at first dispose its elements and dispose it's itself.
+					offHeapService.freeString(replaced.getUsername());
+					offHeapService.freeString(replaced.getFirstName());
+					offHeapService.freeString(replaced.getLastName());
+					offHeapService.freeObject(replaced);
+				}
+			}
+			
+			try {
+				Thread.sleep(10000); // Wait for 10 seconds
+			} 
+			catch (InterruptedException e) {
+				e.printStackTrace();
+			} 
+			
+			System.out.println("********************************");
 		}
 		
-		public Person(long id, String username, String firstName,
-				String lastName, Date birthDate, int accountNo, double debt) {
-			this.id = id;
-			this.username = username;
-			this.firstName = firstName;
-			this.lastName = lastName;
-			this.birthDate = birthDate;
-			this.accountNo = accountNo;
-			this.debt = debt;
-		}
-
-		public long getId() {
-			return id;
+		JvmUtil.runGC();
+		
+		for (int i = 0; i < ENTRY_COUNT; i++) {
+			Person p = judyMap.get(i);
+			if (i % 1000 == 0) {
+				System.out.println(p);
+			}	
 		}
 		
-		public void setId(long id) {
-			this.id = id;
-		}
-		
-		public String getUsername() {
-			return username;
-		}
-		
-		public void setUsername(String username) {
-			this.username = username;
-		}
-		
-		public String getFirstName() {
-			return firstName;
-		}
-		
-		public void setFirstName(String firstName) {
-			this.firstName = firstName;
-		}
-		
-		public String getLastName() {
-			return lastName;
-		}
-		
-		public void setLastName(String lastName) {
-			this.lastName = lastName;
-		}
-		
-		public Date getBirthDate() {
-			return birthDate;
-		}
-		
-		public void setBirthDate(Date birthDate) {
-			this.birthDate = birthDate;
-		}
-		
-		public int getAccountNo() {
-			return accountNo;
-		}
-		
-		public void setAccountNo(int accountNo) {
-			this.accountNo = accountNo;
-		}
-		
-		public double getDebt() {
-			return debt;
-		}
-		
-		public void setDebt(double debt) {
-			this.debt = debt;
-		}
-
-		@Override
-		public String toString() {
-			return "Person [id=" + id + ", username=" + username
-					+ ", firstName=" + firstName + ", lastName=" + lastName
-					+ ", birthDate=" + birthDate + ", accountNo=" + accountNo
-					+ ", debt=" + debt + "]";
-		}
-	
+		JvmUtil.runGC();
 	}
-	
+
 }

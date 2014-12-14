@@ -26,6 +26,7 @@ import org.objectweb.asm.MethodAdapter;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
+import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.Jillegal;
 import tr.com.serkanozal.jillegal.instrument.Instrumenter;
 import tr.com.serkanozal.jillegal.instrument.domain.model.GeneratedClass;
@@ -50,10 +51,38 @@ import tr.com.serkanozal.jillegal.util.ReflectionUtil;
 
 public class OffHeapServiceImpl implements OffHeapService {
 
-	protected final Logger logger = Logger.getLogger(getClass());
+	protected static final Logger logger = Logger.getLogger(OffHeapServiceImpl.class);
 	
-	protected DirectMemoryService directMemoryService = 
+	protected static final DirectMemoryService directMemoryService = 
 			DirectMemoryServiceFactory.getDirectMemoryService();
+	protected static final Unsafe UNSAFE = JvmUtil.getUnsafe();
+	
+	protected static final long BOOLEAN_VALUE_FIELD_OFFSET;
+	protected static final long BYTE_VALUE_FIELD_OFFSET;
+	protected static final long CHARACTER_VALUE_FIELD_OFFSET;
+	protected static final long SHORT_VALUE_FIELD_OFFSET;
+	protected static final long INTEGER_VALUE_FIELD_OFFSET;
+	protected static final long FLOAT_VALUE_FIELD_OFFSET;
+	protected static final long LONG_VALUE_FIELD_OFFSET;
+	protected static final long DOUBLE_VALUE_FIELD_OFFSET;
+	
+	static {
+		try {
+			BOOLEAN_VALUE_FIELD_OFFSET = UNSAFE.objectFieldOffset(JvmUtil.getField(Boolean.class, "value"));
+			BYTE_VALUE_FIELD_OFFSET = UNSAFE.objectFieldOffset(JvmUtil.getField(Byte.class, "value"));
+			CHARACTER_VALUE_FIELD_OFFSET = UNSAFE.objectFieldOffset(JvmUtil.getField(Character.class, "value"));
+			SHORT_VALUE_FIELD_OFFSET = UNSAFE.objectFieldOffset(JvmUtil.getField(Short.class, "value"));
+			INTEGER_VALUE_FIELD_OFFSET = UNSAFE.objectFieldOffset(JvmUtil.getField(Integer.class, "value"));
+			FLOAT_VALUE_FIELD_OFFSET = UNSAFE.objectFieldOffset(JvmUtil.getField(Float.class, "value"));
+			LONG_VALUE_FIELD_OFFSET = UNSAFE.objectFieldOffset(JvmUtil.getField(Long.class, "value"));
+			DOUBLE_VALUE_FIELD_OFFSET = UNSAFE.objectFieldOffset(JvmUtil.getField(Double.class, "value"));
+		} 
+		catch (Throwable t) {
+			logger.error("Unable to initialize " + OffHeapServiceImpl.class, t);
+			throw new IllegalStateException("Unable to initialize " + OffHeapServiceImpl.class, t);
+		}
+	}
+	
 	protected OffHeapPoolFactory defaultOffHeapPoolFactory = 
 			new DefaultOffHeapPoolFactory();
 	protected Map<Class<? extends OffHeapPoolCreateParameter<?>>, OffHeapPoolFactory> offHeapPoolFactoryMap = 
@@ -109,6 +138,11 @@ public class OffHeapServiceImpl implements OffHeapService {
 	}
 	
 	@Override
+	public boolean isEnable() {
+		return enable;
+	}
+	
+	@Override
 	public OffHeapPoolFactory getDefaultOffHeapPoolFactory() {
 		checkEnable();
 		
@@ -130,11 +164,27 @@ public class OffHeapServiceImpl implements OffHeapService {
 	}
 
 	@Override
-	public <P extends OffHeapPoolCreateParameter<?>> void setOffHeapPoolFactory(
-			OffHeapPoolFactory offHeapPoolFactory, Class<P> clazz) {
+	public <P extends OffHeapPoolCreateParameter<?>> void setOffHeapPoolFactory(Class<P> clazz, 
+			OffHeapPoolFactory offHeapPoolFactory) {
 		checkEnable();
 		
 		offHeapPoolFactoryMap.put(clazz, offHeapPoolFactory);
+	}
+	
+	@SuppressWarnings("unchecked")
+	@Override
+	public <T, P extends OffHeapPoolCreateParameter<T>> ObjectOffHeapPool<T, P> getObjectOffHeapPool(Class<T> clazz) {
+		checkEnable();
+		
+		return objectOffHeapPoolMap.get(clazz);
+	}
+	
+	@Override
+	public <T, P extends OffHeapPoolCreateParameter<T>> void setObjectOffHeapPool(Class<T> clazz, 
+			ObjectOffHeapPool<T, P> objectOffHeapPool) {
+		checkEnable();
+		
+		objectOffHeapPoolMap.put(clazz, objectOffHeapPool);
 	}
 	
 	@Override
@@ -604,6 +654,78 @@ public class OffHeapServiceImpl implements OffHeapService {
 		checkEnable();
 		
 		return extendableStringOffHeapPool.freeFromAddress(address);
+	}
+	
+	@Override
+	public Boolean getOffHeapBoolean(boolean b) {
+		checkEnable();
+		
+		Boolean offHeapBoolean = newObject(Boolean.class);
+		directMemoryService.putBoolean(offHeapBoolean, BOOLEAN_VALUE_FIELD_OFFSET, b);
+		return offHeapBoolean;
+	}
+	
+	@Override
+	public Byte getOffHeapByte(byte b) {
+		checkEnable();
+		
+		Byte offHeapByte = newObject(Byte.class);
+		directMemoryService.putByte(offHeapByte, BYTE_VALUE_FIELD_OFFSET, b);
+		return offHeapByte;
+	}
+	
+	@Override
+	public Character getOffHeapCharacter(char c) {
+		checkEnable();
+		
+		Character offHeapCharacter = newObject(Character.class);
+		directMemoryService.putChar(offHeapCharacter, CHARACTER_VALUE_FIELD_OFFSET, c);
+		return offHeapCharacter;
+	}
+	
+	@Override
+	public Short getOffHeapShort(short s) {
+		checkEnable();
+		
+		Short offHeapShort = newObject(Short.class);
+		directMemoryService.putShort(offHeapShort, SHORT_VALUE_FIELD_OFFSET, s);
+		return offHeapShort;
+	}
+	
+	@Override
+	public Integer getOffHeapInteger(int i) {
+		checkEnable();
+		
+		Integer offHeapInteger = newObject(Integer.class);
+		directMemoryService.putInt(offHeapInteger, INTEGER_VALUE_FIELD_OFFSET, i);
+		return offHeapInteger;
+	}
+	
+	@Override
+	public Float getOffHeapFloat(float f) {
+		checkEnable();
+		
+		Float offHeapFloat = newObject(Float.class);
+		directMemoryService.putFloat(offHeapFloat, FLOAT_VALUE_FIELD_OFFSET, f);
+		return offHeapFloat;
+	}
+	
+	@Override
+	public Long getOffHeapLong(long l) {
+		checkEnable();
+		
+		Long offHeapLong = newObject(Long.class);
+		directMemoryService.putLong(offHeapLong, LONG_VALUE_FIELD_OFFSET, l);
+		return offHeapLong;
+	}
+	
+	@Override
+	public Double getOffHeapDouble(double d) {
+		checkEnable();
+		
+		Double offHeapDouble = newObject(Double.class);
+		directMemoryService.putDouble(offHeapDouble, DOUBLE_VALUE_FIELD_OFFSET, d);
+		return offHeapDouble;
 	}
 	
 }

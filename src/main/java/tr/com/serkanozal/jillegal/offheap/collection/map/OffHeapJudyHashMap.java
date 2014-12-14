@@ -15,8 +15,11 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.ObjectOffHeapPoolCreateParameterBuilder;
+import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectPoolReferenceType;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
+import tr.com.serkanozal.jillegal.offheap.pool.impl.LazyReferencedObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 
@@ -40,15 +43,37 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	private static final OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
 	private static final DirectMemoryService directMemoryService = DirectMemoryServiceFactory.getDirectMemoryService();
 	
-	private JudyTree<K, V> root = new JudyTree<K, V>();
+	private JudyTree<K, V> root;
+	private Class<K> keyType;
 	private Class<V> elementType;
 	
 	public OffHeapJudyHashMap() {
-
+		this.root = createJudyTree();
 	}
 	
 	public OffHeapJudyHashMap(Class<V> elementType) {
 		this.elementType = elementType;
+		this.root = createJudyTree();
+	}
+	
+	public OffHeapJudyHashMap(Class<K> keyType, Class<V> elementType) {
+		this.keyType = keyType;
+		this.elementType = elementType;
+		this.root = createJudyTree();
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	JudyTree<K, V> createJudyTree() {
+		LazyReferencedObjectOffHeapPool<JudyTree> objectPool = 
+				offHeapService.createOffHeapPool(
+						new ObjectOffHeapPoolCreateParameterBuilder<JudyTree>().
+								type(JudyTree.class).
+								objectCount(1).
+								referenceType(ObjectPoolReferenceType.LAZY_REFERENCED).
+							build());
+		JudyTree<K, V> judyTree = objectPool.get();
+		judyTree.init();
+		return judyTree;
 	}
 	
 	@Override
@@ -62,7 +87,17 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			return offHeapService.newObject(elementType);
 		}
 		else {
-			return null;
+			throw new IllegalStateException("Element type is not specified");
+		}
+	}
+	
+	@Override
+	public K newKey() {
+		if (keyType != null) {
+			return offHeapService.newObject(keyType);
+		}
+		else {
+			throw new IllegalStateException("Key type is not specified");
 		}
 	}
 	
@@ -209,7 +244,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 				return null;
 			}
 			else {
-				return entry.key;
+				return entry.getKey();
 			}
 		}
 
@@ -260,51 +295,66 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 
 		@Override
 		public void remove() {
-			throw new UnsupportedOperationException("\"remove()\" operation is not supported by JudyEntryIterator !");
+			throw new UnsupportedOperationException("\"remove()\" operation is not supported by JudyValueIterator !");
 		}
 		
 	}
 	
 	static class JudyEntry<K, V> implements Map.Entry<K, V> {
 
-		K key;
-		V value;
-		long keyAddress = -1;
-		long valueAddress = -1;
+		long keyAddress = 0;
+		long valueAddress = 0;
 		JudyEntry<K, V> prev;
 		JudyEntry<K, V> next;
 		
-		JudyEntry(K key) {
-			this.key = key;
-		}
-		
 		JudyEntry(K key, V value) {
-			this.key = key;
-			valueAddress = directMemoryService.addressOf(value); // this.value = value;
+			this.keyAddress = directMemoryService.addressOf(key); 
+			this.valueAddress = directMemoryService.addressOf(value);
 		}
 		
 		@Override
 		public K getKey() {
-			return key;
+			if (keyAddress != 0) {
+				return directMemoryService.getObject(keyAddress);
+			} else {
+				return null;
+			}
 		}
 		
 		void setKey(K key) {
-			directMemoryService.setObjectField(this, "key", key);
+			if (keyAddress != 0) {
+				offHeapService.freeObjectWithAddress(keyAddress);
+			}
+			if (key != null) {
+				keyAddress = directMemoryService.addressOf(key);
+			}
+			else {
+				keyAddress = 0;
+			}
 		}
 
 		@Override
 		public V getValue() {
-			if (valueAddress != -1) {
+			if (valueAddress != 0) {
 				return directMemoryService.getObject(valueAddress);
 			} else {
-				return value;
+				return null;
 			}
 		}
 
 		@Override
 		public V setValue(V value) {
-			valueAddress = directMemoryService.addressOf(value); // directMemoryService.setObjectField(this, "value", value);
-			return value;
+			V oldValue = null;
+			if (valueAddress != 0) {
+				oldValue = directMemoryService.getObject(valueAddress);
+			}
+			if (value != null) {
+				valueAddress = directMemoryService.addressOf(value);
+			} 
+			else {
+				valueAddress = 0;
+			}
+			return oldValue;
 		}
 		
 		JudyEntry<K, V> getPrev() {
@@ -355,7 +405,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		
 		@SuppressWarnings("unchecked")
 		void init() {
-			setChildren(offHeapService.newArray(JudyNode[].class, NODE_SIZE)); // children = new OffHeapJudyHashMap.JudyNode[NODE_SIZE];
+			setChildren(offHeapService.newArray(JudyNode[].class, NODE_SIZE));
 		}
 		
 		JudyNode<K, V>[] getChildren() {
@@ -395,14 +445,14 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			JudyNode<K, V> child = children[index];
 			if (child == null) {
 				if (nextLevel < MAX_LEVEL) {
-					child = offHeapService.newObject(JudyIntermediateNode.class); // new JudyIntermediateNode();
+					child = offHeapService.newObject(JudyIntermediateNode.class);
 					child.setRoot(root);
 				}
 				else {
-					child = offHeapService.newObject(JudyLeafNode.class); // new JudyLeafNode();
+					child = offHeapService.newObject(JudyLeafNode.class);
 					child.setRoot(root); 
 				}
-				directMemoryService.setArrayElement(children, index, child); // children[index] = child;
+				directMemoryService.setArrayElement(children, index, child);
 			}
 			return child.put(hash, key, value, nextLevel);
 		}
@@ -442,11 +492,10 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 						child.clear((byte) (level + 1));
 						offHeapService.freeObject(child);
 					}	
-					// child = null; // Now it can be collected by GC
 				}
 			}
-			offHeapService.freeArray(children); // directMemoryService.freeObject(children);
-			setChildren(null); // children = null; // Now it can be collected by GC
+			offHeapService.freeArray(children);
+			setChildren(null);
 		}
 		
 	}
@@ -461,7 +510,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		
 		@SuppressWarnings("unchecked")
 		void init() {
-			setEntries(offHeapService.newArray(JudyEntry[].class, NODE_SIZE)); // entries = new JudyEntry[NODE_SIZE];
+			setEntries(offHeapService.newArray(JudyEntry[].class, NODE_SIZE));
 		}
 		
 		JudyEntry<K, V>[] getEntries() {
@@ -500,9 +549,8 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
 			JudyEntry<K, V> entry = entries[index];
 			if (entry == null) {
-				entry = offHeapService.newObject(JudyEntry.class); // new JudyEntry(key);
-				entry.setKey(key); 
-				directMemoryService.setArrayElement(entries, index, entry); // entries[index] = entry;
+				entry = offHeapService.newObject(JudyEntry.class); 
+				directMemoryService.setArrayElement(entries, index, entry);
 				synchronized (root) {
 					if (root.firstEntry == null) {
 						root.setFirstEntry(entry);
@@ -514,8 +562,8 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 					root.setLastEntry(entry);
 				}	
 			}
-			entry.setValue(value);
-			return value;
+			entry.setKey(key); 
+			return entry.setValue(value);
 		}
 		
 		@Override
@@ -526,7 +574,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
 			JudyEntry<K, V> entryToRemove = entries[index];
 			if (entryToRemove != null) {
-				directMemoryService.setArrayElement(entries, index, null); // entries[index] = null;
+				directMemoryService.setArrayElement(entries, index, null); 
 				synchronized (root) {
 					if (entryToRemove == root.firstEntry) {
 						root.setFirstEntry(entryToRemove.next);
@@ -561,8 +609,13 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		
 		@Override
 		void clear(byte level) {
-			offHeapService.freeArray(entries); // directMemoryService.freeObject(entries);
-			setEntries(null); // entries = null; // Now it can be collected by GC
+			for (int i = 0; i < entries.length; i++) {
+				JudyEntry<K, V> entry = entries[i];
+				entry.setKey(null); // key area will be free automatically in entry instance
+				entry.setValue(null);
+			}
+			offHeapService.freeArray(entries);
+			setEntries(null);
 		}
 		
 	}
@@ -577,19 +630,17 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		JudyEntry<K, V> lastEntry;
 		volatile int size;
 		
-		@SuppressWarnings("unchecked")
 		JudyTree() {
+			init();
+		}
+		
+		@SuppressWarnings("unchecked")
+		void init() {
 			// Create and initialize first level nodes
 			setNodes(offHeapService.newArray(JudyIntermediateNode[].class, NODE_SIZE));
 			for (int i = 0 ; i < nodes.length; i++) {
 				nodes[i].setRoot(this);
 			}
-			/*
-			nodes = new OffHeapJudyHashMap.JudyIntermediateNode[NODE_SIZE];
-			for (int i = 0 ; i < nodes.length; i++) {
-				nodes[i] = new JudyIntermediateNode();
-			}
-			*/
 		}
 		
 		JudyIntermediateNode<K, V>[] getNodes() {
@@ -626,7 +677,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			// Use most significant byte as first level index
 			short index = (short)((key.hashCode() >> 24) & 0x000000FF);
 			V obj = nodes[index].put(key.hashCode(), key, value, (byte) 1);
-			if (obj != null) {
+			if (obj == null) {
 				size++;
 			}
 			return obj;

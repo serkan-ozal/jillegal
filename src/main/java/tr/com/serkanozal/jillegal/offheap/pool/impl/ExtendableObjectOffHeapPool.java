@@ -16,6 +16,7 @@ import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.pool.ContentAwareOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.DeeplyForkableObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
+import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, ExtendableObjectOffHeapPoolCreateParameter<T>> 
 		implements 	ObjectOffHeapPool<T, ExtendableObjectOffHeapPoolCreateParameter<T>>,
@@ -25,6 +26,7 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	protected List<DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>>> forkableOffHeapPoolList = 
 					new ArrayList<DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>>>();
 	protected volatile DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> currentForkableOffHeapPool;
+	protected volatile DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> lastUsedForkableOffHeapPoolToFree;
 			
 	public ExtendableObjectOffHeapPool(ExtendableObjectOffHeapPoolCreateParameter<T> parameter) {
 		this(parameter.getElementType(), parameter.getForkableObjectOffHeapPool(), parameter.getDirectMemoryService());
@@ -42,6 +44,22 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 		super.init();
 		
 		currentForkableOffHeapPool = rootForkableOffHeapPool;
+		lastUsedForkableOffHeapPoolToFree = null;
+	}
+	
+	@Override
+	public boolean isFull() {
+		if (!currentForkableOffHeapPool.isFull()) {
+			return false;
+		}
+		for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
+			DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool = 
+					forkableOffHeapPoolList.get(i);
+			if (!forkableOffHeapPool.isFull()) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	@Override
@@ -49,6 +67,16 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 		checkAvailability();
 		T obj = currentForkableOffHeapPool.get();
 		if (obj == null) {
+			for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
+				DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool = 
+						forkableOffHeapPoolList.get(i);
+				if (!forkableOffHeapPool.isFull()) {
+					obj = forkableOffHeapPool.get();
+					if (obj != null) {
+						return obj;
+					}
+				}
+			}
 			extend();
 			return currentForkableOffHeapPool.get();
 		}
@@ -60,7 +88,24 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	@Override
 	public synchronized long getAsAddress() {
 		checkAvailability();
-		return currentForkableOffHeapPool.getAsAddress();
+		long address = currentForkableOffHeapPool.getAsAddress();
+		if (address == JvmUtil.NULL) {
+			for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
+				DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool = 
+						forkableOffHeapPoolList.get(i);
+				if (!forkableOffHeapPool.isFull()) {
+					address = forkableOffHeapPool.getAsAddress();
+					if (address != JvmUtil.NULL) {
+						return address;
+					}
+				}
+			}
+			extend();
+			return currentForkableOffHeapPool.getAsAddress();
+		}
+		else {
+			return address;
+		}
 	}
 	
 	@Override
@@ -83,7 +128,9 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 				return true;
 			}
 		}
-		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
+		for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
+			DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool = 
+					forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != currentForkableOffHeapPool && forkableOffHeapPool instanceof ContentAwareOffHeapPool) {
 				if (((ContentAwareOffHeapPool)forkableOffHeapPool).isMine(address)) {
 					return true;
@@ -102,9 +149,17 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 		if (currentForkableOffHeapPool.free(obj)) {
 			return true;
 		}
-		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
+		if (lastUsedForkableOffHeapPoolToFree != null) {
+			if (lastUsedForkableOffHeapPoolToFree.free(obj)) {
+				return true;
+			}
+		}
+		for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
+			DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool = 
+					forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != currentForkableOffHeapPool) {
-				if (currentForkableOffHeapPool.free(obj)) {
+				if (forkableOffHeapPool.free(obj)) {
+					lastUsedForkableOffHeapPoolToFree = forkableOffHeapPool;
 					return true;
 				}
 			}
@@ -118,9 +173,17 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 		if (currentForkableOffHeapPool.freeFromAddress(objAddress)) {
 			return true;
 		}
-		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
+		if (lastUsedForkableOffHeapPoolToFree != null) {
+			if (lastUsedForkableOffHeapPoolToFree.freeFromAddress(objAddress)) {
+				return true;
+			}
+		}
+		for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
+			DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool = 
+					forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != currentForkableOffHeapPool) {
-				if (currentForkableOffHeapPool.freeFromAddress(objAddress)) {
+				if (forkableOffHeapPool.freeFromAddress(objAddress)) {
+					lastUsedForkableOffHeapPoolToFree = forkableOffHeapPool;
 					return true;
 				}
 			}
@@ -130,7 +193,9 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	
 	@Override
 	public synchronized void reset() {
-		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
+		for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
+			DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool = 
+					forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != rootForkableOffHeapPool) {
 				forkableOffHeapPool.reset();
 			}	
@@ -143,7 +208,9 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	@Override
 	public synchronized void free() {
 		checkAvailability();
-		for (DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool : forkableOffHeapPoolList) {
+		for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
+			DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool = 
+					forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != rootForkableOffHeapPool) {
 				forkableOffHeapPool.free();
 			}	

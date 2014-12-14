@@ -34,9 +34,6 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	protected int charArrayIndexStartOffset;
 	protected int valueArrayOffsetInString;
 	protected int stringSize;
-	protected long allocationStartAddress;
-	protected long allocationEndAddress;
-	protected long allocationSize;
 	protected long stringsStartAddress;
 	protected long currentAddress;
 	protected long totalSegmentCount;
@@ -206,6 +203,9 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 			directMemoryService.putByte(inUseBlockAddress + blockIndex, newBlockIndexValue);
 			strSegment++;
 		}	
+		if (full && !set) {
+			currentSegmentIndex = strSegment - 1;
+		}
 	}
 	
 	protected void setUnsetInUseFromStringAddress(long strAddress, int segmentCount, boolean set) {
@@ -365,6 +365,11 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 				JvmUtil.toJvmAddress(valueAddress));
 		
 		return takeStringAsAddress(currentAddress);
+	}
+	
+	@Override
+	public boolean isFull() {
+		return full;
 	}
 	
 	@Override

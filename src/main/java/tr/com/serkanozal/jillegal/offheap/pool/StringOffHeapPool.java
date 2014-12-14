@@ -12,4 +12,6 @@ import tr.com.serkanozal.jillegal.offheap.domain.model.pool.StringOffHeapPoolCre
 public interface StringOffHeapPool 
 	extends ExplicitStringOffHeapPool<StringOffHeapPoolCreateParameter> {
 	
+	boolean isFull();
+	
 }
