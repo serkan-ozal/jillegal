@@ -10,6 +10,7 @@ package tr.com.serkanozal.jillegal.util.compressedoops.hotspot;
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.util.compressedoops.CompressedOopsInfo;
 
+@SuppressWarnings( { "restriction" } )
 public class HotspotMemoryLayoutBasedCompressedOopsInfoProvider implements HotspotCompressedOopsInfoProvider {
 
 	@Override

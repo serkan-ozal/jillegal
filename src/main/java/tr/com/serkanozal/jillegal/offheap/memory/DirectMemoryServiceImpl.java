@@ -15,7 +15,7 @@ import tr.com.serkanozal.jillegal.offheap.memory.allocator.MemoryAllocator;
 import tr.com.serkanozal.jillegal.offheap.memory.allocator.MemoryAllocatorFactory;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
-@SuppressWarnings( { "unchecked" } )
+@SuppressWarnings( { "unchecked", "restriction" } )
 public class DirectMemoryServiceImpl implements DirectMemoryService {
 	
 	private final Logger logger = Logger.getLogger(getClass());
@@ -293,12 +293,12 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
             	}
             	break; 
         }       
-    	T obj = (T) unsafe.getObject(objArray, JvmUtil.getBaseOffset()); // T obj = (T) objArray[0];
-    	unsafe.putObject(objArray, JvmUtil.getBaseOffset(), null); // objArray[0] = null;
+    	T obj = (T) unsafe.getObject(objArray, JvmUtil.getBaseOffset()); 
+    	unsafe.putObject(objArray, JvmUtil.getBaseOffset(), null); 
         return obj;
     }
     
-    @Override
+	@Override
     public synchronized <T> void setObject(long address, T obj) {
         if (obj == null) {
             switch (JvmUtil.getAddressSize()) {

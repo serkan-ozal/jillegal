@@ -49,6 +49,7 @@ import tr.com.serkanozal.jillegal.offheap.pool.impl.ExtendableStringOffHeapPool;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 import tr.com.serkanozal.jillegal.util.ReflectionUtil;
 
+@SuppressWarnings( { "restriction" } )
 public class OffHeapServiceImpl implements OffHeapService {
 
 	protected static final Logger logger = Logger.getLogger(OffHeapServiceImpl.class);

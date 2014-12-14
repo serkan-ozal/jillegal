@@ -13,6 +13,7 @@ import java.util.List;
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
+@SuppressWarnings( { "restriction" } )
 public class PooledMemoryAllocator implements MemoryAllocator {
 
 	private static final Unsafe UNSAFE = JvmUtil.getUnsafe();

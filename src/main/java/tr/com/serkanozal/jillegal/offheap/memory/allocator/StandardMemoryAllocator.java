@@ -10,6 +10,7 @@ package tr.com.serkanozal.jillegal.offheap.memory.allocator;
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
+@SuppressWarnings( { "restriction" } )
 public class StandardMemoryAllocator implements MemoryAllocator {
 
 	private static final Unsafe UNSAFE = JvmUtil.getUnsafe();

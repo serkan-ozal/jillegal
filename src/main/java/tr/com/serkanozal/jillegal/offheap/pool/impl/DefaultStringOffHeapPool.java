@@ -14,6 +14,7 @@ import tr.com.serkanozal.jillegal.offheap.pool.StringOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapConstants;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
+@SuppressWarnings( { "restriction" } )
 public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffHeapPoolCreateParameter> 
 		implements 	StringOffHeapPool, 
 					DeeplyForkableStringOffHeapPool, 

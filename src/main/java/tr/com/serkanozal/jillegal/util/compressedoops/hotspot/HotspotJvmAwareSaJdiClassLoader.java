@@ -17,6 +17,7 @@ import java.net.URLClassLoader;
 
 import sun.misc.Resource;
 
+@SuppressWarnings( { "restriction" } )
 public class HotspotJvmAwareSaJdiClassLoader extends URLClassLoader {
 
 	public static final String URL_CLASSPATH_VM_ARGUMENT_NAME = "url.classpath";

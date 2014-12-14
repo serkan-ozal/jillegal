@@ -13,4 +13,6 @@ import tr.com.serkanozal.jillegal.offheap.collection.OffHeapCollection;
 
 public interface OffHeapSet<E> extends Set<E>, OffHeapCollection<E> {
 	
+	E put(E element);
+	
 }

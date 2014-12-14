@@ -15,6 +15,7 @@ import org.apache.log4j.Logger;
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.util.compressedoops.CompressedOopsInfo;
 
+@SuppressWarnings( { "restriction" } )
 public class HotspotCompressedOopsInfoUtil {
 
 	private static final Logger logger = Logger.getLogger(HotspotCompressedOopsInfoUtil.class);

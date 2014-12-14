@@ -29,6 +29,7 @@ import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.util.ClasspathUtil;
 import tr.com.serkanozal.jillegal.util.compressedoops.CompressedOopsInfo;
 
+@SuppressWarnings( { "restriction" } )
 public class HotspotServiceabilityAgentBasedCompressedOopsInfoProvider implements HotspotCompressedOopsInfoProvider {
 
 	private static final Logger logger = 

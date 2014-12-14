@@ -101,4 +101,10 @@ public class Person {
 				+ ", debt=" + debt + "]";
 	}
 	
+	@Override
+	public int hashCode() {
+		// TODO Handle integer overflow
+		return (int) id;
+	}
+	
 }

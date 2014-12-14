@@ -14,8 +14,9 @@ import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
+@SuppressWarnings("restriction")
 public class BaseOffHeapCollectionTest {
-
+	
 	protected static final Unsafe UNSAFE = JvmUtil.getUnsafe();
 	protected static final long INTEGER_VALUE_FIELD_OFFSET = UNSAFE.objectFieldOffset(JvmUtil.getField(Integer.class, "value"));
 	

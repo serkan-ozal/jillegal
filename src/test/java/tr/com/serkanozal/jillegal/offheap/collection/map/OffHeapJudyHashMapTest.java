@@ -31,12 +31,12 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(1 << i), randomizePerson(i, map.newElement()));
 			Assert.assertEquals(i + 1, map.size());
 		}
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.remove(i << i);
+			map.remove(1 << i);
 			Assert.assertEquals(ENTRY_COUNT - (i + 1), map.size());
 		}
 	}
@@ -50,13 +50,13 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 		Assert.assertTrue(map.isEmpty());
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(1 << i), randomizePerson(i, map.newElement()));
 		}
 		
 		Assert.assertFalse(map.isEmpty());
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.remove(i << i);
+			map.remove(1 << i);
 		}
 		
 		Assert.assertTrue(map.isEmpty());
@@ -69,13 +69,13 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
-			Assert.assertTrue(map.containsKey(i << i));
+			map.put(getOffHeapIntegerKey(1 << i), randomizePerson(i, map.newElement()));
+			Assert.assertTrue(map.containsKey(1 << i));
 		}
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.remove(i << i);
-			Assert.assertFalse(map.containsKey(i << i));
+			map.remove(1 << i);
+			Assert.assertFalse(map.containsKey(1 << i));
 		}
 	}
 	
@@ -99,16 +99,16 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(1 << i), randomizePerson(i, map.newElement()));
 		}
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			Assert.assertEquals(i, map.get(i << i).getId());
+			Assert.assertEquals(i, map.get(1 << i).getId());
 		}
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.remove(i << i);
-			Assert.assertNull(map.get(i << i));
+			map.remove(1 << i);
+			Assert.assertNull(map.get(1 << i));
 		}
 	}
 	
@@ -120,17 +120,17 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			delegatedMap.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
+			delegatedMap.put(getOffHeapIntegerKey(1 << i), randomizePerson(i, map.newElement()));
 		}
 		map.putAll(delegatedMap);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			Assert.assertEquals(i, map.get(i << i).getId());
+			Assert.assertEquals(i, map.get(1 << i).getId());
 		}
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.remove(i << i);
-			Assert.assertNull(map.get(i << i));
+			map.remove(1 << i);
+			Assert.assertNull(map.get(1 << i));
 		}
 	}
 	
@@ -143,7 +143,7 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 		Assert.assertTrue(map.isEmpty());
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(1 << i), randomizePerson(i, map.newElement()));
 		}
 		
 		Assert.assertFalse(map.isEmpty());
@@ -155,7 +155,7 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 		Assert.assertEquals(0, map.size());
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			Assert.assertNull(map.get(i << i));
+			Assert.assertNull(map.get(1 << i));
 		}
 	}
 	
@@ -166,12 +166,12 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(1 << i), randomizePerson(i, map.newElement()));
 		}
 		
 		int i = 0;
 		for (Integer key : map.keySet()) {
-			Integer expectedKey = i << i;
+			Integer expectedKey = 1 << i;
 			i++;
 			Assert.assertEquals(expectedKey, key);
 		}
@@ -184,7 +184,7 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(1 << i), randomizePerson(i, map.newElement()));
 		}
 		
 		int i = 0;
@@ -192,6 +192,7 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 			Assert.assertEquals(i, value.getId());
 			i++;
 		}
+		Assert.assertEquals(ENTRY_COUNT, i);
 	}
 	
 	@Test
@@ -201,12 +202,12 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 				new OffHeapJudyHashMap<Integer, Person>(Person.class);
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			map.put(getOffHeapIntegerKey(i << i), randomizePerson(i, map.newElement()));
+			map.put(getOffHeapIntegerKey(1 << i), randomizePerson(i, map.newElement()));
 		}
 		
 		int i = 0;
 		for (Map.Entry<Integer, Person> entry : map.entrySet()) {
-			Assert.assertEquals((Integer)(i << i), entry.getKey());
+			Assert.assertEquals((Integer)(1 << i), entry.getKey());
 			Assert.assertEquals(i, entry.getValue().getId());
 			i++;
 		}

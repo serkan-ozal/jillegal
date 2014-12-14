@@ -61,6 +61,7 @@ import com.google.common.collect.Multiset;
  * 
  * Note: Use "-XX:-UseCompressedOops" for 64 bit JVM to disable CompressedOops
  */
+@SuppressWarnings( { "restriction" } )
 public class JvmUtil {
 	
 	public static final String JAVA_6 = "1.6";
@@ -1473,13 +1474,25 @@ public class JvmUtil {
 				}
 			} 
 			catch (Throwable t) {
-				//logger.error("Unable to create a sample object for class " + clazz.getName(), t);
+				// logger.error("Unable to create a sample object for class " + clazz.getName(), t);
 			} 
+			/*
+			try {
+				Constructor<T> defaultConstructor = clazz.getDeclaredConstructor();
+				if (defaultConstructor != null) {
+					defaultConstructor.setAccessible(true);
+					return defaultConstructor.newInstance();
+				}
+			} 
+			catch (Throwable t) {
+				// logger.error("Unable to create a sample object for class " + clazz.getName(), t);
+			} 
+			*/
 			try {
 				return clazz.newInstance();
 			}	
 			catch (Throwable t) {
-				//logger.error("Unable to create a sample object for class " + clazz.getName(), t);
+				// logger.error("Unable to create a sample object for class " + clazz.getName(), t);
 			} 
 			try {
 				return (T) unsafe.allocateInstance(clazz);

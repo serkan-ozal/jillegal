@@ -19,6 +19,7 @@ import org.apache.log4j.Logger;
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.util.compressedoops.CompressedOopsInfo;
 
+@SuppressWarnings( { "restriction" } )
 public class HotspotMxBeanBasedCompressedOopsInfoProvider implements HotspotCompressedOopsInfoProvider {
 
 	private static final Logger logger = 
