@@ -511,6 +511,10 @@ System.out.println(obj.toString());
 5. Roadmap
 =======
 
+* Parallel GC support for OffHeap module.
+
+* Object lifecycle awareness support for OffHeap module.
+
 * Java 6 / Java 7 support for OffHeap module.
 
 * IBM JVM support for OffHeap module.
