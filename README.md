@@ -127,22 +127,6 @@ public class JillegalDemo extends JillegalAware {
 To make any of your class, just annotate it with **`tr.com.serkanozal.jillegal.config.annotation.JillegalAware`** annotation. So it will be detected by Jillegal on initialize cycle and will be instrumented automatically to be aware of Jillegal.
 
 ~~~~~ java
-public class SampleClassWrapper {
-
-	private SampleClass sampleClass;
-
-	public SampleClass getSampleClass() {
-		return sampleClass;
-	}
-
-	public void setSampleClass(SampleClass sampleClass) {
-		this.sampleClass = sampleClass;
-	}
-
-}
-~~~~~
-
-~~~~~ java
 @JillegalAware
 public class JillegalAwareSampleClassWrapper {
 
@@ -177,7 +161,6 @@ public class SampleClass {
 	private int i1 = 5;
 	private int i2 = 10;
 	private int order;
-	private SampleLinkClass link;
 
 	public int getI1() {
 		return i1;
@@ -189,34 +172,6 @@ public class SampleClass {
 
 	public int getOrder() {
 		return order;
-	}
-
-	public void setOrder(int order) {
-		this.order = order;
-	}
-
-	public SampleLinkClass getLink() {
-		return link;
-	}
-
-	public void setLink(SampleLinkClass link) {
-		this.link = link;
-	}
-	
-}
-~~~~~
-
-~~~~~ java
-public class SampleLinkClass {
-
-	private long linkNo;
-
-	public long getLinkNo() {
-		return linkNo;
-	}
-
-	public void setLinkNo(long linkNo) {
-		this.linkNo = linkNo;
 	}
 	
 }
