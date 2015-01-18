@@ -189,6 +189,11 @@
             <artifactId>log4j</artifactId>
             <version>${log4j.version}</version>
         </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+            <version>${commons.lang.version}</version>
+        </dependency>
         <!-- test -->
         <dependency>
             <groupId>junit</groupId>
@@ -196,11 +201,15 @@
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+        <!-- HeapFragger is only used for load testing to simulate all GC events/cases -->
+        <!--  
         <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
-            <version>${commons.lang.version}</version>
+            <groupId>org.giltene</groupId>
+            <artifactId>HeapFragger</artifactId>
+            <version>1.0</version>
+            <scope>test</scope>
         </dependency>
+        -->
 	</dependencies>
 	
    	<distributionManagement>

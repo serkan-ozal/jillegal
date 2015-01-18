@@ -43,13 +43,10 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 	protected void init() {
 		super.init();
 		
-		long sourceAddress = offHeapSampleObjectAddress + 4;
-		long copySize = objectSize - 4;
 		// Copy sample object to allocated memory region for each object
 		for (long l = 0; l < objectCount; l++) {
 			long targetAddress = objectsStartAddress + (l * objectSize);
-			directMemoryService.putInt(targetAddress, 0);
-			directMemoryService.copyMemory(sourceAddress, targetAddress + 4, copySize);
+			resetObject(targetAddress);
 		}
 	}
 	
@@ -139,7 +136,7 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		try {
 			super.init(elementType, objectCount, allocateNonPrimitiveFieldsAtOffHeapConfigType, directMemoryService);
 			allocationSize = 
-					objectSize * objectCount + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning)
+					objectSize * objectCount + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
 			allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
 			allocationEndAddress = allocationStartAddress + (objectCount * objectSize) - objectSize;
 			objectsStartAddress = allocationStartAddress;

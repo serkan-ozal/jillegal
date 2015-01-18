@@ -7,7 +7,9 @@
 
 package tr.com.serkanozal.jillegal.offheap.collection.map;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -342,7 +344,20 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 	 */
 	@Test
 	@Ignore
+	// -XX:-UseCompressedOops -XX:+UseSerialGC        -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\Asus\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
+	// -XX:-UseCompressedOops -XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\Asus\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
+	// -XX:-UseCompressedOops -XX:+UseG1GC            -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\Asus\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
+	// Note that: Crashes with "-XX:+UseParallelGC"
+	// -XX:-UseCompressedOops -XX:+UseParallelGC      -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\Asus\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
 	public void stressTest() {
+		/*
+		Thread t = new Thread() {
+			public void run() {
+				Idle.main(new String[] {"-t", "1000000000"});
+			};
+		};
+		t.start();
+		*/
 		final int ENTRY_COUNT = 1000000;
 		final int ITERATION_COUNT = 100;
 
@@ -369,6 +384,8 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 		
 		JvmUtil.runGC();
 		
+		List<Person> list = new ArrayList<Person>();
+		
 		// We must sure that there is no out of memory.
 		// Because new puts will be replaced with old ones and they will be free.
 		// So there must not be memory leak and out of memory error.
@@ -377,18 +394,22 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 			System.out.println("********************************");
 			
 			for (int j = 0; j < ENTRY_COUNT; j++) {
+				Person person = randomizePerson(j, judyMap.newElement());
 				Person replaced = 
-					judyMap.put(getOffHeapIntegerKey(j), randomizePerson(j, judyMap.newElement())); // They will be replaced
+					judyMap.put(getOffHeapIntegerKey(j), person); // They will be replaced
 				// OffHeap map only disposes only keys, not values.
 				// So disposing elements is developer's responsibility.
 				if (replaced != null) {
-					// If there is an old value, at first dispose its elements and dispose it's itself.
-					offHeapService.freeString(replaced.getUsername());
-					offHeapService.freeString(replaced.getFirstName());
-					offHeapService.freeString(replaced.getLastName());
 					offHeapService.freeObject(replaced);
 				}
+				list.add(person);
 			}
+			
+			JvmUtil.runGC();
+			
+			list.clear();
+			
+			JvmUtil.runGC();
 			
 			try {
 				Thread.sleep(10000); // Wait for 10 seconds
@@ -396,6 +417,8 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 			catch (InterruptedException e) {
 				e.printStackTrace();
 			} 
+			
+			JvmUtil.runGC();
 			
 			System.out.println("********************************");
 		}

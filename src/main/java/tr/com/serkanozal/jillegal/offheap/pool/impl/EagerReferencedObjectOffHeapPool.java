@@ -71,13 +71,10 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 					JvmUtil.toJvmAddress((objectsStartAddress + (l * objectSize))));
 		}
 		
-		long sourceAddress = offHeapSampleObjectAddress + 4;
-		long copySize = objectSize - 4;
 		// Copy sample object to allocated memory region for each object
 		for (long l = 0; l < objectCount; l++) {
 			long targetAddress = objectsStartAddress + (l * objectSize);
-			directMemoryService.putInt(targetAddress, 0);
-			directMemoryService.copyMemory(sourceAddress, targetAddress + 4, copySize);
+			resetObject(targetAddress);
 		}
 
 		directMemoryService.setObjectField(this, "objectArray", directMemoryService.getObject(arrayStartAddress));

@@ -324,48 +324,64 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		}
 		// Reset free object
 		int stringSegmentedSize = calculateSegmentedStringSize(strAddress);
-		directMemoryService.setMemory(strAddress, stringSegmentedSize, (byte)0);
+		directMemoryService.setMemory(strAddress + JvmUtil.getHeaderSize(), 
+									  stringSegmentedSize - JvmUtil.getHeaderSize(), 
+									  (byte)0);
 		freeStringFromStringAddress(strAddress, stringSegmentedSize / STRING_SEGMENT_SIZE);
 		return true;
 	}
 	
 	protected long allocateStringFromOffHeap(String str) {
-		long addressOfStr = directMemoryService.addressOf(str);
-		char[] valueArray = (char[]) directMemoryService.getObject(str, valueArrayOffsetInString);
-		int valueArraySize = charArrayIndexStartOffset + (charArrayIndexScale * valueArray.length);
-		int strSize = stringSize + valueArraySize + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
-		
-		long addressMod1 = currentAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
-		if (addressMod1 != 0) {
-			currentAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod1);
+		synchronized (str) {
+			long addressOfStr = directMemoryService.addressOf(str);
+			char[] valueArray = (char[]) directMemoryService.getObject(str, valueArrayOffsetInString);
+			synchronized (valueArray) {
+				int valueArraySize = charArrayIndexStartOffset + (charArrayIndexScale * valueArray.length);
+				int strSize = stringSize + valueArraySize + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
+				
+				long addressMod1 = currentAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
+				if (addressMod1 != 0) {
+					currentAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod1);
+				}
+				
+				if (currentAddress + strSize > allocationEndAddress) {
+					return JvmUtil.NULL;
+				}
+				
+				// Copy string object content to allocated area
+				directMemoryService.copyMemory(addressOfStr, currentAddress, strSize);
+				/*
+				for (int i = 0; i < strSize; i++) {
+					directMemoryService.putByte(currentAddress + i, directMemoryService.getByte(str, i));
+				}
+				*/
+				
+				long valueAddress = currentAddress + stringSize;
+				long addressMod2 = valueAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
+				if (addressMod2 != 0) {
+					valueAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod2);
+				}
+				
+				// Copy value array in allocated string to allocated char array
+				directMemoryService.copyMemory(
+						JvmUtil.toNativeAddress(
+								directMemoryService.getAddress(addressOfStr + valueArrayOffsetInString)),
+						valueAddress, 
+						valueArraySize);
+				/*
+				for (int i = 0; i < valueArraySize; i++) {
+					directMemoryService.putByte(valueAddress + i, directMemoryService.getByte(valueArray, i));
+				}
+				*/
+				
+				// Now, value array in allocated string points to allocated char array
+				directMemoryService.putAddress(
+						currentAddress + valueArrayOffsetInString, 
+						JvmUtil.toJvmAddress(valueAddress));
+				
+				return takeStringAsAddress(currentAddress);
+			}
 		}
-		
-		if (currentAddress + strSize > allocationEndAddress) {
-			return JvmUtil.NULL;
-		}
-		
-		// Copy string object content to allocated area
-		directMemoryService.copyMemory(addressOfStr, currentAddress, strSize);
-		
-		long valueAddress = currentAddress + stringSize;
-		long addressMod2 = valueAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
-		if (addressMod2 != 0) {
-			valueAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod2);
-		}
-		
-		// Copy value array in allocated string to allocated char array
-		directMemoryService.copyMemory(
-				JvmUtil.toNativeAddress(
-						directMemoryService.getAddress(addressOfStr + valueArrayOffsetInString)),
-				valueAddress, 
-				valueArraySize);
-
-		// Now, value array in allocated string points to allocated char array
-		directMemoryService.putAddress(
-				currentAddress + valueArrayOffsetInString, 
-				JvmUtil.toJvmAddress(valueAddress));
-		
-		return takeStringAsAddress(currentAddress);
 	}
 	
 	@Override

@@ -7,14 +7,25 @@
 
 package tr.com.serkanozal.jillegal.offheap.collection;
 
-public class Person {
+import java.util.Date;
 
+import tr.com.serkanozal.jillegal.offheap.OffHeapAwareObject;
+import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
+import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
+
+public class Person implements OffHeapAwareObject {
+
+	protected static final long MILLI_SECONDS_IN_A_DAY = 24 * 60 * 60 * 1000;
+	protected static final long MILLI_SECONDS_IN_A_MONTH = 30 * MILLI_SECONDS_IN_A_DAY;
+	protected static final long MILLI_SECONDS_IN_A_YEAR = 365 * MILLI_SECONDS_IN_A_DAY;
+	
 	private long id;
 	private String username;
 	private String firstName;
 	private String lastName;
 //	@OffHeapObject
 //	private Date birthDate;
+	private long birthDate;
 	private int accountNo;
 	private double debt;
 	
@@ -23,13 +34,12 @@ public class Person {
 	}
 	
 	public Person(long id, String username, String firstName, String lastName, 
-//			Date birthDate, 
-			int accountNo, double debt) {
+			long birthDate, int accountNo, double debt) {
 		this.id = id;
 		this.username = username;
 		this.firstName = firstName;
 		this.lastName = lastName;
-//		this.birthDate = birthDate;
+		this.birthDate = birthDate;
 		this.accountNo = accountNo;
 		this.debt = debt;
 	}
@@ -66,13 +76,27 @@ public class Person {
 		this.lastName = lastName;
 	}
 	
-//	public Date getBirthDate() {
-//		return birthDate;
-//	}
-//	
-//	public void setBirthDate(Date birthDate) {
-//		this.birthDate = birthDate;
-//	}
+	public long getBirthDate() {
+		return birthDate;
+	}
+	
+	public String getBirthDateFormatted() {
+		int year = 1970 + (int) (birthDate / MILLI_SECONDS_IN_A_YEAR);
+		int month = (int) ((birthDate / MILLI_SECONDS_IN_A_MONTH) % 12);
+		int day = (int) (((birthDate / MILLI_SECONDS_IN_A_DAY) % 365) % 29); // TODO Handle years with 366 days
+		return 
+			((day < 10) ? "0" : "") + day + "/" + 
+			((month < 10) ? "0" : "") + month + "/" + 
+			year;
+	}
+	
+	public void setBirthDate(long birthDate) {
+		this.birthDate = birthDate;
+	}
+	
+	public void setBirthDate(Date birthDate) {
+		this.birthDate = birthDate.getTime();
+	}
 
 	public int getAccountNo() {
 		return accountNo;
@@ -96,7 +120,7 @@ public class Person {
 				+ ", username=" + username
 				+ ", firstName=" + firstName 
 				+ ", lastName=" + lastName
-//				+ ", birthDate=" + birthDate 
+				+ ", birthDate=" + getBirthDateFormatted()
 				+ ", accountNo=" + accountNo
 				+ ", debt=" + debt + "]";
 	}
@@ -105,6 +129,18 @@ public class Person {
 	public int hashCode() {
 		// TODO Handle integer overflow
 		return (int) id;
+	}
+
+	@Override
+	public void onGet(OffHeapService offHeapService, DirectMemoryService directMemoryService) {
+		
+	}
+
+	@Override
+	public void onFree(OffHeapService offHeapService, DirectMemoryService directMemoryService) {
+		offHeapService.freeString(username);
+		offHeapService.freeString(firstName);
+		offHeapService.freeString(lastName);
 	}
 	
 }

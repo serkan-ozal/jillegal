@@ -21,7 +21,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
 	private final Logger logger = Logger.getLogger(getClass());
 
     private Unsafe unsafe;
-    private Object[] objArray;
+    private ThreadLocal<Object[]> objArrayBuffers;
     private MemoryAllocator memoryAllocator;
     
     public DirectMemoryServiceImpl() {
@@ -34,7 +34,12 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     
     private void initUnsafe() {
         unsafe = JvmUtil.getUnsafe();
-        objArray = new Object[1];
+        objArrayBuffers = new ThreadLocal<Object[]>() {
+            @Override
+            protected Object[] initialValue() {
+                return new Object[1];
+            }
+        };
         memoryAllocator = MemoryAllocatorFactory.getDefaultMemoryAllocator();
     }
 
@@ -99,12 +104,12 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     }
     
     @Override
-    public synchronized long addressOf(Object obj) {
+    public long addressOf(Object obj) {
         return JvmUtil.addressOf(obj);
     }
   
     @Override
-    public synchronized long addressOfField(Object obj, String fieldName) throws SecurityException, NoSuchFieldException {
+    public long addressOfField(Object obj, String fieldName) throws SecurityException, NoSuchFieldException {
         return JvmUtil.addressOfField(obj, fieldName);
     }
     
@@ -115,7 +120,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     
     @Override
     public <O, F> F getObjectField(O obj, int fieldOffset) {
-    	// synchronized (obj) {
+//    	synchronized (obj) {
     		long objAddress = JvmUtil.addressOf(obj);
         	long fieldAddress = objAddress + fieldOffset;
         	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
@@ -124,12 +129,12 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
         	else {
         		return null;
         	}
-		// }
+//		}
     }
     
     @Override
     public <O, F> void setObjectField(O rootObj, int fieldOffset, F fieldObj) {
-    	// synchronized (rootObj) {
+//    	synchronized (rootObj) {
     		long objAddress = JvmUtil.addressOf(rootObj);
 	    	long fieldAddress = objAddress + fieldOffset;
 	    	if (fieldObj == null) {
@@ -146,7 +151,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
             	}
 	    	}
 	    	else {
-	    		// synchronized (fieldObj) {
+//	    		synchronized (fieldObj) {
 	    			long fieldObjAddress = JvmUtil.toJvmAddress(JvmUtil.addressOf(fieldObj));
 	    	      	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
 	    	    		switch (JvmUtil.getAddressSize()) {
@@ -170,14 +175,14 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
 	    		                throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
 	    	    		}      
 	    	    	}	
-				// }
+//				}
 	    	}
-    	// }	
+//    	}	
     }
     
     @Override
     public <O, F> F getObjectField(O obj, String fieldName) {
-    	// synchronized (obj) {
+//    	synchronized (obj) {
     		long fieldAddress = JvmUtil.addressOfField(obj, fieldName);
         	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
         		return getObject(fieldAddress);
@@ -185,12 +190,12 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
         	else {
         		return null;
         	}
-		// }
+//		}
     }
     
     @Override
     public <O, F> void setObjectField(O rootObj, String fieldName, F fieldObj) {
-    	// synchronized (rootObj) {
+//    	synchronized (rootObj) {
     		long fieldAddress = JvmUtil.addressOfField(rootObj, fieldName);
 	    	if (fieldObj == null) {
 	    		int referenceSize = JvmUtil.getReferenceSize();
@@ -206,7 +211,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
             	}
 	    	}
 	    	else {
-	    		// synchronized (fieldObj) {
+//	    		synchronized (fieldObj) {
 	    			long fieldObjAddress = JvmUtil.toJvmAddress(JvmUtil.addressOf(fieldObj));
 			    	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
 			    		switch (JvmUtil.getAddressSize()) {
@@ -230,14 +235,14 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
 				                throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
 			    		}      
 			    	}
-	    		// }
+//	    		}
 	    	}	
-		// }
+//		}
     }
     
     @Override
     public Object getArrayElement(Object array, int elementIndex) {
-    	// synchronized (array) {
+//    	synchronized (array) {
     		long arrayElementAddress = JvmUtil.getArrayElementAddress(array, elementIndex);
         	if (arrayElementAddress != 0 && arrayElementAddress != JvmUtil.INVALID_ADDRESS) {
         		return getObject(arrayElementAddress);
@@ -245,12 +250,12 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
         	else {
         		return null;
         	}
-		// } 
+//		} 
     }
     
     @Override
     public void setArrayElement(Object array, int elementIndex, Object element) {
-    	// synchronized (array) {
+//    	synchronized (array) {
 	    	long arrayElementAddress = JvmUtil.getArrayElementAddress(array, elementIndex);
 	    	long elementAddress = JvmUtil.toJvmAddress(JvmUtil.addressOf(element));
 	    	if (elementAddress != JvmUtil.INVALID_ADDRESS) {
@@ -271,12 +276,13 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
 		            	break; 
 	    		}      
 	    	}
-    	// }	
+//    	}	
     }
     
     @Override
-    public synchronized <T> T getObject(long address) {
+    public <T> T getObject(long address) {
     	address = JvmUtil.toJvmAddress(address);
+    	Object[] objArray = objArrayBuffers.get();
     	switch (JvmUtil.getAddressSize()) {
             case JvmUtil.SIZE_32_BIT:
                 putAsIntAddress(objArray, JvmUtil.getBaseOffset(), address);
@@ -292,14 +298,12 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
                  		break;
             	}
             	break; 
-        }       
-    	T obj = (T) unsafe.getObject(objArray, JvmUtil.getBaseOffset()); 
-    	unsafe.putObject(objArray, JvmUtil.getBaseOffset(), null); 
-        return obj;
+        }  
+    	return (T) unsafe.getAndSetObject(objArray, JvmUtil.getBaseOffset(), null); 
     }
     
 	@Override
-    public synchronized <T> void setObject(long address, T obj) {
+    public <T> void setObject(long address, T obj) {
         if (obj == null) {
             switch (JvmUtil.getAddressSize()) {
                 case JvmUtil.SIZE_32_BIT:
@@ -319,57 +323,57 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
             }
         }
         else {
-        	// synchronized (obj) {
+//        	synchronized (obj) {
                 long objSize = sizeOfClass(obj.getClass());
-                long objAddress = addressOf(obj);
+                long objAddress = JvmUtil.addressOf(obj);
                 unsafe.copyMemory(objAddress, address, JvmUtil.getHeaderSize() + objSize);   
-             // } 
+//             } 
         }    
     }
     
     @Override
-    public synchronized <T> T changeObject(T source, T target) {
+    public <T> T changeObject(T source, T target) {
         if (source == null) {
             throw new IllegalArgumentException("Source object is null !");
         }
         if (target == null) {
             throw new IllegalArgumentException("Target object is null !");
         }
-        // synchronized (source) {
-        	// synchronized (target) {
-                long targetAddress = addressOf(target);
+//        synchronized (source) {
+//        	synchronized (target) {
+                long targetAddress = JvmUtil.addressOf(target);
                 setObject(targetAddress, source);
                 return target;
-    		// }
-        // }
+//    		}
+//        }
     }
     
     @Override
-    public synchronized <T> T copyObject(T original) {
+    public <T> T copyObject(T original) {
     	if (original == null) {
             throw new IllegalArgumentException("Original object is null !");
         }
-    	// synchronized (original) {
-    		long originalAddress = addressOf(original);
-            Object[] array = new Object[] { null };
+    	Object[] objArray = objArrayBuffers.get();
+//    	synchronized (original) {
+    		long originalAddress = JvmUtil.addressOf(original);
             switch (JvmUtil.getAddressSize()) {
     	        case JvmUtil.SIZE_32_BIT:
-    	        	putAsIntAddress(array, JvmUtil.getBaseOffset(), originalAddress);
+    	        	putAsIntAddress(objArray, JvmUtil.getBaseOffset(), originalAddress);
     	            break;
     	        case JvmUtil.SIZE_64_BIT:
     	        	int referenceSize = JvmUtil.getReferenceSize();
                 	switch (referenceSize) {
                      	case JvmUtil.ADDRESSING_4_BYTE:
-                     		putAsIntAddress(array, JvmUtil.getBaseOffset(), originalAddress);
+                     		putAsIntAddress(objArray, JvmUtil.getBaseOffset(), originalAddress);
                      		break;
                      	case JvmUtil.ADDRESSING_8_BYTE:
-                     		unsafe.putLong(array, JvmUtil.getBaseOffset(), originalAddress);
+                     		unsafe.putLong(objArray, JvmUtil.getBaseOffset(), originalAddress);
                      		break;
                 	}
     	            break;  
             }
-            return (T) array[0];
-		// } 
+            return (T) unsafe.getAndSetObject(objArray, JvmUtil.getBaseOffset(), null); 
+//		} 
     }
     
     @Override

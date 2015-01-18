@@ -7,6 +7,7 @@
 
 package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
+import tr.com.serkanozal.jillegal.offheap.OffHeapAwareObject;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAllocationConfigType;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
@@ -101,11 +102,18 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 			throw new IllegalStateException("Unable to create a sample object for class " + elementType.getName());
 		}
 		sampleHeader = directMemoryService.getLong(sampleObject, 0L);
-		long address = directMemoryService.addressOf(sampleObject);
 		objectSize = directMemoryService.sizeOfObject(sampleObject);
 		offHeapSampleObjectAddress = directMemoryService.allocateMemory(objectSize);
-		directMemoryService.copyMemory(address, offHeapSampleObjectAddress, objectSize);
-
+		for (int i = 0; i < objectSize; i += JvmUtil.LONG_SIZE) {
+			directMemoryService.putLong(offHeapSampleObjectAddress + i, directMemoryService.getLong(sampleObject, i));
+		}
+		/*
+		for (int i = 0; i < objectSize; i++) {
+			directMemoryService.putByte(offHeapSampleObjectAddress + i, directMemoryService.getByte(sampleObject, i));
+		}
+		*/
+		// directMemoryService.copyMemory(directMemoryService.addressOf(sampleObject), offHeapSampleObjectAddress, objectSize);
+		
 		/*
 		this.classPointerAddress = JvmUtil.jvmAddressOfClass(sampleObject);
 		this.classPointerOffset = JvmUtil.getClassDefPointerOffsetInObject();
@@ -160,6 +168,15 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 				getBit(blockIndexValue, blockInternalOrder) == 1 ? 
 						OBJECT_IS_IN_USE : OBJECT_IS_AVAILABLE;
 		}	
+	}
+	
+	protected void resetObject(long objAddress) {
+		/*
+		for (int i = 0; i < objectSize; i++) {
+			directMemoryService.putByte(objAddress + i, directMemoryService.getByte(sampleObject, i));
+		}
+		*/
+		directMemoryService.copyMemory(offHeapSampleObjectAddress, objAddress, objectSize);
 	}
 	
 	protected byte getInUseFromObjectAddress(long objAddress) {
@@ -295,6 +312,9 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		obj = super.processObject(obj);
 		directMemoryService.putLong(objAddress, sampleHeader);
 		allocateObjectFromObjectAddress(objAddress);
+		if (obj instanceof OffHeapAwareObject) {
+			((OffHeapAwareObject) obj).onGet(offHeapService, directMemoryService);
+		}
 		return obj;
 	}
 	
@@ -304,27 +324,50 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		obj = super.processObject(obj);
 		directMemoryService.putLong(objAddress, sampleHeader);
 		allocateObjectFromObjectAddress(objAddress);
+		if (obj instanceof OffHeapAwareObject) {
+			((OffHeapAwareObject) obj).onGet(offHeapService, directMemoryService);
+		}
 		return obj;
 	}
 	
+	@SuppressWarnings("unchecked")
 	protected synchronized long takeObjectAsAddress(long objAddress) {
 		long address = super.processObject(objAddress);
 		directMemoryService.putLong(objAddress, sampleHeader);
 		allocateObjectFromObjectAddress(address);
+		T obj = (T) directMemoryService.getObject(objAddress);
+		if (obj instanceof OffHeapAwareObject) {
+			((OffHeapAwareObject) obj).onGet(offHeapService, directMemoryService);
+		}
 		return address;
 	}
 	
 	protected synchronized boolean releaseObject(T obj) {
-		return releaseObject(directMemoryService.addressOf(obj));
+		long objAddress = directMemoryService.addressOf(obj);
+		if (!isIn(objAddress)) {
+			return false;
+		}
+		if (obj instanceof OffHeapAwareObject) {
+			((OffHeapAwareObject) obj).onFree(offHeapService, directMemoryService);
+		}
+		return doReleaseObject(objAddress);
 	}
 	
+	@SuppressWarnings("unchecked")
 	protected synchronized boolean releaseObject(long objAddress) {
 		if (!isIn(objAddress)) {
 			return false;
 		}
+		T obj = (T) directMemoryService.getObject(objAddress);
+		if (obj instanceof OffHeapAwareObject) {
+			((OffHeapAwareObject) obj).onFree(offHeapService, directMemoryService);
+		}
+		return doReleaseObject(objAddress);
+	}
+	
+	protected synchronized boolean doReleaseObject(long objAddress) {
 		// Reset free object
-		directMemoryService.putLong(objAddress, 0);
-		directMemoryService.copyMemory(offHeapSampleObjectAddress + 8, objAddress + 8, objectSize - 8);
+		resetObject(objAddress); 
 		freeObjectFromObjectAddress(objAddress);
 		return true;
 	}
@@ -332,6 +375,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	@Override
 	public synchronized void free() {
 		checkAvailability();
+		// TODO Iterate over all objects and call their "onFree" methods if they are instance of "OffHeapAwareObject"
 		directMemoryService.freeMemory(offHeapSampleObjectAddress);
 		directMemoryService.freeMemory(inUseBlockAddress);
 		directMemoryService.freeMemory(allocationStartAddress);

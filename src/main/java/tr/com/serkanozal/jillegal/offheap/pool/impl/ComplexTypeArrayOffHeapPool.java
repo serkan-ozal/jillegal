@@ -9,6 +9,7 @@ package tr.com.serkanozal.jillegal.offheap.pool.impl;
 
 import java.lang.reflect.Array;
 
+import tr.com.serkanozal.jillegal.offheap.OffHeapAwareObject;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ArrayOffHeapPoolCreateParameter;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.pool.ContentAwareOffHeapPool;
@@ -139,7 +140,11 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 		processObject(
 				jvmAwareArrayElementAddressFinder.findAddress(
 						arrayIndexStartAddress, arrayIndexScale, index));
-		return ((T[])(objectArray))[index];
+		T obj = ((T[])(objectArray))[index];
+		if (obj instanceof OffHeapAwareObject) {
+			((OffHeapAwareObject) obj).onGet(offHeapService, directMemoryService);
+		}
+		return obj;
 	}
 	
 	@Override
@@ -176,6 +181,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	@Override
 	public synchronized void free() {
 		checkAvailability();
+		// TODO Iterate over all objects and call their "onFree" methods if they are instance of "OffHeapAwareObject"
 		directMemoryService.freeMemory(allocationStartAddress);
 		makeUnavaiable();
 	}

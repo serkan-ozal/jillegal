@@ -141,7 +141,7 @@ public class JvmUtil {
     
     private static VMOptions options;
     private static Unsafe unsafe;
-    private static Object[] objArray;
+    private static ThreadLocal<Object[]> objArrayBuffers;
     private static int addressSize;
     private static int headerSize;
     private static int arrayHeaderSize;
@@ -185,7 +185,12 @@ public class JvmUtil {
 			throw new RuntimeException("Couldn't find current process id", e);
 		}
 		
-        objArray = new Object[1];
+		objArrayBuffers = new ThreadLocal<Object[]>() {
+            @Override
+            protected Object[] initialValue() {
+                return new Object[1];
+            }
+        };
         
         int headerSize;
         try {
@@ -463,8 +468,9 @@ public class JvmUtil {
 			if (obj == null) {
 	            return 0;
 	        }
+			Object[] objArray = objArrayBuffers.get();
 			unsafe.putObject(objArray, baseOffset, obj); // objArray[0] = obj;
-	        return unsafe.getInt(objArray, baseOffset);
+	        return unsafe.getAndSetInt(objArray, baseOffset, 0);
 		}
 
 		@SuppressWarnings("deprecation")
@@ -574,8 +580,9 @@ public class JvmUtil {
 			if (obj == null) {
 	            return 0;
 	        }
+			Object[] objArray = objArrayBuffers.get();
 			unsafe.putObject(objArray, baseOffset, obj); // objArray[0] = obj;
-	        return JvmUtil.toNativeAddress(normalize(unsafe.getInt(objArray, baseOffset)));
+	        return JvmUtil.toNativeAddress(normalize(unsafe.getAndSetInt(objArray, baseOffset, 0)));
 		}
 
 		@SuppressWarnings("deprecation")
@@ -589,8 +596,9 @@ public class JvmUtil {
 			if (obj == null) {
 	            return 0;
 	        }
-			unsafe.putObject(objArray, baseOffset, obj); // objArray[0] = obj;
-	        return normalize(unsafe.getInt(objArray, baseOffset));
+			Object[] objArray = objArrayBuffers.get();
+			unsafe.putObject(objArray, baseOffset, obj); // objArray[0] = obj; 
+	        return normalize(unsafe.getAndSetInt(objArray, baseOffset, 0));
 		}
 
 		@SuppressWarnings("deprecation")
@@ -664,8 +672,9 @@ public class JvmUtil {
 			if (obj == null) {
 	            return 0;
 	        }
-	        unsafe.putObject(objArray, baseOffset, obj); // objArray[0] = obj;
-	        return unsafe.getLong(objArray, baseOffset);
+			Object[] objArray = objArrayBuffers.get();
+			unsafe.putObject(objArray, baseOffset, obj); // objArray[0] = obj; 
+	        return unsafe.getAndSetLong(objArray, baseOffset, 0L);
 		}
 
 		@SuppressWarnings("deprecation")
@@ -740,14 +749,16 @@ public class JvmUtil {
     	
     }
     
-    public synchronized static long addressOf(Object obj) {
+    public static long addressOf(Object obj) {
     	long address = jvmAwareUtil.addressOf(obj);
+    	Object[] objArray = objArrayBuffers.get();
     	unsafe.putObject(objArray, baseOffset, null); // objArray[0] = null;
     	return address;
     }
     
-    public synchronized static long jvmAddressOf(Object obj) {
+    public static long jvmAddressOf(Object obj) {
     	long address = jvmAwareUtil.jvmAddressOf(obj);
+    	Object[] objArray = objArrayBuffers.get();
     	unsafe.putObject(objArray, baseOffset, null); // objArray[0] = null;
     	return address;
     }
@@ -2165,5 +2176,5 @@ public class JvmUtil {
 		}
 		
 	}
-	 
+
 }

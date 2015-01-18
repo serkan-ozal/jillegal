@@ -278,10 +278,6 @@ public class OffHeapJudyHashSetTest extends BaseOffHeapCollectionTest {
 				// OffHeap set doesn't dispose elements.
 				// So disposing elements is developer's responsibility.
 				if (replaced != null) {
-					// If there is an old value, at first dispose its elements and dispose it's itself.
-					offHeapService.freeString(replaced.getUsername());
-					offHeapService.freeString(replaced.getFirstName());
-					offHeapService.freeString(replaced.getLastName());
 					offHeapService.freeObject(replaced);
 				}
 			}
