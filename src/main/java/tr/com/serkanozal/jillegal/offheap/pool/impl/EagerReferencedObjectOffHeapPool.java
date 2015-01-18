@@ -119,9 +119,6 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 		if (getInUseFromObjectIndex(index) != OBJECT_IS_AVAILABLE) {
 			throw new ObjectInUseException(index);
 		}
-		if (index == 0) {
-			System.out.println(directMemoryService.addressOf(objectArray) + ", " + arrayStartAddress);
-		}
 		// Address of class could be changed by GC at "Compact" phase.
 		//long address = objectsStartAddress + (index * objectSize);
 		//updateClassPointerOfObject(address);
