@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import javassist.ClassPool;
+import javassist.CtClass;
 import javassist.bytecode.Opcode;
 
 import org.apache.log4j.Logger;
@@ -282,7 +284,12 @@ public class OffHeapServiceImpl implements OffHeapService {
 				ownerClassDescSet.add(parentClass.getName().replace(".", "/"));
 			}
 			
-			ClassReader cr = new ClassReader(elementType.getName());
+			String className = elementType.getName();
+			
+			ClassPool cp = ClassPool.getDefault();
+			CtClass clazz = cp.get(className);
+			
+			ClassReader cr = new ClassReader(clazz.toBytecode());
 			ClassWriter cw = new ClassWriter(ClassReader.SKIP_DEBUG) {
 				@Override
 				public MethodVisitor visitMethod(final int access, final String name,
@@ -399,7 +406,7 @@ public class OffHeapServiceImpl implements OffHeapService {
 			logger.info("Instrumented class " + elementType.getName() + " for non-primitive field assignment");
 		}
 		catch (Throwable t) {
-			t.printStackTrace();
+			// t.printStackTrace();
 			logger.error("Error occured while instrumenting non-primitive field assignments for class " + 
 							elementType.getName(), t);
 		}
