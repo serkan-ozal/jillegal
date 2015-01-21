@@ -14,6 +14,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.ObjectOffHeapPoolCreateParameterBuilder;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectPoolReferenceType;
@@ -84,6 +86,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	private JudyTree<K, V> root;
 	private Class<K> keyType;
 	private Class<V> elementType;
+	private Lock judyTreeLock = new ReentrantLock();
 	
 	public OffHeapJudyHashMap() {
 		this.root = createJudyTree();
@@ -171,7 +174,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	
 	@Override
 	public V put(K key, V value) {
-		return (V) root.put(key, value);
+		return (V) root.put(key, value, judyTreeLock);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -183,7 +186,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	@SuppressWarnings("unchecked")
 	@Override
 	public V remove(Object key) {
-		return (V) root.remove((K) key);
+		return (V) root.remove((K) key, judyTreeLock);
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -421,8 +424,8 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		}
 		
 		abstract V get(int hash, byte level);
-		abstract V put(int hash, K key, V value, byte level);
-		abstract V remove(int hash, byte level);
+		abstract V put(int hash, K key, V value, byte level, Lock judyTreeLock);
+		abstract V remove(int hash, byte level, Lock judyTreeLock);
 		abstract boolean containsKey(int hash, byte level);
 		abstract void clear(byte level);
 		
@@ -470,7 +473,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		
 		@SuppressWarnings("unchecked")
 		@Override
-		V put(int hash, K key, V value, byte level) {
+		V put(int hash, K key, V value, byte level, Lock judyTreeLock) {
 			initIfNeeded();
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
@@ -487,18 +490,18 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 				}
 				directMemoryService.setArrayElement(children, index, child);
 			}
-			return child.put(hash, key, value, nextLevel);
+			return child.put(hash, key, value, nextLevel, judyTreeLock);
 		}
 		
 		@Override
-		V remove(int hash, byte level) {
+		V remove(int hash, byte level, Lock judyTreeLock) {
 			initIfNeeded();
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
 			JudyNode<K, V> child = children[index];
 			if (child != null) {
-				return child.remove(hash, nextLevel);
+				return child.remove(hash, nextLevel, judyTreeLock);
 			}
 			return null;
 		}
@@ -575,7 +578,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		
 		@SuppressWarnings("unchecked")
 		@Override
-		V put(int hash, K key, V value, byte level) {
+		V put(int hash, K key, V value, byte level, Lock judyTreeLock) {
 			initIfNeeded();
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
@@ -583,11 +586,10 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			JudyEntry<K, V> entry = entries[index];
 			if (entry == null) {
 				entry = offHeapService.newObject(JudyEntry.class); 
-				directMemoryService.setArrayElement(entries, index, entry);
-				
+				directMemoryService.setArrayElement(entries, index, entry);	
 			}
-			// TODO Implement synchronization mechanism
-			// synchronized (root) {
+			judyTreeLock.lock();
+			try {
 				if (root.firstEntry == null) {
 					root.setFirstEntry(entry);
 				}
@@ -596,13 +598,15 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 					root.lastEntry.setNext(entry);
 				}
 				root.setLastEntry(entry);
-			// }	
+			} finally {
+				judyTreeLock.unlock();
+			}
 			entry.setKey(key); 
 			return entry.setValue(value);
 		}
 		
 		@Override
-		V remove(int hash, byte level) {
+		V remove(int hash, byte level, Lock judyTreeLock) {
 			initIfNeeded();
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
@@ -610,27 +614,23 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			JudyEntry<K, V> entryToRemove = entries[index];
 			if (entryToRemove != null) {
 				directMemoryService.setArrayElement(entries, index, null); 
-				// TODO Implement synchronization mechanism
-				// synchronized (root) {
+				judyTreeLock.lock();
+				try {
 					if (entryToRemove == root.firstEntry) {
 						root.setFirstEntry(entryToRemove.next);
 					}
 					if (entryToRemove == root.lastEntry) {
 						root.setLastEntry(entryToRemove.prev);
 					}
-				// }
-				if (entryToRemove.prev != null) {
-					// TODO Implement synchronization mechanism
-					// synchronized (entryToRemove.prev) {
+					if (entryToRemove.prev != null) {
 						entryToRemove.prev.setNext(entryToRemove.next);
-					// }
-				}
-				if (entryToRemove.next != null) {
-					// TODO Implement synchronization mechanism
-					// synchronized (entryToRemove.next) {
-						entryToRemove.next.setPrev(entryToRemove.prev);
-					// }	
-				}
+					}
+					if (entryToRemove.next != null) {
+						entryToRemove.next.setPrev(entryToRemove.prev);	
+					}
+				} finally {
+					judyTreeLock.unlock();
+				}	
 				return entryToRemove.getValue();
 			}
 			return null;
@@ -711,20 +711,20 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			return nodes[index].get(key.hashCode(), (byte) 1);
 		}
 		
-		V put(K key, V value) {
+		V put(K key, V value, Lock judyTreeLock) {
 			// Use most significant byte as first level index
 			short index = (short)((key.hashCode() >> 24) & 0x000000FF);
-			V obj = nodes[index].put(key.hashCode(), key, value, (byte) 1);
+			V obj = nodes[index].put(key.hashCode(), key, value, (byte) 1, judyTreeLock);
 			if (obj == null) {
 				size++;
 			}
 			return obj;
 		}
 		
-		V remove(K key) {
+		V remove(K key, Lock judyTreeLock) {
 			// Use most significant byte as first level index
 			short index = (short)((key.hashCode() >> 24) & 0x000000FF);
-			V obj = nodes[index].remove(key.hashCode(), (byte) 1);
+			V obj = nodes[index].remove(key.hashCode(), (byte) 1, judyTreeLock);
 			if (obj != null) {
 				size--;
 			}
