@@ -14,6 +14,8 @@ public interface DirectMemoryService {
 	<T> void freeObject(T obj);
 	Object allocateInstance(Class<?> clazz);
 	void copyMemory(long sourceAddress, long destinationAddress, long size);
+	void copyMemory(Object sourceObject, long sourceOffset, Object destinationObject, 
+    		long destinationOffset, long size);
 	void setMemory(long sourceAddress, long bytes, byte val);
     
 	<T> long sizeOfObject(T obj);
@@ -52,6 +54,8 @@ public interface DirectMemoryService {
 	void putDouble(long address, double x);
 	long getAddress(long address);
 	void putAddress(long address, long x);
+	long getAddress(Object o, long offset);
+	void putAddress(Object o, long offset, long x);
 	
 	boolean getBoolean(Object o, long offset);
 	void putBoolean(Object o, long offset, boolean x);

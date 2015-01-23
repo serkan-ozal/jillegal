@@ -50,7 +50,6 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 
 /**
- * 
  * @author Serkan ÖZAL
  * 
  * @link http://hg.openjdk.java.net/jdk7/hotspot/hotspot/file/9b0ca45cd756/src/share/vm/oops/oop.hpp

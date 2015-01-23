@@ -42,6 +42,7 @@ import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreatePar
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.pool.ArrayOffHeapPool;
+import tr.com.serkanozal.jillegal.offheap.pool.ContentAwareOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.factory.DefaultOffHeapPoolFactory;
@@ -98,7 +99,7 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@SuppressWarnings("rawtypes")
 	protected Set<ArrayOffHeapPool> arrayOffHeapPoolSet = 
 			new HashSet<ArrayOffHeapPool>();
-	protected ExtendableStringOffHeapPool extendableStringOffHeapPool;
+	protected ExtendableStringOffHeapPool stringOffHeapPool;
 	protected boolean enable = false;
 					
 	public OffHeapServiceImpl() {
@@ -189,7 +190,7 @@ public class OffHeapServiceImpl implements OffHeapService {
 		
 		objectOffHeapPoolMap.put(clazz, objectOffHeapPool);
 	}
-	
+
 	@Override
 	public <T, O extends OffHeapPool<T, ?>> O createOffHeapPool(OffHeapPoolCreateParameter<T> parameter) {
 		checkEnable();
@@ -506,30 +507,40 @@ public class OffHeapServiceImpl implements OffHeapService {
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public synchronized <T> T newObject(Class<T> objectType) {
+	public <T> T newObject(Class<T> objectType) {
 		checkEnable();
 		
 		ObjectOffHeapPool<T, ?> objectOffHeapPool = objectOffHeapPoolMap.get(objectType);
 		if (objectOffHeapPool == null) {
-			objectOffHeapPool = 
-					defaultOffHeapPoolFactory.createObjectOffHeapPool(
-							objectType, OffHeapConstants.DEFAULT_OBJECT_COUNT);
-			objectOffHeapPoolMap.put(objectType, objectOffHeapPool);
+			synchronized (objectOffHeapPoolMap) {
+				objectOffHeapPool = objectOffHeapPoolMap.get(objectType);
+				if (objectOffHeapPool == null) {
+					objectOffHeapPool = 
+							defaultOffHeapPoolFactory.createObjectOffHeapPool(
+									objectType, OffHeapConstants.DEFAULT_OBJECT_COUNT);
+					objectOffHeapPoolMap.put(objectType, objectOffHeapPool);
+				}
+			}
 		}
 		return objectOffHeapPool.get();
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public synchronized <T> long newObjectAsAddress(Class<T> objectType) {
+	public <T> long newObjectAsAddress(Class<T> objectType) {
 		checkEnable();
 		
 		ObjectOffHeapPool<T, ?> objectOffHeapPool = objectOffHeapPoolMap.get(objectType);
 		if (objectOffHeapPool == null) {
-			objectOffHeapPool = 
-					defaultOffHeapPoolFactory.createObjectOffHeapPool(
-							objectType, OffHeapConstants.DEFAULT_OBJECT_COUNT);
-			objectOffHeapPoolMap.put(objectType, objectOffHeapPool);
+			synchronized (objectOffHeapPoolMap) {
+				objectOffHeapPool = objectOffHeapPoolMap.get(objectType);
+				if (objectOffHeapPool == null) {
+					objectOffHeapPool = 
+							defaultOffHeapPoolFactory.createObjectOffHeapPool(
+									objectType, OffHeapConstants.DEFAULT_OBJECT_COUNT);
+					objectOffHeapPoolMap.put(objectType, objectOffHeapPool);
+				}
+			}
 		}
 		return objectOffHeapPool.getAsAddress();
 	}
@@ -632,36 +643,44 @@ public class OffHeapServiceImpl implements OffHeapService {
 	public String newString(String str) {
 		checkEnable();
 		
-		if (extendableStringOffHeapPool == null) {
-			extendableStringOffHeapPool = 
-					new ExtendableStringOffHeapPool(new DefaultStringOffHeapPool());
+		if (stringOffHeapPool == null) {
+			synchronized (this) {
+				if (stringOffHeapPool == null) {
+					stringOffHeapPool = 
+							new ExtendableStringOffHeapPool(new DefaultStringOffHeapPool());
+				}
+			}
 		}
-		return extendableStringOffHeapPool.get(str);
+		return stringOffHeapPool.get(str);
 	}
 	
 	@Override
 	public long newStringAsAddress(String str) {
 		checkEnable();
 		
-		if (extendableStringOffHeapPool == null) {
-			extendableStringOffHeapPool = 
-					new ExtendableStringOffHeapPool(new DefaultStringOffHeapPool());
+		if (stringOffHeapPool == null) {
+			synchronized (this) {
+				if (stringOffHeapPool == null) {
+					stringOffHeapPool = 
+							new ExtendableStringOffHeapPool(new DefaultStringOffHeapPool());
+				}
+			}
 		}
-		return extendableStringOffHeapPool.getAsAddress(str);
+		return stringOffHeapPool.getAsAddress(str);
 	}
 	
 	@Override
 	public boolean freeString(String str) {
 		checkEnable();
 		
-		return extendableStringOffHeapPool.free(str);
+		return stringOffHeapPool.free(str);
 	}
 	
 	@Override
 	public boolean freeStringWithAddress(long address) {
 		checkEnable();
 		
-		return extendableStringOffHeapPool.freeFromAddress(address);
+		return stringOffHeapPool.freeFromAddress(address);
 	}
 	
 	@Override
@@ -734,6 +753,39 @@ public class OffHeapServiceImpl implements OffHeapService {
 		Double offHeapDouble = newObject(Double.class);
 		directMemoryService.putDouble(offHeapDouble, DOUBLE_VALUE_FIELD_OFFSET, d);
 		return offHeapDouble;
+	}
+	
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@Override
+	public <T> boolean isInOffHeap(T obj) {
+		checkEnable();
+		
+		if (obj == null) {
+			return false;
+		}
+		
+		Class<T> objClass = (Class<T>) obj.getClass();
+		if (objClass.equals(String.class)) {
+			return stringOffHeapPool.isMine((String) obj);
+		} 
+		else if (objClass.isArray()) {
+			for (ArrayOffHeapPool arrayOffHeapPool : arrayOffHeapPoolSet) {
+				if (arrayOffHeapPool.isMe(obj)) {
+					return true;
+				}
+			}
+			return false;
+		}
+		else {
+			ObjectOffHeapPool objectOffHeapPool = objectOffHeapPoolMap.get(objClass);
+			if (objectOffHeapPool != null && objectOffHeapPool instanceof ContentAwareOffHeapPool) {
+				ContentAwareOffHeapPool contentAwareOffHeapPool = (ContentAwareOffHeapPool) objectOffHeapPool;
+				return contentAwareOffHeapPool.isMine(obj);
+			}
+			else {
+				return false;
+			}
+		}
 	}
 	
 }

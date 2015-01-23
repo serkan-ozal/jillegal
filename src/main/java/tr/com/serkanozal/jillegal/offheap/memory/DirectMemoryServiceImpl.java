@@ -77,6 +77,12 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     }
     
     @Override
+    public void copyMemory(Object sourceObject, long sourceOffset, Object destinationObject, 
+    		long destinationOffset, long size) {
+    	unsafe.copyMemory(sourceObject, sourceOffset, destinationObject, destinationOffset, size);
+    }
+    
+    @Override
     public void setMemory(long sourceAddress, long bytes, byte val) {
     	unsafe.setMemory(sourceAddress, bytes, val);
     }
@@ -454,6 +460,30 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     @Override
     public void putAddress(long address, long x) {
     	unsafe.putAddress(address, x);
+    }
+    
+    @Override
+    public long getAddress(Object o, long offset) {
+    	switch (JvmUtil.getAddressSize()) {
+	        case JvmUtil.SIZE_32_BIT:
+	        	return getAsIntAddress(o, offset);
+	        case JvmUtil.SIZE_64_BIT:
+	        	return getLong(o, offset);
+	        default:
+	        	throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
+    	}  	
+    }
+    
+    @Override
+    public void putAddress(Object o, long offset, long x) {
+    	switch (JvmUtil.getAddressSize()) {
+	        case JvmUtil.SIZE_32_BIT:
+	        	putAsIntAddress(o, offset, x);
+	        case JvmUtil.SIZE_64_BIT:
+	        	putLong(o, offset, x);
+	        default:
+	        	throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
+		}  	
     }
    
     @Override

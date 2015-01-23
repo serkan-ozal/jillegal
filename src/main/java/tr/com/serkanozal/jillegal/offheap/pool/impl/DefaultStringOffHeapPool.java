@@ -324,18 +324,22 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		}
 		// Reset free object
 		int stringSegmentedSize = calculateSegmentedStringSize(strAddress);
-		directMemoryService.setMemory(strAddress + JvmUtil.getHeaderSize(), 
-									  stringSegmentedSize - JvmUtil.getHeaderSize(), 
+		int freeStartOffset = valueArrayOffsetInString + JvmUtil.getAddressSize();
+		// Don't clear value array reference
+		directMemoryService.setMemory(strAddress + freeStartOffset, 
+									  stringSegmentedSize - freeStartOffset, 
 									  (byte)0);
+		// Make value array empty (not null)
+		JvmUtil.setArrayLength(strAddress + valueArrayOffsetInString, char.class, 0);
 		freeStringFromStringAddress(strAddress, stringSegmentedSize / STRING_SEGMENT_SIZE);
 		return true;
 	}
 	
 	protected long allocateStringFromOffHeap(String str) {
-		synchronized (str) {
-			long addressOfStr = directMemoryService.addressOf(str);
+		// synchronized (str) {
+			// long addressOfStr = directMemoryService.addressOf(str);
 			char[] valueArray = (char[]) directMemoryService.getObject(str, valueArrayOffsetInString);
-			synchronized (valueArray) {
+			// synchronized (valueArray) {
 				int valueArraySize = charArrayIndexStartOffset + (charArrayIndexScale * valueArray.length);
 				int strSize = stringSize + valueArraySize + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
 				
@@ -349,7 +353,8 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 				}
 				
 				// Copy string object content to allocated area
-				directMemoryService.copyMemory(addressOfStr, currentAddress, strSize);
+				directMemoryService.copyMemory(str, 0, null, currentAddress, strSize);
+				// directMemoryService.copyMemory(addressOfStr, currentAddress, strSize);
 				/*
 				for (int i = 0; i < strSize; i++) {
 					directMemoryService.putByte(currentAddress + i, directMemoryService.getByte(str, i));
@@ -361,13 +366,19 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 				if (addressMod2 != 0) {
 					valueAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod2);
 				}
-				
+
 				// Copy value array in allocated string to allocated char array
+				directMemoryService.copyMemory(
+						valueArray, 0L,
+						null, valueAddress, 
+						valueArraySize);
+				/*
 				directMemoryService.copyMemory(
 						JvmUtil.toNativeAddress(
 								directMemoryService.getAddress(addressOfStr + valueArrayOffsetInString)),
 						valueAddress, 
 						valueArraySize);
+				*/		
 				/*
 				for (int i = 0; i < valueArraySize; i++) {
 					directMemoryService.putByte(valueAddress + i, directMemoryService.getByte(valueArray, i));
@@ -380,8 +391,8 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 						JvmUtil.toJvmAddress(valueAddress));
 				
 				return takeStringAsAddress(currentAddress);
-			}
-		}
+			// }
+		// }
 	}
 	
 	@Override

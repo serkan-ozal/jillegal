@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import junit.framework.Assert;
 
+import org.HeapFragger.Idle;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -343,21 +344,29 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 	 * This test is ignored by default since it is load test.
 	 */
 	@Test
-	@Ignore
+	//@Ignore
+	// /Users/serkanozal/.m2/repository/org/giltene/HeapFragger/1.0
 	// -XX:-UseCompressedOops -XX:+UseSerialGC        -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\Asus\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
+	// -XX:-UseCompressedOops -XX:+UseSerialGC        -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:/Users/serkanozal/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
+	
 	// -XX:-UseCompressedOops -XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\Asus\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
+	// -XX:-UseCompressedOops -XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:/Users/serkanozal/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
+	
 	// -XX:-UseCompressedOops -XX:+UseG1GC            -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\Asus\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
+	// -XX:-UseCompressedOops -XX:+UseG1GC            -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:/Users/serkanozal/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
+		
 	// Note that: Crashes with "-XX:+UseParallelGC"
 	// -XX:-UseCompressedOops -XX:+UseParallelGC      -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\Asus\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
+	// -XX:-UseCompressedOops -XX:+UseParallelGC      -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:/Users/serkanozal/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
 	public void stressTest() {
-		/*
+		
 		Thread t = new Thread() {
 			public void run() {
 				Idle.main(new String[] {"-t", "1000000000"});
 			};
 		};
 		t.start();
-		*/
+		
 		final int ENTRY_COUNT = 1000000;
 		final int ITERATION_COUNT = 100;
 
