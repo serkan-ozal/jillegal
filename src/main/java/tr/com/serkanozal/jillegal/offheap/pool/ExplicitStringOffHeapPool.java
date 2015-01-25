@@ -16,5 +16,7 @@ public interface ExplicitStringOffHeapPool<P extends OffHeapPoolCreateParameter<
 
 	String get(String str);
 	long getAsAddress(String str);
+	String get(char[] chars);
+	String get(char[] chars, int offset, int length);
 	
 }

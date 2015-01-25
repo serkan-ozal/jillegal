@@ -25,4 +25,14 @@ public class StandardMemoryAllocator implements MemoryAllocator {
 		UNSAFE.freeMemory(address);
 	}
 	
+	@Override
+	public long totalMemory() {
+		return -1L; // Not supported
+	}
+	
+	@Override
+	public long usedMemory() {
+		return -1L;  // Not supported
+	}
+	
 }

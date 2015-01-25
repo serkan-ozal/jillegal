@@ -29,10 +29,11 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected long objectSize;
 	protected long objectCount;
 	protected long inUseBlockCount;
-	protected long currentAddress;
+	protected long usedObjectCount;
+	protected volatile long currentAddress;
 	protected long inUseBlockAddress;
-	protected long currentIndex;
-	protected long currentBlockIndex;
+	protected volatile long currentIndex;
+	protected volatile long currentBlockIndex;
 	protected long objectsStartAddress;
 	protected long objectsEndAddress;
 	protected T sampleObject;
@@ -40,13 +41,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected long sampleHeader;
 	protected byte fullValueOfLastBlock;
 	protected volatile boolean full;
-	/*
-	protected long classPointerAddress;
-	protected long classPointerOffset;
-	protected long classPointerSize;
-	protected JvmAwareClassPointerUpdater jvmAwareClassPointerUpdater;
-	*/
-	
+
 	public BaseObjectOffHeapPool(Class<T> objectType) {
 		super(objectType);
 		offHeapService.makeOffHeapable(objectType);
@@ -85,6 +80,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		}
 		this.elementType = elementType;
 		this.objectCount = objectCount;
+		this.usedObjectCount = 0;
 		this.directMemoryService = directMemoryService;
 		inUseBlockCount = objectCount / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
 		long blockCountMod = objectCount % OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
@@ -113,32 +109,6 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		}
 		*/
 		// directMemoryService.copyMemory(directMemoryService.addressOf(sampleObject), offHeapSampleObjectAddress, objectSize);
-		
-		/*
-		this.classPointerAddress = JvmUtil.jvmAddressOfClass(sampleObject);
-		this.classPointerOffset = JvmUtil.getClassDefPointerOffsetInObject();
-		this.classPointerSize = JvmUtil.getReferenceSize();
-		switch (JvmUtil.getAddressSize()) {
-	        case JvmUtil.SIZE_32_BIT:
-	        	jvmAwareClassPointerUpdater = new Address32BitJvmClassPointerUpdater();
-	            break;
-	        case JvmUtil.SIZE_64_BIT:
-	        	int referenceSize = JvmUtil.getReferenceSize();
-	        	switch (referenceSize) {
-	             	case JvmUtil.ADDRESSING_4_BYTE:   
-	             		jvmAwareClassPointerUpdater = new Address64BitWithCompressedOopsJvmClassPointerUpdater();
-	             		break;
-	             	case JvmUtil.ADDRESSING_8_BYTE:
-	             		jvmAwareClassPointerUpdater = new Address64BitWithoutCompressedOopsJvmClassPointerUpdater();
-	             		break;
-	             	default:    
-	                    throw new AssertionError("Unsupported reference size: " + referenceSize);
-	        	}
-	        	break;    
-	        default:
-	            throw new AssertionError("Unsupported address size: " + JvmUtil.getAddressSize());
-		}
-		*/
 	}
 	
 	/*
@@ -291,6 +261,11 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	public boolean isFull() {
 		return full;
 	}
+	
+	@Override
+	public boolean isEmpty() {
+		return usedObjectCount == 0;
+	}
 
 	@Override
 	public boolean isMine(T element) {
@@ -309,9 +284,11 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	
 	protected synchronized T takeObject(T obj) {
 		long objAddress = directMemoryService.addressOf(obj);
+		resetObject(objAddress);
 		obj = super.processObject(obj);
-		directMemoryService.putLong(objAddress, sampleHeader);
+		//directMemoryService.putLong(objAddress, sampleHeader);
 		allocateObjectFromObjectAddress(objAddress);
+		usedObjectCount++;
 		if (obj instanceof OffHeapAwareObject) {
 			((OffHeapAwareObject) obj).onGet(offHeapService, directMemoryService);
 		}
@@ -321,9 +298,11 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	@SuppressWarnings("unchecked")
 	protected synchronized T takeObject(long objAddress) {
 		T obj = (T) directMemoryService.getObject(objAddress);
+		resetObject(objAddress);
 		obj = super.processObject(obj);
-		directMemoryService.putLong(objAddress, sampleHeader);
+		//directMemoryService.putLong(objAddress, sampleHeader);
 		allocateObjectFromObjectAddress(objAddress);
+		usedObjectCount++;
 		if (obj instanceof OffHeapAwareObject) {
 			((OffHeapAwareObject) obj).onGet(offHeapService, directMemoryService);
 		}
@@ -336,6 +315,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		directMemoryService.putLong(objAddress, sampleHeader);
 		allocateObjectFromObjectAddress(address);
 		T obj = (T) directMemoryService.getObject(objAddress);
+		usedObjectCount++;
 		if (obj instanceof OffHeapAwareObject) {
 			((OffHeapAwareObject) obj).onGet(offHeapService, directMemoryService);
 		}
@@ -369,6 +349,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		// Reset free object
 		resetObject(objAddress); 
 		freeObjectFromObjectAddress(objAddress);
+		usedObjectCount--;
 		return true;
 	}
 	
@@ -379,65 +360,8 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		directMemoryService.freeMemory(offHeapSampleObjectAddress);
 		directMemoryService.freeMemory(inUseBlockAddress);
 		directMemoryService.freeMemory(allocationStartAddress);
+		usedObjectCount = 0;
 		makeUnavaiable();
 	}
-	
-	/*
-	protected boolean checkAndRefreshIfClassPointerOfObjectUpdated() {
-		long currentClassPointerAddress = JvmUtil.jvmAddressOfClass(sampleObject);
-		if (currentClassPointerAddress != classPointerAddress) {
-			classPointerAddress = currentClassPointerAddress;
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-	
-	protected interface JvmAwareClassPointerUpdater {
-		
-		long updateClassPointerOfObject(long address);
-	
-	}
-	
-	protected class Address32BitJvmClassPointerUpdater implements JvmAwareClassPointerUpdater {
 
-		@Override
-		public long updateClassPointerOfObject(long address) {
-			classPointerAddress = JvmUtil.jvmAddressOfClass(sampleObject);
-			directMemoryService.putAsIntAddress(address + classPointerOffset, classPointerAddress);
-			return address;
-		}
-		
-	}
-	
-	protected class Address64BitWithoutCompressedOopsJvmClassPointerUpdater implements JvmAwareClassPointerUpdater {
-
-		@Override
-		public long updateClassPointerOfObject(long address) {
-			classPointerAddress = JvmUtil.jvmAddressOfClass(sampleObject);
-			directMemoryService.putAsIntAddress(address + classPointerOffset, classPointerAddress);
-			return address;
-		}
-		
-	}
-	
-	protected class Address64BitWithCompressedOopsJvmClassPointerUpdater implements JvmAwareClassPointerUpdater {
-
-		@Override
-		public long updateClassPointerOfObject(long address) {
-			classPointerAddress = JvmUtil.jvmAddressOfClass(sampleObject);
-			directMemoryService.putLong(address + classPointerOffset, classPointerAddress);
-			return address;
-		}
-		
-	}
-
-	// Get and copy class pointer to current object's class pointer field. 
-	// Address of class could be changed by GC at "Compact" phase.
-	protected long updateClassPointerOfObject(long address) {
-		return jvmAwareClassPointerUpdater.updateClassPointerOfObject(address);
-	}
-	*/
-	
 }

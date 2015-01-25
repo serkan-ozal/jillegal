@@ -13,5 +13,6 @@ public interface StringOffHeapPool
 	extends ExplicitStringOffHeapPool<StringOffHeapPoolCreateParameter> {
 	
 	boolean isFull();
+	boolean isEmpty();
 	
 }

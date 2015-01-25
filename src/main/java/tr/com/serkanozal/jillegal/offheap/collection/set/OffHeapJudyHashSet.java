@@ -10,8 +10,6 @@ package tr.com.serkanozal.jillegal.offheap.collection.set;
 import java.util.AbstractCollection;
 import java.util.AbstractSet;
 import java.util.Iterator;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.ObjectOffHeapPoolCreateParameterBuilder;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectPoolReferenceType;
@@ -79,7 +77,6 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 	
 	private JudyTree<E> root;
 	private Class<E> elementType;
-	private Lock judyTreeLock = new ReentrantLock();
 	
 	public OffHeapJudyHashSet() {
 		this.root = createJudyTree();
@@ -137,23 +134,31 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
   
 	@Override
 	public boolean add(E element) {
-		return root.add(element, judyTreeLock) == null;
+		synchronized (this) {
+			return root.add(element) == null;
+		}	
 	}
 	
 	@Override
 	public E put(E element) {
-		return root.add(element, judyTreeLock);
+		synchronized (this) {
+			return root.add(element);
+		}	
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
 	public boolean remove(Object element) {
-		return root.remove((E) element, judyTreeLock) != null;
+		synchronized (this) {
+			return root.remove((E) element) != null;
+		}	
 	}
 	
 	@Override
 	public void clear() {
-		root.clear();
+		synchronized (this) {
+			root.clear();
+		}	
 	}
 	
 	@Override
@@ -240,7 +245,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 	
 	static class JudyEntry<E> {
 
-		long elementAddress = 0;
+		volatile long elementAddress = 0;
 		JudyEntry<E> prev;
 		JudyEntry<E> next;
 		
@@ -300,8 +305,8 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 			directMemoryService.setObjectField(this, ROOT_FIELD_OFFSET, root);
 		}
 		
-		abstract E add(int hash, E element, byte level, Lock judyTreeLock);
-		abstract E remove(int hash, byte level, Lock judyTreeLock);
+		abstract E add(int hash, E element, byte level);
+		abstract E remove(int hash, byte level);
 		abstract boolean contains(int hash, byte level);
 		abstract void clear(byte level);
 		
@@ -336,7 +341,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 
 		@SuppressWarnings("unchecked")
 		@Override
-		E add(int hash, E element, byte level, Lock judyTreeLock) {
+		E add(int hash, E element, byte level) {
 			initIfNeeded();
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
@@ -353,25 +358,29 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 				}
 				directMemoryService.setArrayElement(children, index, child);
 			}
-			return child.add(hash, element, nextLevel, judyTreeLock);
+			return child.add(hash, element, nextLevel);
 		}
 		
 		@Override
-		E remove(int hash, byte level, Lock judyTreeLock) {
-			initIfNeeded();
+		E remove(int hash, byte level) {
+			if (children == null) {
+				return null;
+			}
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
 			JudyNode<E> child = children[index];
 			if (child != null) {
-				return child.remove(hash, nextLevel, judyTreeLock);
+				return child.remove(hash, nextLevel);
 			}
 			return null;
 		}
 		
 		@Override
 		boolean contains(int hash, byte level) {
-			initIfNeeded();
+			if (children == null) {
+				return false;
+			}
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
@@ -392,9 +401,9 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 						offHeapService.freeObject(child);
 					}	
 				}
+				offHeapService.freeArray(children);
+				setChildren(null);
 			}
-			offHeapService.freeArray(children);
-			setChildren(null);
 		}
 		
 	}
@@ -428,7 +437,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		
 		@SuppressWarnings("unchecked")
 		@Override
-		E add(int hash, E element, byte level, Lock judyTreeLock) {
+		E add(int hash, E element, byte level) {
 			initIfNeeded();
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
@@ -438,58 +447,52 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 				entry = offHeapService.newObject(JudyEntry.class); 
 				directMemoryService.setArrayElement(entries, index, entry);
 			}
-			judyTreeLock.lock();
-			try {
-				if (root.firstEntry == null) {
-					root.setFirstEntry(entry);
-				}
-				if (root.lastEntry != null) {
-					entry.setPrev(root.lastEntry);
-					root.lastEntry.setNext(entry);
-				}
-				root.setLastEntry(entry);
+			if (root.firstEntry == null) {
+				root.setFirstEntry(entry);
 			}
-			finally {
-				judyTreeLock.unlock();
+			if (root.lastEntry != null) {
+				entry.setPrev(root.lastEntry);
+				root.lastEntry.setNext(entry);
 			}
+			root.setLastEntry(entry);
 			return entry.setElement(element);
 		}
 		
 		@Override
-		E remove(int hash, byte level, Lock judyTreeLock) {
-			initIfNeeded();
+		E remove(int hash, byte level) {
+			if (entries == null) {
+				return null;
+			}
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
 			JudyEntry<E> entryToRemove = entries[index];
 			if (entryToRemove != null) {
 				directMemoryService.setArrayElement(entries, index, null); 
-				judyTreeLock.lock();
-				try {
-					if (entryToRemove == root.firstEntry) {
-						root.setFirstEntry(entryToRemove.next);
-					}
-					if (entryToRemove == root.lastEntry) {
-						root.setLastEntry(entryToRemove.prev);
-					}
-					if (entryToRemove.prev != null) {
-						entryToRemove.prev.setNext(entryToRemove.next);
-					}
-					if (entryToRemove.next != null) {
-						entryToRemove.next.setPrev(entryToRemove.prev);	
-					}
+				if (entryToRemove == root.firstEntry) {
+					root.setFirstEntry(entryToRemove.next);
 				}
-				finally {
-					judyTreeLock.unlock();
+				if (entryToRemove == root.lastEntry) {
+					root.setLastEntry(entryToRemove.prev);
 				}
-				return entryToRemove.getElement();
+				if (entryToRemove.prev != null) {
+					entryToRemove.prev.setNext(entryToRemove.next);
+				}
+				if (entryToRemove.next != null) {
+					entryToRemove.next.setPrev(entryToRemove.prev);	
+				}
+				E element = entryToRemove.getElement();
+				offHeapService.freeObject(entryToRemove);
+				return element;
 			}
 			return null;
 		}
 		
 		@Override
 		boolean contains(int hash, byte level) {
-			initIfNeeded();
+			if (entries == null) {
+				return false;
+			}
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
@@ -501,6 +504,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 			for (int i = 0; i < entries.length; i++) {
 				JudyEntry<E> entry = entries[i];
 				entry.setElement(null);
+				offHeapService.freeObject(entry);
 			}
 			offHeapService.freeArray(entries);
 			setEntries(null);
@@ -555,20 +559,20 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 			directMemoryService.setObjectField(this, LAST_ENTRY_FIELD_OFFSET, lastEntry);
 		}
 
-		E add(E element, Lock judyTreeLock) {
+		E add(E element) {
 			// Use most significant byte as first level index
 			short index = (short)((element.hashCode() >> 24) & 0x000000FF);
-			E obj = nodes[index].add(element.hashCode(), element, (byte) 1, judyTreeLock);
+			E obj = nodes[index].add(element.hashCode(), element, (byte) 1);
 			if (obj == null) {
 				size++;
 			}
 			return obj;
 		}
 		
-		E remove(E element, Lock judyTreeLock) {
+		E remove(E element) {
 			// Use most significant byte as first level index
 			short index = (short)((element.hashCode() >> 24) & 0x000000FF);
-			E obj = nodes[index].remove(element.hashCode(), (byte) 1, judyTreeLock);
+			E obj = nodes[index].remove(element.hashCode(), (byte) 1);
 			if (obj != null) {
 				size--;
 			}

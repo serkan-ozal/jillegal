@@ -44,6 +44,16 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     }
 
     @Override
+    public MemoryAllocator getMemoryAllocator() {
+    	return memoryAllocator;
+    }
+    
+    @Override
+    public void setMemoryAllocator(MemoryAllocator memoryAllocator) {
+    	this.memoryAllocator = memoryAllocator;
+    }
+    
+    @Override
     public long allocateMemory(long size) {
     	return memoryAllocator.allocateMemory(size);
     }

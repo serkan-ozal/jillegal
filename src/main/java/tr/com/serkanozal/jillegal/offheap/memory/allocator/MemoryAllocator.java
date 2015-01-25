@@ -9,6 +9,9 @@ package tr.com.serkanozal.jillegal.offheap.memory.allocator;
 
 public interface MemoryAllocator {
 
+	long totalMemory();
+	long usedMemory();
+	
 	long allocateMemory(long size);
 	void freeMemory(long address);
 	

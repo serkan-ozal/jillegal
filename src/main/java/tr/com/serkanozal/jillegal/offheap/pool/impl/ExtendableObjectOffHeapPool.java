@@ -61,6 +61,18 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 		}
 		return true;
 	}
+	
+	@Override
+	public boolean isEmpty() {
+		for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
+			DeeplyForkableObjectOffHeapPool<T, ? extends OffHeapPoolCreateParameter<T>> forkableOffHeapPool = 
+					forkableOffHeapPoolList.get(i);
+			if (!forkableOffHeapPool.isEmpty()) {
+				return false;
+			}
+		}
+		return true;
+	}
 
 	@Override
 	public synchronized T get() {
@@ -147,10 +159,24 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 			return false;
 		}
 		if (currentForkableOffHeapPool.free(obj)) {
+			if (currentForkableOffHeapPool.isEmpty() && 
+					currentForkableOffHeapPool != rootForkableOffHeapPool) {
+				currentForkableOffHeapPool.free();
+				forkableOffHeapPoolList.remove(currentForkableOffHeapPool);
+				currentForkableOffHeapPool = rootForkableOffHeapPool;
+			}
+			lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
 			return true;
 		}
 		if (lastUsedForkableOffHeapPoolToFree != null) {
 			if (lastUsedForkableOffHeapPoolToFree.free(obj)) {
+				if (lastUsedForkableOffHeapPoolToFree.isEmpty() && 
+						lastUsedForkableOffHeapPoolToFree != rootForkableOffHeapPool) {
+					lastUsedForkableOffHeapPoolToFree.free();
+					forkableOffHeapPoolList.remove(lastUsedForkableOffHeapPoolToFree);
+					currentForkableOffHeapPool = rootForkableOffHeapPool;
+					lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+				}
 				return true;
 			}
 		}
@@ -159,7 +185,15 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 					forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != currentForkableOffHeapPool) {
 				if (forkableOffHeapPool.free(obj)) {
-					lastUsedForkableOffHeapPoolToFree = forkableOffHeapPool;
+					if (forkableOffHeapPool.isEmpty() && forkableOffHeapPool != rootForkableOffHeapPool) {
+						forkableOffHeapPool.free();
+						forkableOffHeapPoolList.remove(forkableOffHeapPool);
+						currentForkableOffHeapPool = rootForkableOffHeapPool;
+						lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+					} 
+					else {
+						lastUsedForkableOffHeapPoolToFree = forkableOffHeapPool;
+					}	
 					return true;
 				}
 			}
@@ -171,11 +205,24 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	public synchronized boolean freeFromAddress(long objAddress) {
 		checkAvailability();
 		if (currentForkableOffHeapPool.freeFromAddress(objAddress)) {
+			if (currentForkableOffHeapPool.isEmpty() && 
+					currentForkableOffHeapPool != rootForkableOffHeapPool) {
+				currentForkableOffHeapPool.free();
+				forkableOffHeapPoolList.remove(currentForkableOffHeapPool);
+				currentForkableOffHeapPool = rootForkableOffHeapPool;
+			}
+			lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
 			return true;
 		}
 		if (lastUsedForkableOffHeapPoolToFree != null) {
 			if (lastUsedForkableOffHeapPoolToFree.freeFromAddress(objAddress)) {
-				return true;
+				if (lastUsedForkableOffHeapPoolToFree.isEmpty() && 
+						lastUsedForkableOffHeapPoolToFree != rootForkableOffHeapPool) {
+					lastUsedForkableOffHeapPoolToFree.free();
+					forkableOffHeapPoolList.remove(lastUsedForkableOffHeapPoolToFree);
+					currentForkableOffHeapPool = rootForkableOffHeapPool;
+					lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+				}
 			}
 		}
 		for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
@@ -183,7 +230,15 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 					forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != currentForkableOffHeapPool) {
 				if (forkableOffHeapPool.freeFromAddress(objAddress)) {
-					lastUsedForkableOffHeapPoolToFree = forkableOffHeapPool;
+					if (forkableOffHeapPool.isEmpty() && forkableOffHeapPool != rootForkableOffHeapPool) {
+						forkableOffHeapPool.free();
+						forkableOffHeapPoolList.remove(forkableOffHeapPool);
+						currentForkableOffHeapPool = rootForkableOffHeapPool;
+						lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+					} 
+					else {
+						lastUsedForkableOffHeapPoolToFree = forkableOffHeapPool;
+					}	
 					return true;
 				}
 			}

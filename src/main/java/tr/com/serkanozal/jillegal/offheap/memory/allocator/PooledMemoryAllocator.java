@@ -9,6 +9,7 @@ package tr.com.serkanozal.jillegal.offheap.memory.allocator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
@@ -17,7 +18,15 @@ import tr.com.serkanozal.jillegal.util.JvmUtil;
 public class PooledMemoryAllocator implements MemoryAllocator {
 
 	private static final Unsafe UNSAFE = JvmUtil.getUnsafe();
+	
+	private static final AtomicLongFieldUpdater<PooledMemoryAllocator> TOTAL_UPDATER = 
+			AtomicLongFieldUpdater.newUpdater(PooledMemoryAllocator.class, "total");
+	private static final AtomicLongFieldUpdater<PooledMemoryAllocator> USED_UPDATER = 
+			AtomicLongFieldUpdater.newUpdater(PooledMemoryAllocator.class, "used");
 
+	private volatile long total;
+	private volatile long used;
+	
 	private final List<Segment> segments = new ArrayList<Segment>();
 	
 	public PooledMemoryAllocator() {
@@ -35,7 +44,8 @@ public class PooledMemoryAllocator implements MemoryAllocator {
 			throw new IllegalArgumentException("Only sizes between 0 < x <= " +  Segment.MAX_SEGMENT_SIZE + 
 					" are supported right now !");
 		}
-		for (Segment segment : segments) {
+		for (int i = 0; i < segments.size(); i++) {
+			Segment segment = segments.get(i);
 			if (segment.hasAvailableMemory((int) size)) {
 				try {
 					return segment.allocate((int) size);
@@ -53,7 +63,8 @@ public class PooledMemoryAllocator implements MemoryAllocator {
 	
 	@Override
 	public synchronized void freeMemory(long address) {
-		for (Segment segment : segments) {
+		for (int i = 0; i < segments.size(); i++) {
+			Segment segment = segments.get(i);
 			if (segment.isMine(address)) {
 				segment.free(address);
 				break;
@@ -62,9 +73,20 @@ public class PooledMemoryAllocator implements MemoryAllocator {
 		disposeFreeSegments();
 	}
 	
+	@Override
+	public long totalMemory() {
+		return total;
+	}
+	
+	@Override
+	public long usedMemory() {
+		return used;
+	}
+
 	private void disposeFreeSegments() {
 		List<Segment> destroyedSegments = null;
-		for (Segment segment : segments) {
+		for (int i = 0; i < segments.size(); i++) {
+			Segment segment = segments.get(i);
 			if (segment.isEmpty()) {
 				if (destroyedSegments == null) {
 					destroyedSegments = new ArrayList<Segment>();
@@ -78,7 +100,7 @@ public class PooledMemoryAllocator implements MemoryAllocator {
 		}
 	}
 	
-	static class Segment {
+	class Segment {
 		
 		static final int MAX_SEGMENT_SIZE = Integer.MAX_VALUE;
 		static final int DEFAULT_CHUNK_SIZE = 1024;
@@ -119,6 +141,7 @@ public class PooledMemoryAllocator implements MemoryAllocator {
 				sizes[i] = 0;
 			}
 			this.allocatedAddress = UNSAFE.allocateMemory(segmentSize);
+			TOTAL_UPDATER.addAndGet(PooledMemoryAllocator.this, segmentSize);
 		}
 		
 		boolean isActive() {
@@ -195,6 +218,8 @@ public class PooledMemoryAllocator implements MemoryAllocator {
 			// Update used memory count
 			used += allocatedSize;
 			
+			USED_UPDATER.addAndGet(PooledMemoryAllocator.this, allocatedSize);
+			
 			// Return absolute address
 			return allocatedAddress + (firstAllocatedChunk * chunkSize);
 		}
@@ -221,10 +246,13 @@ public class PooledMemoryAllocator implements MemoryAllocator {
 			
 			// Update used memory count
 			used -= allocatedSize;
+			
+			USED_UPDATER.addAndGet(PooledMemoryAllocator.this, -allocatedSize);
 		}
 		
 		void destroy() {
 			UNSAFE.freeMemory(allocatedAddress);
+			TOTAL_UPDATER.addAndGet(PooledMemoryAllocator.this, -segmentSize);
 			chunks = null;
 			sizes = null;
 		}

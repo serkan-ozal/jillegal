@@ -9,6 +9,7 @@ package tr.com.serkanozal.jillegal.offheap.service;
 
 import tr.com.serkanozal.jillegal.offheap.domain.model.instance.InstanceRequest;
 import tr.com.serkanozal.jillegal.offheap.domain.model.pool.OffHeapPoolCreateParameter;
+import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.pool.ObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.OffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.pool.factory.OffHeapPoolFactory;
@@ -16,6 +17,9 @@ import tr.com.serkanozal.jillegal.offheap.pool.factory.OffHeapPoolFactory;
 public interface OffHeapService {
 
 	boolean isEnable();
+
+	DirectMemoryService getDirectMemoryService();
+	void setDirectMemoryService(DirectMemoryService directMemoryService);
 	
 	OffHeapPoolFactory getDefaultOffHeapPoolFactory();
 	void setOffHeapPoolFactory(OffHeapPoolFactory offHeapPoolFactory);
@@ -48,6 +52,8 @@ public interface OffHeapService {
 	boolean freeArrayWithAddress(long address);
 	
 	String newString(String str);
+	String newString(char[] chars);
+	String newString(char[] chars, int offset, int length);
 	long newStringAsAddress(String str);
 	boolean freeString(String str);
 	boolean freeStringWithAddress(long address);

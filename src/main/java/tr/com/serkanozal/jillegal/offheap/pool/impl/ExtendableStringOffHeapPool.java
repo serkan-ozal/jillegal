@@ -114,6 +114,43 @@ public class ExtendableStringOffHeapPool
 	}
 	
 	@Override
+	public synchronized String get(char[] chars) {
+		if (chars == null) {
+			return null;
+		}
+		return getInternal(chars, 0, chars.length);
+	}
+	
+	@Override
+	public synchronized String get(char[] chars, int offset, int length) {
+		if (chars == null) {
+			return null;
+		}
+		return getInternal(chars, offset, length);
+	}
+	
+	protected String getInternal(char[] chars, int offset, int length) {
+		checkAvailability();
+		String obj = currentForkableOffHeapPool.get(chars, offset, length);
+		if (obj == null) {
+			for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {
+				DeeplyForkableStringOffHeapPool forkableOffHeapPool = forkableOffHeapPoolList.get(i);
+				if (!forkableOffHeapPool.isFull()) {
+					obj = forkableOffHeapPool.get(chars, offset, length);
+					if (obj != null) {
+						return obj;
+					}
+				}
+			}
+			extend();
+			return currentForkableOffHeapPool.get(chars, offset, length);
+		}
+		else {
+			return obj;
+		}
+	}
+	
+	@Override
 	public boolean isMine(String element) {
 		checkAvailability();
 		if (element == null) {
@@ -151,10 +188,24 @@ public class ExtendableStringOffHeapPool
 			return false;
 		}
 		if (currentForkableOffHeapPool.free(str)) {
+			if (currentForkableOffHeapPool.isEmpty() && 
+					currentForkableOffHeapPool != rootForkableOffHeapPool) {
+				currentForkableOffHeapPool.free();
+				forkableOffHeapPoolList.remove(currentForkableOffHeapPool);
+				currentForkableOffHeapPool = rootForkableOffHeapPool;
+			}
+			lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
 			return true;
 		}
 		if (lastUsedForkableOffHeapPoolToFree != null) {
 			if (lastUsedForkableOffHeapPoolToFree.free(str)) {
+				if (lastUsedForkableOffHeapPoolToFree.isEmpty() && 
+						lastUsedForkableOffHeapPoolToFree != rootForkableOffHeapPool) {
+					lastUsedForkableOffHeapPoolToFree.free();
+					forkableOffHeapPoolList.remove(lastUsedForkableOffHeapPoolToFree);
+					currentForkableOffHeapPool = rootForkableOffHeapPool;
+					lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+				}
 				return true;
 			}
 		}
@@ -162,7 +213,15 @@ public class ExtendableStringOffHeapPool
 			DeeplyForkableStringOffHeapPool forkableOffHeapPool = forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != currentForkableOffHeapPool) {
 				if (forkableOffHeapPool.free(str)) {
-					lastUsedForkableOffHeapPoolToFree = forkableOffHeapPool;
+					if (forkableOffHeapPool.isEmpty() && forkableOffHeapPool != rootForkableOffHeapPool) {
+						forkableOffHeapPool.free();
+						forkableOffHeapPoolList.remove(forkableOffHeapPool);
+						currentForkableOffHeapPool = rootForkableOffHeapPool;
+						lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+					} 
+					else {
+						lastUsedForkableOffHeapPoolToFree = forkableOffHeapPool;
+					}	
 					return true;
 				}
 			}
@@ -174,10 +233,24 @@ public class ExtendableStringOffHeapPool
 	public synchronized boolean freeFromAddress(long strAddress) {
 		checkAvailability();
 		if (currentForkableOffHeapPool.freeFromAddress(strAddress)) {
+			if (currentForkableOffHeapPool.isEmpty() && 
+					currentForkableOffHeapPool != rootForkableOffHeapPool) {
+				currentForkableOffHeapPool.free();
+				forkableOffHeapPoolList.remove(currentForkableOffHeapPool);
+				currentForkableOffHeapPool = rootForkableOffHeapPool;
+			}
+			lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
 			return true;
 		}
 		if (lastUsedForkableOffHeapPoolToFree != null) {
 			if (lastUsedForkableOffHeapPoolToFree.freeFromAddress(strAddress)) {
+				if (lastUsedForkableOffHeapPoolToFree.isEmpty() && 
+						lastUsedForkableOffHeapPoolToFree != rootForkableOffHeapPool) {
+					lastUsedForkableOffHeapPoolToFree.free();
+					forkableOffHeapPoolList.remove(lastUsedForkableOffHeapPoolToFree);
+					currentForkableOffHeapPool = rootForkableOffHeapPool;
+					lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+				}
 				return true;
 			}
 		}
@@ -185,7 +258,15 @@ public class ExtendableStringOffHeapPool
 			DeeplyForkableStringOffHeapPool forkableOffHeapPool = forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != currentForkableOffHeapPool) {
 				if (forkableOffHeapPool.freeFromAddress(strAddress)) {
-					lastUsedForkableOffHeapPoolToFree = forkableOffHeapPool;
+					if (forkableOffHeapPool.isEmpty() && forkableOffHeapPool != rootForkableOffHeapPool) {
+						forkableOffHeapPool.free();
+						forkableOffHeapPoolList.remove(forkableOffHeapPool);
+						currentForkableOffHeapPool = rootForkableOffHeapPool;
+						lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+					} 
+					else {
+						lastUsedForkableOffHeapPoolToFree = forkableOffHeapPool;
+					}	
 					return true;
 				}
 			}

@@ -7,8 +7,13 @@
 
 package tr.com.serkanozal.jillegal.offheap.memory;
 
+import tr.com.serkanozal.jillegal.offheap.memory.allocator.MemoryAllocator;
+
 public interface DirectMemoryService {
 
+	MemoryAllocator getMemoryAllocator();
+	void setMemoryAllocator(MemoryAllocator memoryAllocator);
+	
 	long allocateMemory(long size);
 	void freeMemory(long address);
 	<T> void freeObject(T obj);
