@@ -11,10 +11,10 @@ import tr.com.serkanozal.jillegal.offheap.domain.model.pool.NonPrimitiveFieldAll
 
 public interface OffHeapConstants {
 
-	int DEFAULT_OBJECT_COUNT = 1024;
+	int DEFAULT_OBJECT_COUNT = Integer.getInteger("jillegal.offheap.pool.objectCount", 1024);
 	NonPrimitiveFieldAllocationConfigType DEFAULT_NON_PRIMITIVE_FIELD_ALLOCATION_CONFIG_TYPE = 
 			NonPrimitiveFieldAllocationConfigType.getDefault();
-	int DEFAULT_ESTIMATED_STRING_COUNT = 1024;
-	int DEFAULT_ESTIMATED_STRING_LENGTH = 32;
+	int DEFAULT_ESTIMATED_STRING_COUNT = Integer.getInteger("jillegal.offheap.pool.estimatedStringCount", 1024);
+	int DEFAULT_ESTIMATED_STRING_LENGTH = Integer.getInteger("jillegal.offheap.pool.estimatedStringLength", 32);
 	
 }

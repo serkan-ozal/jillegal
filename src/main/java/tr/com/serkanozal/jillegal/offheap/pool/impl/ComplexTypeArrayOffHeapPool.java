@@ -183,6 +183,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 		checkAvailability();
 		// TODO Iterate over all objects and call their "onFree" methods if they are instance of "OffHeapAwareObject"
 		directMemoryService.freeMemory(allocationStartAddress);
+		directMemoryService.freeMemory(sampleObjectAddress);
 		makeUnavaiable();
 	}
 
