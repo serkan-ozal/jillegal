@@ -170,7 +170,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
     }
 
 	@Override
-	public V put(K key, V value) {
+	public synchronized V put(K key, V value) {
 		synchronized (this) {
 			return (V) root.put(key, value);
 		} 
@@ -178,29 +178,25 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public V get(Object key) {
+	public synchronized V get(Object key) {
 		return (V) root.get((K) key);
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public V remove(Object key) {
-		synchronized (this) {
-			return (V) root.remove((K) key);
-		}	
+	public synchronized V remove(Object key) {
+		return (V) root.remove((K) key);	
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public boolean containsKey(Object key) {
+	public synchronized boolean containsKey(Object key) {
 		return root.containsKey((K) key);
 	}
 	
 	@Override
-	public void clear() {
-		synchronized (this) {
-			root.clear();
-		}	
+	public synchronized void clear() {
+		root.clear();	
 	}
 	
 	class JudyEntrySet extends AbstractSet<Map.Entry<K, V>> {
@@ -233,9 +229,11 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		@Override
 		public JudyEntry<K, V> next() {
 			if (currentEntry != null) {
-				JudyEntry<K, V> nextEntry = currentEntry;
-				currentEntry = currentEntry.next;
-				return nextEntry;
+				synchronized (OffHeapJudyHashMap.this) {
+					JudyEntry<K, V> nextEntry = currentEntry;
+					currentEntry = currentEntry.next;
+					return nextEntry;
+				}	
 			}
 			else {
 				return null;
@@ -343,8 +341,8 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 
 		volatile long keyAddress = 0;
 		volatile long valueAddress = 0;
-		JudyEntry<K, V> prev;
-		JudyEntry<K, V> next;
+		volatile JudyEntry<K, V> prev;
+		volatile JudyEntry<K, V> next;
 		
 		JudyEntry(K key, V value) {
 			this.keyAddress = directMemoryService.addressOf(key); 
@@ -436,7 +434,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	
 	static class JudyIntermediateNode<K, V> extends JudyNode<K, V> {
 
-		JudyNode<K, V>[] children;
+		volatile JudyNode<K, V>[] children;
 		
 		JudyIntermediateNode() {
 			init();
@@ -444,7 +442,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		
 		@SuppressWarnings("unchecked")
 		void init() {
-			setChildren(offHeapService.newArray(JudyNode[].class, NODE_SIZE));
+			setChildren(offHeapService.newArray(JudyNode[].class, NODE_SIZE, false));
 		}
 		
 		JudyNode<K, V>[] getChildren() {
@@ -555,7 +553,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		
 		@SuppressWarnings("unchecked")
 		void init() {
-			setEntries(offHeapService.newArray(JudyEntry[].class, NODE_SIZE));
+			setEntries(offHeapService.newArray(JudyEntry[].class, NODE_SIZE, false));
 		}
 		
 		JudyEntry<K, V>[] getEntries() {
@@ -635,6 +633,8 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 					entryToRemove.next.setPrev(entryToRemove.prev);	
 				}
 				entryToRemove.setKey(null); // key area will be free automatically in entry instance
+				entryToRemove.setPrev(null);
+				entryToRemove.setNext(null);
 				V value = entryToRemove.getValue();
 				offHeapService.freeObject(entryToRemove);
 				return value;
@@ -657,6 +657,9 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		void clear(byte level) {
 			for (int i = 0; i < entries.length; i++) {
 				JudyEntry<K, V> entry = entries[i];
+				if (entry == null) {
+					continue;
+				}
 				entry.setKey(null); // key area will be free automatically in entry instance
 				entry.setValue(null);
 				offHeapService.freeObject(entry);
@@ -673,8 +676,8 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	static class JudyTree<K, V> {
 
 		JudyIntermediateNode<K, V>[] nodes;
-		JudyEntry<K, V> firstEntry;
-		JudyEntry<K, V> lastEntry;
+		volatile JudyEntry<K, V> firstEntry;
+		volatile JudyEntry<K, V> lastEntry;
 		volatile int size;
 		
 		JudyTree() {
@@ -684,7 +687,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		@SuppressWarnings("unchecked")
 		void init() {
 			// Create and initialize first level nodes
-			setNodes(offHeapService.newArray(JudyIntermediateNode[].class, NODE_SIZE));
+			setNodes(offHeapService.newArray(JudyIntermediateNode[].class, NODE_SIZE, true));
 			for (int i = 0 ; i < nodes.length; i++) {
 				nodes[i].setRoot(this);
 			}

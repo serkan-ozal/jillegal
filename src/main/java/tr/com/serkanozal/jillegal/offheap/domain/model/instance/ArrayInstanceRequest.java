@@ -11,6 +11,7 @@ public class ArrayInstanceRequest<T> implements InstanceRequest<T> {
 
 	private Class<T> arrayType;
 	private int length;
+	private boolean initializeElements;
 	
 	public ArrayInstanceRequest() {
 
@@ -19,6 +20,12 @@ public class ArrayInstanceRequest<T> implements InstanceRequest<T> {
 	public ArrayInstanceRequest(Class<T> arrayType, int length) {
 		this.arrayType = arrayType;
 		this.length = length;
+	}
+	
+	public ArrayInstanceRequest(Class<T> arrayType, int length, boolean initializeElements) {
+		this.arrayType = arrayType;
+		this.length = length;
+		this.initializeElements = initializeElements;
 	}
 
 	public Class<T> getArrayType() {
@@ -40,6 +47,14 @@ public class ArrayInstanceRequest<T> implements InstanceRequest<T> {
 	@Override
 	public Class<T> getInstanceType() {
 		return arrayType;
+	}
+	
+	public boolean isInitializeElements() {
+		return initializeElements;
+	}
+	
+	public void setInitializeElements(boolean initializeElements) {
+		this.initializeElements = initializeElements;
 	}
 	
 }

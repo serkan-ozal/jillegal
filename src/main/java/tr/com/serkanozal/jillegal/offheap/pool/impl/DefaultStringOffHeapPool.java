@@ -347,6 +347,9 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		if (!isIn(strAddress)) {
 			return false;
 		}
+		if (getInUseFromStringAddress(strAddress, 1) == SEGMENT_BLOCK_IS_AVAILABLE) {
+			return false;
+		}
 		// Reset free object
 		int stringSegmentedSize = calculateSegmentedStringSize(strAddress);
 		int freeStartOffset = valueArrayOffsetInString + JvmUtil.getAddressSize();
@@ -355,7 +358,10 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 									  stringSegmentedSize - freeStartOffset, 
 									  (byte)0);
 		// Make value array empty (not null)
-		JvmUtil.setArrayLength(strAddress + valueArrayOffsetInString, char.class, 0);
+		JvmUtil.setArrayLength(
+				JvmUtil.toNativeAddress(directMemoryService.getAddress(strAddress + valueArrayOffsetInString)), 
+				char.class,
+				0);
 		int segmentCount = stringSegmentedSize / STRING_SEGMENT_SIZE;
 		freeStringFromStringAddress(strAddress, segmentCount);
 		usedSegmentCount -= segmentCount;

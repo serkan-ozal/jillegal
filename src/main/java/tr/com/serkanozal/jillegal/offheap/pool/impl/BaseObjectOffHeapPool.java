@@ -285,8 +285,8 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected synchronized T takeObject(T obj) {
 		long objAddress = directMemoryService.addressOf(obj);
 		resetObject(objAddress);
+		directMemoryService.putLong(objAddress, sampleHeader);
 		obj = super.processObject(obj);
-		//directMemoryService.putLong(objAddress, sampleHeader);
 		allocateObjectFromObjectAddress(objAddress);
 		usedObjectCount++;
 		if (obj instanceof OffHeapAwareObject) {
@@ -297,10 +297,10 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	
 	@SuppressWarnings("unchecked")
 	protected synchronized T takeObject(long objAddress) {
-		T obj = (T) directMemoryService.getObject(objAddress);
 		resetObject(objAddress);
+		directMemoryService.putLong(objAddress, sampleHeader);
+		T obj = (T) directMemoryService.getObject(objAddress);
 		obj = super.processObject(obj);
-		//directMemoryService.putLong(objAddress, sampleHeader);
 		allocateObjectFromObjectAddress(objAddress);
 		usedObjectCount++;
 		if (obj instanceof OffHeapAwareObject) {
@@ -311,8 +311,9 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	
 	@SuppressWarnings("unchecked")
 	protected synchronized long takeObjectAsAddress(long objAddress) {
-		long address = super.processObject(objAddress);
+		resetObject(objAddress);
 		directMemoryService.putLong(objAddress, sampleHeader);
+		long address = super.processObject(objAddress);
 		allocateObjectFromObjectAddress(address);
 		T obj = (T) directMemoryService.getObject(objAddress);
 		usedObjectCount++;
@@ -342,12 +343,14 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		if (obj instanceof OffHeapAwareObject) {
 			((OffHeapAwareObject) obj).onFree(offHeapService, directMemoryService);
 		}
+		
 		return doReleaseObject(objAddress);
 	}
 	
 	protected synchronized boolean doReleaseObject(long objAddress) {
 		// Reset free object
 		resetObject(objAddress); 
+		directMemoryService.putLong(objAddress, sampleHeader);
 		freeObjectFromObjectAddress(objAddress);
 		usedObjectCount--;
 		return true;

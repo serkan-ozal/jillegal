@@ -260,6 +260,7 @@ public class OffHeapUtil {
 		protected Class<?> elementType;
 		protected Class<?> arrayType;
 		protected int length;
+		protected boolean initializeElements;
 
 		public ArrayTypedFieldInitializer(OffHeapArrayFieldConfig fieldConfig) {
 			super(fieldConfig);
@@ -269,6 +270,7 @@ public class OffHeapUtil {
 							fieldConfig.getElementType();
 			this.arrayType = Array.newInstance(elementType, 0).getClass();
 			this.length = fieldConfig.getLength();
+			this.initializeElements = fieldConfig.isInitializeElements();
 		}
 
 		public Class<?> getElementType() {
@@ -286,13 +288,13 @@ public class OffHeapUtil {
 		public void initializeField(Object obj) {
 			jvmAwareObjectFieldInjecter.injectField(
 					JvmUtil.addressOf(obj) + fieldOffset, 
-					offHeapService.newArrayAsAddress(arrayType, length));
+					offHeapService.newArrayAsAddress(arrayType, length, initializeElements));
 		}
 		
 		public void initializeField(long objAddress) {
 			jvmAwareObjectFieldInjecter.injectField(
 					objAddress + fieldOffset, 
-					offHeapService.newArrayAsAddress(arrayType, length));
+					offHeapService.newArrayAsAddress(arrayType, length, initializeElements));
 		}
 		
 	}

@@ -19,6 +19,7 @@ public interface OffHeapPoolFactory {
 	@SuppressWarnings("rawtypes")
 	<T, O extends ObjectOffHeapPool> O createObjectOffHeapPool(Class<T> objectType, int objectCount);
 	@SuppressWarnings("rawtypes")
-	<T, A, O extends ArrayOffHeapPool> O createArrayOffHeapPool(Class<A> arrayType, int arrayLength);
+	<T, A, O extends ArrayOffHeapPool> O createArrayOffHeapPool(Class<A> arrayType, int arrayLength, 
+			boolean initializeElements);
 	
 }

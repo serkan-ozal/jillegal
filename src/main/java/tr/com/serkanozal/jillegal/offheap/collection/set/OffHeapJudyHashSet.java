@@ -128,37 +128,29 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
     
 	@SuppressWarnings("unchecked")
 	@Override
-	public boolean contains(Object element) {
+	public synchronized boolean contains(Object element) {
 		return root.contains((E) element);
 	}
   
 	@Override
-	public boolean add(E element) {
-		synchronized (this) {
-			return root.add(element) == null;
-		}	
+	public synchronized boolean add(E element) {
+		return root.add(element) == null;	
 	}
 	
 	@Override
-	public E put(E element) {
-		synchronized (this) {
-			return root.add(element);
-		}	
+	public synchronized E put(E element) {
+		return root.add(element);
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public boolean remove(Object element) {
-		synchronized (this) {
-			return root.remove((E) element) != null;
-		}	
+	public synchronized boolean remove(Object element) {
+		return root.remove((E) element) != null;	
 	}
 	
 	@Override
-	public void clear() {
-		synchronized (this) {
-			root.clear();
-		}	
+	public synchronized void clear() {
+		root.clear();	
 	}
 	
 	@Override
@@ -182,9 +174,11 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		@Override
 		public JudyEntry<E> next() {
 			if (currentEntry != null) {
-				JudyEntry<E> nextEntry = currentEntry;
-				currentEntry = currentEntry.next;
-				return nextEntry;
+				synchronized (OffHeapJudyHashSet.this) {
+					JudyEntry<E> nextEntry = currentEntry;
+					currentEntry = currentEntry.next;
+					return nextEntry;
+				}
 			}
 			else {
 				return null;
@@ -322,7 +316,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		
 		@SuppressWarnings("unchecked")
 		void init() {
-			setChildren(offHeapService.newArray(JudyNode[].class, NODE_SIZE));
+			setChildren(offHeapService.newArray(JudyNode[].class, NODE_SIZE, false));
 		}
 		
 		JudyNode<E>[] getChildren() {
@@ -418,7 +412,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		
 		@SuppressWarnings("unchecked")
 		void init() {
-			setEntries(offHeapService.newArray(JudyEntry[].class, NODE_SIZE));
+			setEntries(offHeapService.newArray(JudyEntry[].class, NODE_SIZE, false));
 		}
 		
 		JudyEntry<E>[] getEntries() {
@@ -503,6 +497,9 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		void clear(byte level) {
 			for (int i = 0; i < entries.length; i++) {
 				JudyEntry<E> entry = entries[i];
+				if (entry == null) {
+					continue;
+				}
 				entry.setElement(null);
 				offHeapService.freeObject(entry);
 			}
@@ -529,7 +526,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		@SuppressWarnings("unchecked")
 		void init() {
 			// Create and initialize first level nodes
-			setNodes(offHeapService.newArray(JudyIntermediateNode[].class, NODE_SIZE));
+			setNodes(offHeapService.newArray(JudyIntermediateNode[].class, NODE_SIZE, true));
 			for (int i = 0 ; i < nodes.length; i++) {
 				nodes[i].setRoot(this);
 			}

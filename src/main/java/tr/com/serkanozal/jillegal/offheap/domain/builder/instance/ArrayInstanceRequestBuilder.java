@@ -14,10 +14,11 @@ public class ArrayInstanceRequestBuilder<T> implements Builder<ArrayInstanceRequ
 
 	private Class<T> arrayType;
 	private int length;
+	private boolean initializeElements;
 	
 	@Override
 	public ArrayInstanceRequest<T> build() {
-		return new ArrayInstanceRequest<T>(arrayType, length);
+		return new ArrayInstanceRequest<T>(arrayType, length, initializeElements);
 	}
 	
 	public ArrayInstanceRequestBuilder<T> arrayType(Class<T> arrayType) {
@@ -27,6 +28,11 @@ public class ArrayInstanceRequestBuilder<T> implements Builder<ArrayInstanceRequ
 	
 	public ArrayInstanceRequestBuilder<T> length(int length) {
 		this.length = length;
+		return this;
+	}
+	
+	public ArrayInstanceRequestBuilder<T> initializeElements(boolean initializeElements) {
+		this.initializeElements = initializeElements;
 		return this;
 	}
 

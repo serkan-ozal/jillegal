@@ -103,7 +103,7 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
 	public <T, A, O extends ArrayOffHeapPool> O createArrayOffHeapPool(
-			Class<A> arrayType, int arrayLength) {
+			Class<A> arrayType, int arrayLength, boolean initializeElements) {
 		if (!arrayType.isArray()) {
 			throw new IllegalArgumentException(arrayType.getClass().getName() + " is not array type");
 		}
@@ -113,7 +113,10 @@ public class DefaultOffHeapPoolFactory implements OffHeapPoolFactory {
 				(O) new PrimitiveTypeArrayOffHeapPool<T, A>(elementType, arrayLength, directMemoryService);
 		}
 		else {
-			boolean initializeElements = !elementType.isInterface() && !Modifier.isAbstract(elementType.getModifiers());
+			if (initializeElements && (elementType.isInterface() || Modifier.isAbstract(elementType.getModifiers()))) {
+				throw new IllegalArgumentException(elementType.getName() + " is interface/abstract class. " + 
+						"So its instance cannot be created");
+			}
 			return
 				(O) new ComplexTypeArrayOffHeapPool<T, A>(elementType, arrayLength, initializeElements, directMemoryService);
 		}

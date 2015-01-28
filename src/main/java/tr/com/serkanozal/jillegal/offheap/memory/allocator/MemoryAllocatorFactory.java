@@ -25,7 +25,7 @@ public class MemoryAllocatorFactory {
 			DEFAULT_MEMORY_ALLOCATOR = MEMORY_ALLOCATOR_MAP.get(MemoryAllocatorType.STANDARD);
 		} 
 		else {
-			DEFAULT_MEMORY_ALLOCATOR = MEMORY_ALLOCATOR_MAP.get(MemoryAllocatorType.POOLED);
+			DEFAULT_MEMORY_ALLOCATOR = MEMORY_ALLOCATOR_MAP.get(MemoryAllocatorType.STANDARD);
 		}
 	}
 

@@ -444,7 +444,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 		}
 		else if (request instanceof ArrayInstanceRequest) {
 			ArrayInstanceRequest<T> arrayInstanceRequest = (ArrayInstanceRequest<T>)request;
-			return newArray(arrayInstanceRequest.getArrayType(), arrayInstanceRequest.getLength());
+			return newArray(arrayInstanceRequest.getArrayType(), arrayInstanceRequest.getLength(), 
+					arrayInstanceRequest.isInitializeElements());
 		}
 		else if (request instanceof StringInstanceRequest) {
 			StringInstanceRequest stringInstanceRequest = (StringInstanceRequest)request;
@@ -467,7 +468,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 		}
 		else if (request instanceof ArrayInstanceRequest) {
 			ArrayInstanceRequest<T> arrayInstanceRequest = (ArrayInstanceRequest<T>)request;
-			return newArrayAsAddress(arrayInstanceRequest.getArrayType(), arrayInstanceRequest.getLength());
+			return newArrayAsAddress(arrayInstanceRequest.getArrayType(), arrayInstanceRequest.getLength(),
+					arrayInstanceRequest.isInitializeElements());
 		}
 		else if (request instanceof StringInstanceRequest) {
 			StringInstanceRequest stringInstanceRequest = (StringInstanceRequest)request;
@@ -599,26 +601,36 @@ public class OffHeapServiceImpl implements OffHeapService {
 		return false;
 	}
 	
+	@Override
+	public <A> A newArray(Class<A> arrayType, int length) {
+		return newArray(arrayType, length, false);
+	}
+	
+	@Override
+	public <A> long newArrayAsAddress(Class<A> arrayType, int length) {
+		return newArrayAsAddress(arrayType, length, false);
+	}
+	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@Override
-	public synchronized <A> A newArray(Class<A> arrayType, int length) {
+	public synchronized <A> A newArray(Class<A> arrayType, int length, boolean initializeElements) {
 		checkEnable();
 		
 		ArrayOffHeapPool arrayOffHeapPool =
 				defaultOffHeapPoolFactory.
-					createArrayOffHeapPool(arrayType, length);
+					createArrayOffHeapPool(arrayType, length, initializeElements);
 		arrayOffHeapPoolSet.add(arrayOffHeapPool);
 		return (A) arrayOffHeapPool.getArray();
 	}
 	
 	@SuppressWarnings("rawtypes")
 	@Override
-	public synchronized <A> long newArrayAsAddress(Class<A> arrayType, int length) {
+	public synchronized <A> long newArrayAsAddress(Class<A> arrayType, int length, boolean initializeElements) {
 		checkEnable();
 		
 		ArrayOffHeapPool arrayOffHeapPool =
 				defaultOffHeapPoolFactory.
-					createArrayOffHeapPool(arrayType, length);
+					createArrayOffHeapPool(arrayType, length, initializeElements);
 		arrayOffHeapPoolSet.add(arrayOffHeapPool);
 		return arrayOffHeapPool.getArrayAsAddress();
 	}

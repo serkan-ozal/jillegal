@@ -17,6 +17,7 @@ public class OffHeapArrayFieldConfigBuilder implements Builder<OffHeapArrayField
 	private Field field;
 	private Class<?> elementType;
 	private int length;
+	private boolean initializeElements;
 	
 	public OffHeapArrayFieldConfigBuilder field(Field field) {
 		this.field = field;
@@ -35,12 +36,18 @@ public class OffHeapArrayFieldConfigBuilder implements Builder<OffHeapArrayField
 		return this;
 	}
 	
+	public OffHeapArrayFieldConfigBuilder initializeElements(boolean initializeElements) {
+		this.initializeElements = initializeElements;
+		return this;
+	}
+	
 	@Override
 	public OffHeapArrayFieldConfig build() {
 		OffHeapArrayFieldConfig config = new OffHeapArrayFieldConfig();
 		config.setField(field);
 		config.setElementType(elementType);
 		config.setLength(length);
+		config.setInitializeElements(initializeElements);
 		return config;
 	}
 	

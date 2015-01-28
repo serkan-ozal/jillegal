@@ -11,6 +11,7 @@ public class OffHeapArrayFieldConfig extends OffHeapFieldConfig {
 	
 	protected Class<?> elementType;
 	protected int length;
+	protected boolean initializeElements;
 	
 	public int getLength() {
 		return length;
@@ -26,6 +27,14 @@ public class OffHeapArrayFieldConfig extends OffHeapFieldConfig {
 	
 	public void setElementType(Class<?> elementType) {
 		this.elementType = elementType;
+	}
+	
+	public boolean isInitializeElements() {
+		return initializeElements;
+	}
+	
+	public void setInitializeElements(boolean initializeElements) {
+		this.initializeElements = initializeElements;
 	}
 	
 }

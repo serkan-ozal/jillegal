@@ -48,6 +48,8 @@ public interface OffHeapService {
 	
 	<A> A newArray(Class<A> arrayType, int length);
 	<A> long newArrayAsAddress(Class<A> arrayType, int length);
+	<A> A newArray(Class<A> arrayType, int length, boolean initializeElements);
+	<A> long newArrayAsAddress(Class<A> arrayType, int length, boolean initializeElements);
 	<A> boolean freeArray(A array);
 	boolean freeArrayWithAddress(long address);
 	
