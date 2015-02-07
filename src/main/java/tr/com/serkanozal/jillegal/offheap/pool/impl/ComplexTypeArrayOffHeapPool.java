@@ -26,7 +26,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	protected long arraySize;
 	protected T sampleObject;
 	protected A sampleArray;
-	protected A objectArray;
+	// protected A objectArray;
 	protected long sampleObjectAddress;
 	protected long objStartAddress;
 	protected long arrayStartAddress;
@@ -89,7 +89,12 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 			}
 		}
 		
-		this.objectArray = (A) directMemoryService.getObject(arrayStartAddress);
+		// this.objectArray = (A) directMemoryService.getObject(arrayStartAddress);
+	}
+	
+	@SuppressWarnings("unchecked")
+	private A getObjectArray() {
+		return (A) directMemoryService.getObject(arrayStartAddress);
 	}
 	
 	public boolean isInitializeElements() {
@@ -121,7 +126,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	@Override
 	public boolean isMe(A array) {
 		checkAvailability();
-		return objectArray == array;
+		return getObjectArray() == array;
 	}
 	
 	@Override
@@ -140,7 +145,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 		processObject(
 				jvmAwareArrayElementAddressFinder.findAddress(
 						arrayIndexStartAddress, arrayIndexScale, index));
-		T obj = ((T[])(objectArray))[index];
+		T obj = ((T[])(getObjectArray()))[index];
 		if (obj instanceof OffHeapAwareObject) {
 			((OffHeapAwareObject) obj).onGet(offHeapService, directMemoryService);
 		}
@@ -163,7 +168,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 	@Override
 	public A getArray() {
 		checkAvailability();
-		return objectArray;
+		return getObjectArray();
 	}
 	
 	@Override
