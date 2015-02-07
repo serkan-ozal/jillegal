@@ -40,8 +40,8 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	protected volatile long usedSegmentCount;
 	protected long inUseSegmentAddress;
 	protected volatile long currentSegmentIndex;
-	protected String sampleStr = "";
-	protected int sampleHeader;
+	protected String sampleStr;
+	protected long sampleHeader;
 	protected volatile boolean full;
 	
 	public DefaultStringOffHeapPool() {
@@ -95,7 +95,8 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 			totalSegmentCount = (allocationEndAddress - stringsStartAddress) / STRING_SEGMENT_SIZE;
 			usedSegmentCount = 0;
 			inUseSegmentAddress = directMemoryService.allocateMemory(totalSegmentCount);
-			sampleHeader = directMemoryService.getInt(new String(), 0L);
+			sampleStr = "";
+			sampleHeader = directMemoryService.getLong(sampleStr, 0L);
 
 			init();
 			makeAvaiable();
@@ -264,7 +265,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	
 	protected synchronized String takeString(String str) {
 		long objAddress = directMemoryService.addressOf(str);
-		directMemoryService.putIntVolatile(objAddress, sampleHeader);
+		directMemoryService.putLong(objAddress, sampleHeader);
 		int segmentCount = calculateStringSegmentCount(str);
 		allocateStringFromStringAddress(objAddress, segmentCount);
 		usedSegmentCount += segmentCount;
@@ -273,7 +274,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	
 	protected synchronized String takeString(long strAddress) {
 		String str = (String) directMemoryService.getObject(strAddress);
-		directMemoryService.putIntVolatile(strAddress, sampleHeader);
+		directMemoryService.putLong(strAddress, sampleHeader);
 		int segmentCount = calculateStringSegmentCount(strAddress);
 		allocateStringFromStringAddress(strAddress, segmentCount);
 		usedSegmentCount += segmentCount;
@@ -281,7 +282,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	}
 	
 	protected synchronized long takeStringAsAddress(long strAddress) {
-		directMemoryService.putIntVolatile(strAddress, sampleHeader);
+		directMemoryService.putLong(strAddress, sampleHeader);
 		int segmentCount = calculateStringSegmentCount(strAddress);
 		allocateStringFromStringAddress(strAddress, segmentCount);
 		usedSegmentCount += segmentCount;

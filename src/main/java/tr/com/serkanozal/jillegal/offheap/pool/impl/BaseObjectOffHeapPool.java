@@ -282,9 +282,9 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		if (!isIn(objAddress)) {
 			return false;
 		}
-		if (getInUseFromObjectAddress(objAddress) != OBJECT_IS_IN_USE) {
-			return false;
-		}
+//		if (getInUseFromObjectAddress(objAddress) != OBJECT_IS_IN_USE) {
+//			return false;
+//		}
 		T obj = (T) directMemoryService.getObject(objAddress);
 		if (obj instanceof OffHeapAwareObject) {
 			((OffHeapAwareObject) obj).onFree(offHeapService, directMemoryService);
