@@ -621,6 +621,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			JudyEntry<K, V> entryToRemove = (JudyEntry<K, V>) directMemoryService.getArrayElement(entries, index); // entries[index];
 			if (entryToRemove != null) {
 				directMemoryService.setArrayElement(entries, index, null); 
+				
 				V value = entryToRemove.getValue();
 				entryToRemove.setKey(null); // key area will be free automatically in entry instance
 				entryToRemove.setValue(null);
@@ -722,16 +723,21 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			this.lastEntry = lastEntry;
 		}
 		
+		@SuppressWarnings("unchecked")
+		JudyIntermediateNode<K, V> getNode(int index) {
+			return (JudyIntermediateNode<K, V>) directMemoryService.getArrayElement(nodes, index); // return nodes[index]; 
+		}
+		
 		V get(K key) {
 			// Use most significant byte as first level index
 			short index = (short)((key.hashCode() >> 24) & 0x000000FF);
-			return nodes[index].get(key.hashCode(), (byte) 1);
+			return getNode(index).get(key.hashCode(), (byte) 1);
 		}
 		
 		V put(K key, V value) {
 			// Use most significant byte as first level index
 			short index = (short)((key.hashCode() >> 24) & 0x000000FF);
-			V obj = nodes[index].put(this, key.hashCode(), key, value, (byte) 1);
+			V obj = getNode(index).put(this, key.hashCode(), key, value, (byte) 1);
 			if (obj == null) {
 				size++;
 			}
@@ -741,7 +747,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		V remove(K key) {
 			// Use most significant byte as first level index
 			short index = (short)((key.hashCode() >> 24) & 0x000000FF);
-			V obj = nodes[index].remove(this, key.hashCode(), (byte) 1);
+			V obj = getNode(index).remove(this, key.hashCode(), (byte) 1);
 			if (obj != null) {
 				size--;
 			}
@@ -751,13 +757,13 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		boolean containsKey(K key) {
 			// Use most significant byte as first level index
 			short index = (short)((key.hashCode() >> 24) & 0x000000FF);
-			return nodes[index].containsKey(key.hashCode(), (byte) 1);
+			return getNode(index).containsKey(key.hashCode(), (byte) 1);
 		}
 		
 		void clear() {
 			// Start clearing from first level child nodes
 			for (int i = 0 ; i < nodes.length; i++) {
-				nodes[i].clear((byte) 1);
+				getNode(i).clear((byte) 1);
 			}
 			size = 0;
 		}
