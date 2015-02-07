@@ -46,12 +46,12 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	private static final OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
 	private static final DirectMemoryService directMemoryService = DirectMemoryServiceFactory.getDirectMemoryService();
 	
-	private static final int KEY_FIELD_OFFSET = 
-			(int) JvmUtil.getUnsafe().objectFieldOffset(
-					JvmUtil.getField(JudyEntry.class, "key"));
-	private static final int VALUE_FIELD_OFFSET = 
-			(int) JvmUtil.getUnsafe().objectFieldOffset(
-					JvmUtil.getField(JudyEntry.class, "value"));
+//	private static final int KEY_FIELD_OFFSET = 
+//			(int) JvmUtil.getUnsafe().objectFieldOffset(
+//					JvmUtil.getField(JudyEntry.class, "key"));
+//	private static final int VALUE_FIELD_OFFSET = 
+//			(int) JvmUtil.getUnsafe().objectFieldOffset(
+//					JvmUtil.getField(JudyEntry.class, "value"));
 	private static final int PREV_FIELD_OFFSET = 
 			(int) JvmUtil.getUnsafe().objectFieldOffset(
 					JvmUtil.getField(JudyEntry.class, "prev"));
@@ -336,70 +336,71 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	@OffHeapIgnoreInstrumentation
 	static class JudyEntry<K, V> implements Map.Entry<K, V> {
 
-//		long keyAddress;
-//		long valueAddress;
-		K key;
-		V value;
+		volatile long keyAddress;
+		volatile long valueAddress;
+//		K key;
+//		V value;
 		JudyEntry<K, V> prev;
 		JudyEntry<K, V> next;
 		
 		@Override
 		public K getKey() {
-//			if (keyAddress == 0) {
-//				return null;
-//			} else {
-//				return directMemoryService.getObject(keyAddress);
-//			}
+			if (keyAddress == 0) {
+				return null;
+			} else {
+				return directMemoryService.getObject(keyAddress);
+			}
 //			return directMemoryService.getObjectField(this, KEY_FIELD_OFFSET);
-			return key;
+//			return key;
 		}
 		
 		void setKey(K key) {
-//			if (keyAddress != 0) {
-//				offHeapService.freeObjectWithAddress(keyAddress);
-//			}
-//			if (key == null) {
-//				keyAddress = 0;
-//			} else {
-//				keyAddress = directMemoryService.addressOf(key);
-//			}
-			K oldKey = getKey();
-			if (oldKey != null) {
-				directMemoryService.setObjectField(this, KEY_FIELD_OFFSET, null);
-				offHeapService.freeObject(oldKey);
+			if (keyAddress != 0) {
+				offHeapService.freeObjectWithAddress(keyAddress);
 			}
-			directMemoryService.setObjectField(this, KEY_FIELD_OFFSET, key);
+			if (key == null) {
+				keyAddress = 0;
+			} else {
+				keyAddress = directMemoryService.addressOf(key);
+			}
+//			K oldKey = getKey();
+//			if (oldKey != null) {
+//				directMemoryService.setObjectField(this, KEY_FIELD_OFFSET, null);
+//				offHeapService.freeObject(oldKey);
+//			}
+//			directMemoryService.setObjectField(this, KEY_FIELD_OFFSET, key);
 		}
 
 		@Override
 		public V getValue() {
-//			if (valueAddress == 0) {
-//				return null;
-//			} else {
-//				return directMemoryService.getObject(valueAddress);
-//			}
+			if (valueAddress == 0) {
+				return null;
+			} else {
+				return directMemoryService.getObject(valueAddress);
+			}
 //			return directMemoryService.getObjectField(this, VALUE_FIELD_OFFSET);
-			return value;
+//			return value;
 		}
 
 		@Override
 		public V setValue(V value) {
-//			if (valueAddress != 0) {
-//				oldValue = directMemoryService.getObject(valueAddress);
-//			}
-//			if (value == null) {
-//				valueAddress = 0;
-//			} else {
-//				valueAddress = directMemoryService.addressOf(value);
-//			}
-			V oldValue = getValue();
-			directMemoryService.setObjectField(this, VALUE_FIELD_OFFSET, value);
+			V oldValue = null;
+			if (valueAddress != 0) {
+				oldValue = directMemoryService.getObject(valueAddress);
+			}
+			if (value == null) {
+				valueAddress = 0;
+			} else {
+				valueAddress = directMemoryService.addressOf(value);
+			}
+//			V oldValue = getValue();
+//			directMemoryService.setObjectField(this, VALUE_FIELD_OFFSET, value);
 			return oldValue;
 		}
 		
 		JudyEntry<K, V> getPrev() {
-			return prev;
-//			return directMemoryService.getObjectField(this, PREV_FIELD_OFFSET);
+//			return prev;
+			return directMemoryService.getObjectField(this, PREV_FIELD_OFFSET);
 		}
 		
 		void setPrev(JudyEntry<K, V> prev) {
@@ -407,8 +408,8 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		}
 		
 		JudyEntry<K, V> getNext() {
-			return next;
-//			return directMemoryService.getObjectField(this, NEXT_FIELD_OFFSET);
+//			return next;
+			return directMemoryService.getObjectField(this, NEXT_FIELD_OFFSET);
 		}
 		
 		void setNext(JudyEntry<K, V> next) {

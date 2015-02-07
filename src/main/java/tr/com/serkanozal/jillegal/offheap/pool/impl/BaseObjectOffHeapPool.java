@@ -158,7 +158,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	}
 	
 	protected boolean nextAvailable() {
-		if (full) {
+		if (full || currentIndex == INDEX_NOT_AVAILABLE) {
 			return false;
 		}
 		
@@ -188,7 +188,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		}	
 
 		currentAddress = objectsStartAddress + (currentIndex * objectSize);
-		
+
 		return true;
 	}
 	

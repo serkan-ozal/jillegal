@@ -223,6 +223,7 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 					currentForkableOffHeapPool = rootForkableOffHeapPool;
 					lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
 				}
+				return true;
 			}
 		}
 		for (int i = 0; i < forkableOffHeapPoolList.size(); i++) {

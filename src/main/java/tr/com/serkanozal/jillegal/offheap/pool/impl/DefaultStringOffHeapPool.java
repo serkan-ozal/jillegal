@@ -188,9 +188,8 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 			return;
 		}
 		for (int i = 0; i < segmentCount; i++) {
-			directMemoryService.putByteVolatile(inUseSegmentAddress + strSegment, 
+			directMemoryService.putByteVolatile(inUseSegmentAddress + strSegment + i, 
 					set ? SEGMENT_IS_IN_USE : SEGMENT_IS_AVAILABLE);
-			strSegment++;
 		}	
 		if (full && !set) {
 			currentSegmentIndex = strSegment - 1;
@@ -223,7 +222,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	}
 	
 	protected boolean nextAvailable(int segmentCount) {
-		if (full) {
+		if (full || currentSegmentIndex == INDEX_NOT_AVAILABLE) {
 			return false;
 		}
 		
@@ -357,63 +356,40 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	}
 	
 	protected long allocateStringFromOffHeap(String str) {
-		// synchronized (str) {
-			// long addressOfStr = directMemoryService.addressOf(str);
-			char[] valueArray = (char[]) directMemoryService.getObject(str, valueArrayOffsetInString);
-			// synchronized (valueArray) {
-				int valueArraySize = charArrayIndexStartOffset + (charArrayIndexScale * valueArray.length);
-				int strSize = stringSize + valueArraySize + 2 * JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
+		char[] valueArray = (char[]) directMemoryService.getObject(str, valueArrayOffsetInString);
+		int valueArraySize = charArrayIndexStartOffset + (charArrayIndexScale * valueArray.length);
+		int strSize = stringSize + valueArraySize + 2 * JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
 				
-				long addressMod1 = currentAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
-				if (addressMod1 != 0) {
-					currentAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod1);
-				}
+		long addressMod1 = currentAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
+		if (addressMod1 != 0) {
+			currentAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod1);
+		}
 				
-				if (currentAddress + strSize > allocationEndAddress) {
-					return JvmUtil.NULL;
-				}
+		if (currentAddress + strSize > allocationEndAddress) {
+			return JvmUtil.NULL;
+		}
 				
-				// Copy string object content to allocated area
-				directMemoryService.copyMemory(str, 0, null, currentAddress, stringSize);
-				// directMemoryService.copyMemory(addressOfStr, currentAddress, strSize);
-				/*
-				for (int i = 0; i < strSize; i++) {
-					directMemoryService.putByte(currentAddress + i, directMemoryService.getByte(str, i));
-				}
-				*/
+		// Copy string object content to allocated area
+		directMemoryService.copyMemory(str, 0, null, currentAddress, stringSize);
 				
-				long valueAddress = currentAddress + stringSize;
-				long addressMod2 = valueAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
-				if (addressMod2 != 0) {
-					valueAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod2);
-				}
+		long valueAddress = currentAddress + stringSize;
+		long addressMod2 = valueAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
+		if (addressMod2 != 0) {
+			valueAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod2);
+		}
 
-				// Copy value array in allocated string to allocated char array
-				directMemoryService.copyMemory(
-						valueArray, 0L,
-						null, valueAddress, 
-						valueArraySize);
-				/*
-				directMemoryService.copyMemory(
-						JvmUtil.toNativeAddress(
-								directMemoryService.getAddress(addressOfStr + valueArrayOffsetInString)),
-						valueAddress, 
-						valueArraySize);
-				*/		
-				/*
-				for (int i = 0; i < valueArraySize; i++) {
-					directMemoryService.putByte(valueAddress + i, directMemoryService.getByte(valueArray, i));
-				}
-				*/
+		// Copy value array in allocated string to allocated char array
+		directMemoryService.copyMemory(
+				valueArray, 0L,
+				null, valueAddress, 
+				valueArraySize);
 				
-				// Now, value array in string points to allocated char array
-				directMemoryService.putAddress(
-						currentAddress + valueArrayOffsetInString, 
-						JvmUtil.toJvmAddress(valueAddress));
+		// Now, value array in string points to allocated char array
+		directMemoryService.putAddress(
+				currentAddress + valueArrayOffsetInString, 
+				JvmUtil.toJvmAddress(valueAddress));
 				
-				return takeStringAsAddress(currentAddress);
-			// }
-		// }
+		return takeStringAsAddress(currentAddress);
 	}
 	
 	@Override
