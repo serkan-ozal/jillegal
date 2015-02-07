@@ -7,6 +7,10 @@
 
 package tr.com.serkanozal.jillegal.offheap.memory.allocator;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
@@ -14,25 +18,37 @@ import tr.com.serkanozal.jillegal.util.JvmUtil;
 public class StandardMemoryAllocator implements MemoryAllocator {
 
 	private static final Unsafe UNSAFE = JvmUtil.getUnsafe();
+
+	private final Map<Long, Long> memoryMappings = new ConcurrentHashMap<Long, Long>();
+	private final AtomicLong allocatedMemory = new AtomicLong();
 	
 	@Override
 	public long allocateMemory(long size) {
-		return UNSAFE.allocateMemory(size);
+		long address = UNSAFE.allocateMemory(size);
+		if (address > 0) {
+			memoryMappings.put(address, size);
+			allocatedMemory.addAndGet(size);
+		}
+		return address;
 	}
 	
 	@Override
 	public void freeMemory(long address) {
+		Long size = memoryMappings.remove(address);
+		if (size != null) {
+			allocatedMemory.addAndGet(-size);
+		}
 		UNSAFE.freeMemory(address);
 	}
 	
 	@Override
 	public long totalMemory() {
-		return -1L; // Not supported
+		return allocatedMemory.get();
 	}
 	
 	@Override
 	public long usedMemory() {
-		return -1L;  // Not supported
+		return allocatedMemory.get();
 	}
 	
 }

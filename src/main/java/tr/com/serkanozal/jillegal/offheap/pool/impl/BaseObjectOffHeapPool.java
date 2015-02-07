@@ -18,13 +18,10 @@ import tr.com.serkanozal.jillegal.util.JvmUtil;
 public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> 
 		extends BaseOffHeapPool<T, P> implements ObjectOffHeapPool<T, P>, ContentAwareOffHeapPool<T, P> {
 
-	protected static final byte OBJECT_COUNT_AT_AN_IN_USE_BLOCK = 8;
 	protected static final byte OBJECT_IS_AVAILABLE = 0;
 	protected static final byte OBJECT_IS_IN_USE = 1;
-	protected static final byte BLOCK_IS_FULL = -1;
 	protected static final byte INDEX_NOT_YET_USED = -1;
 	protected static final byte INDEX_NOT_AVAILABLE = -2;
-	protected static final byte BLOCK_IS_FULL_VALUE = (byte)0xFF;
 	
 	protected long objectSize;
 	protected long objectCount;
@@ -33,13 +30,11 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	protected volatile long currentAddress;
 	protected long inUseBlockAddress;
 	protected volatile long currentIndex;
-	protected volatile long currentBlockIndex;
 	protected long objectsStartAddress;
 	protected long objectsEndAddress;
 	protected T sampleObject;
 	protected long offHeapSampleObjectAddress;
 	protected long sampleHeader;
-	protected byte fullValueOfLastBlock;
 	protected volatile boolean full;
 
 	public BaseObjectOffHeapPool(Class<T> objectType) {
@@ -57,8 +52,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		super.init();
 		full = false;
 		currentIndex = INDEX_NOT_YET_USED;
-		currentBlockIndex = INDEX_NOT_YET_USED;
-		directMemoryService.setMemory(inUseBlockAddress, inUseBlockCount, (byte)0);
+		directMemoryService.setMemory(inUseBlockAddress, inUseBlockCount, (byte) 0x00);
 	}
 	
 	protected void init(Class<T> elementType, long objectCount, 
@@ -82,16 +76,8 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		this.objectCount = objectCount;
 		this.usedObjectCount = 0;
 		this.directMemoryService = directMemoryService;
-		inUseBlockCount = objectCount / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
-		long blockCountMod = objectCount % OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
-		if (blockCountMod != 0) {
-			inUseBlockCount++;
-			fullValueOfLastBlock = (byte)(Math.pow(2, blockCountMod) - 1);
-		}
-		else {
-			fullValueOfLastBlock = BLOCK_IS_FULL_VALUE;
-		}
 		
+		inUseBlockCount = objectCount;
 		inUseBlockAddress = directMemoryService.allocateMemory(inUseBlockCount);
 		sampleObject = JvmUtil.getSampleInstance(elementType);
 		if (sampleObject == null) {
@@ -100,9 +86,12 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		sampleHeader = directMemoryService.getLong(sampleObject, 0L);
 		objectSize = directMemoryService.sizeOfObject(sampleObject);
 		offHeapSampleObjectAddress = directMemoryService.allocateMemory(objectSize);
+		directMemoryService.copyMemory(sampleObject, 0L, null, offHeapSampleObjectAddress, objectSize);
+		/*
 		for (int i = 0; i < objectSize; i += JvmUtil.LONG_SIZE) {
 			directMemoryService.putLong(offHeapSampleObjectAddress + i, directMemoryService.getLong(sampleObject, i));
 		}
+		*/
 		/*
 		for (int i = 0; i < objectSize; i++) {
 			directMemoryService.putByte(offHeapSampleObjectAddress + i, directMemoryService.getByte(sampleObject, i));
@@ -127,25 +116,10 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	 */
 	
 	protected byte getInUseFromObjectIndex(long objIndex) {
-		long blockIndex = objIndex / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
-		byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + blockIndex);
-		if (blockIndexValue == BLOCK_IS_FULL_VALUE) {
-			return BLOCK_IS_FULL;
-		}
-		else {
-			byte blockInternalOrder = (byte) (objIndex % OBJECT_COUNT_AT_AN_IN_USE_BLOCK);
-			return
-				getBit(blockIndexValue, blockInternalOrder) == 1 ? 
-						OBJECT_IS_IN_USE : OBJECT_IS_AVAILABLE;
-		}	
+		return directMemoryService.getByteVolatile(inUseBlockAddress + objIndex);	
 	}
 	
 	protected void resetObject(long objAddress) {
-		/*
-		for (int i = 0; i < objectSize; i++) {
-			directMemoryService.putByte(objAddress + i, directMemoryService.getByte(sampleObject, i));
-		}
-		*/
 		directMemoryService.copyMemory(offHeapSampleObjectAddress, objAddress, objectSize);
 	}
 	
@@ -154,14 +128,8 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 	}
 	
 	protected void setUnsetInUseFromObjectIndex(long objIndex, boolean set) {
-		long blockIndex = objIndex / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
-		byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + blockIndex);
-		byte blockInternalOrder = (byte) (objIndex % OBJECT_COUNT_AT_AN_IN_USE_BLOCK);
-		byte newBlockIndexValue = 
-				set ? 
-					setBit(blockIndexValue, blockInternalOrder) : 
-					unsetBit(blockIndexValue, blockInternalOrder);
-		directMemoryService.putByte(inUseBlockAddress + blockIndex, newBlockIndexValue);
+		directMemoryService.putByteVolatile(inUseBlockAddress + objIndex, 
+				set ? OBJECT_IS_IN_USE : OBJECT_IS_AVAILABLE);
 		if (full && !set) {
 			currentIndex = objIndex - 1;
 		}
@@ -200,58 +168,25 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		}
 		
 		byte objectInUse = getInUseFromObjectIndex(currentIndex);
-		
-		// Object on current index is not available
-		if (objectInUse != OBJECT_IS_AVAILABLE) {
-			// Current object is not available, so search in current block for available one
-			if (objectInUse != BLOCK_IS_FULL) {
-				byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + currentBlockIndex);
-				// Check objects in block
-				for (int i = 0; i < OBJECT_COUNT_AT_AN_IN_USE_BLOCK; i++) {
-					// If current object is not in use, use it
-					if (((blockIndexValue >> i) & 0x01) == 0) {
-						break;
-					}
-					currentIndex++;
-				}
+		int checkedBlockCount = 0;
+		while (checkedBlockCount < objectCount) {
+			if (objectInUse == OBJECT_IS_AVAILABLE) {
+				break;
 			}
-			else {
-				currentBlockIndex = currentIndex / OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
-				byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + currentBlockIndex);
-				long checkedBlockCount;
-				
-				// Search for non-full block
-				for (	checkedBlockCount = 0; 
-						blockIndexValue == BLOCK_IS_FULL_VALUE && checkedBlockCount < inUseBlockCount; 
-						checkedBlockCount++) {
-					currentBlockIndex++;
-					if (currentBlockIndex >= inUseBlockCount) {
-						currentBlockIndex = 0;
-					}
-					currentIndex = currentBlockIndex * OBJECT_COUNT_AT_AN_IN_USE_BLOCK;
-					blockIndexValue = directMemoryService.getByte(inUseBlockAddress + currentBlockIndex);
-				}
-				
-				// All blocks are checked but there is no available block
-				if (	checkedBlockCount >=  inUseBlockCount || 
-						(currentBlockIndex == (inUseBlockCount - 1) && blockIndexValue == fullValueOfLastBlock)) {
-					currentIndex = INDEX_NOT_AVAILABLE;
-					currentBlockIndex = INDEX_NOT_AVAILABLE;
-					full = true;
-					return false;
-				}
-				
-				// A non-full block found, check free object in block
-				for (int i = 0; i < OBJECT_COUNT_AT_AN_IN_USE_BLOCK; i++) {
-					// If current object is not in use, use it
-					if (((blockIndexValue >> i) & 0x01) == 0) {
-						break;
-					}
-					currentIndex++;
-				}
-			}	
+			currentIndex++;
+			if (currentIndex >= objectCount) {
+				currentIndex = 0;
+			}
+			objectInUse = getInUseFromObjectIndex(currentIndex);
+			checkedBlockCount++;
 		}
 		
+		if (objectInUse != OBJECT_IS_AVAILABLE) {
+			currentIndex = INDEX_NOT_AVAILABLE;
+			full = true;
+			return false;
+		}	
+
 		currentAddress = objectsStartAddress + (currentIndex * objectSize);
 		
 		return true;
@@ -328,6 +263,9 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		if (!isIn(objAddress)) {
 			return false;
 		}
+		if (getInUseFromObjectAddress(objAddress) != OBJECT_IS_IN_USE) {
+			return false;
+		}
 		if (obj instanceof OffHeapAwareObject) {
 			((OffHeapAwareObject) obj).onFree(offHeapService, directMemoryService);
 		}
@@ -339,11 +277,13 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		if (!isIn(objAddress)) {
 			return false;
 		}
+		if (getInUseFromObjectAddress(objAddress) != OBJECT_IS_IN_USE) {
+			return false;
+		}
 		T obj = (T) directMemoryService.getObject(objAddress);
 		if (obj instanceof OffHeapAwareObject) {
 			((OffHeapAwareObject) obj).onFree(offHeapService, directMemoryService);
 		}
-		
 		return doReleaseObject(objAddress);
 	}
 	

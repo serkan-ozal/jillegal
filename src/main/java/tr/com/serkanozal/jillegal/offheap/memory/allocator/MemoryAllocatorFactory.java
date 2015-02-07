@@ -20,12 +20,17 @@ public class MemoryAllocatorFactory {
 	
 	static {
 		MEMORY_ALLOCATOR_MAP.put(MemoryAllocatorType.STANDARD, new StandardMemoryAllocator());
-		MEMORY_ALLOCATOR_MAP.put(MemoryAllocatorType.POOLED, new PooledMemoryAllocator());
+		MEMORY_ALLOCATOR_MAP.put(MemoryAllocatorType.BATCH, new BatchMemoryAllocator());
 		if (JvmUtil.getAddressSize() == JvmUtil.SIZE_32_BIT) {
 			DEFAULT_MEMORY_ALLOCATOR = MEMORY_ALLOCATOR_MAP.get(MemoryAllocatorType.STANDARD);
 		} 
 		else {
-			DEFAULT_MEMORY_ALLOCATOR = MEMORY_ALLOCATOR_MAP.get(MemoryAllocatorType.STANDARD);
+			if (Boolean.getBoolean("jillegal.offheap.memory.useBatchMemoryAllocatorOn64BitJVM")) {
+				DEFAULT_MEMORY_ALLOCATOR = MEMORY_ALLOCATOR_MAP.get(MemoryAllocatorType.BATCH);
+			}
+			else {
+				DEFAULT_MEMORY_ALLOCATOR = MEMORY_ALLOCATOR_MAP.get(MemoryAllocatorType.STANDARD);
+			}	
 		}
 	}
 

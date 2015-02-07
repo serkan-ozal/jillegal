@@ -20,14 +20,13 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 					DeeplyForkableStringOffHeapPool, 
 					ContentAwareOffHeapPool<String, StringOffHeapPoolCreateParameter> {
 
-	protected static final byte STRING_SEGMENT_COUNT_AT_AN_IN_USE_BLOCK = 8;
 	protected static final byte STRING_SEGMENT_SIZE = 16;
+	protected static final byte SEGMENT_IS_AVAILABLE = 0;
+	protected static final byte SEGMENT_IS_IN_USE = 1;
 	protected static final byte SEGMENT_BLOCK_IS_AVAILABLE = 0;
-	protected static final byte SEGMENT_BLOCK_IS_IN_USE = 1;
-	protected static final byte BLOCK_IS_FULL = -1;
+	protected static final byte SEGMENT_BLOCK_IS_NOT_AVAILABLE = 1;
 	protected static final byte INDEX_NOT_YET_USED = -1;
 	protected static final byte INDEX_NOT_AVAILABLE = -2;
-	protected static final byte BLOCK_IS_FULL_VALUE = (byte)0xFF;
 	
 	protected int estimatedStringCount;
 	protected int estimatedStringLength;
@@ -39,13 +38,10 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	protected volatile long currentAddress;
 	protected long totalSegmentCount;
 	protected volatile long usedSegmentCount;
-	protected long inUseBlockCount;
-	protected long inUseBlockAddress;
+	protected long inUseSegmentAddress;
 	protected volatile long currentSegmentIndex;
-	protected volatile long currentSegmentBlockIndex;
 	protected String sampleStr = "";
 	protected int sampleHeader;
-	protected byte fullValueOfLastBlock;
 	protected volatile boolean full;
 	
 	public DefaultStringOffHeapPool() {
@@ -68,8 +64,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		currentAddress = stringsStartAddress;
 		full = false;
 		currentSegmentIndex = INDEX_NOT_YET_USED;
-		currentSegmentBlockIndex = INDEX_NOT_YET_USED;
-		directMemoryService.setMemory(inUseBlockAddress, inUseBlockCount, (byte)0);
+		directMemoryService.setMemory(inUseSegmentAddress, totalSegmentCount, (byte) 0x00);
 	}
 	
 	@SuppressWarnings({ "deprecation" })
@@ -97,24 +92,11 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 				stringsStartAddress += (JvmUtil.OBJECT_ADDRESS_SENSIVITY - addressMod);
 			}
 			currentAddress = stringsStartAddress;
-			totalSegmentCount = allocationSize / STRING_SEGMENT_SIZE;
+			totalSegmentCount = (allocationEndAddress - stringsStartAddress) / STRING_SEGMENT_SIZE;
 			usedSegmentCount = 0;
-			long segmentCountMod = allocationSize % STRING_SEGMENT_SIZE;
-			if (segmentCountMod != 0) {
-				totalSegmentCount++;
-			}
-			inUseBlockCount = totalSegmentCount / STRING_SEGMENT_COUNT_AT_AN_IN_USE_BLOCK;
-			long blockCountMod = totalSegmentCount % STRING_SEGMENT_COUNT_AT_AN_IN_USE_BLOCK;
-			if (blockCountMod != 0) {
-				inUseBlockCount++;
-				fullValueOfLastBlock = (byte)(Math.pow(2, blockCountMod) - 1);
-			}
-			else {
-				fullValueOfLastBlock = BLOCK_IS_FULL_VALUE;
-			}
-			inUseBlockAddress = directMemoryService.allocateMemory(inUseBlockCount);
+			inUseSegmentAddress = directMemoryService.allocateMemory(totalSegmentCount);
 			sampleHeader = directMemoryService.getInt(new String(), 0L);
-			
+
 			init();
 			makeAvaiable();
 		}
@@ -131,7 +113,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	
 	protected int calculateSegmentedStringSize(char[] chars, int offset, int length) {
 		int valueArraySize = charArrayIndexStartOffset + (charArrayIndexScale * length);
-		int segmentedStringSize = stringSize + valueArraySize + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
+		int segmentedStringSize = stringSize + valueArraySize + 2 * JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
 		int segmentSizeMod = segmentedStringSize % STRING_SEGMENT_SIZE;
 		if (segmentSizeMod != 0) {
 			segmentedStringSize += (STRING_SEGMENT_SIZE - segmentSizeMod);
@@ -156,7 +138,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 								directMemoryService.getAddress(
 										strAddress + valueArrayOffsetInString)));
 		int valueArraySize = charArrayIndexStartOffset + (charArrayIndexScale * valueArray.length);
-		int segmentedStringSize = stringSize + valueArraySize + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
+		int segmentedStringSize = stringSize + valueArraySize + 2 * JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
 		int segmentSizeMod = segmentedStringSize % STRING_SEGMENT_SIZE;
 		if (segmentSizeMod != 0) {
 			segmentedStringSize += (STRING_SEGMENT_SIZE - segmentSizeMod);
@@ -182,19 +164,12 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	
 	protected byte getInUseFromStringSegment(long strSegment, int segmentCount) {
 		if (strSegment + segmentCount >= totalSegmentCount) {
-			return BLOCK_IS_FULL;
+			return SEGMENT_BLOCK_IS_NOT_AVAILABLE;
 		}
 		for (int i = 0; i < segmentCount; i++) {
-			long blockIndex = strSegment / STRING_SEGMENT_COUNT_AT_AN_IN_USE_BLOCK;
-			byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + blockIndex);
-			if (blockIndexValue == BLOCK_IS_FULL_VALUE) {
-				return BLOCK_IS_FULL;
-			}
-			else {
-				byte blockInternalOrder = (byte) (strSegment % STRING_SEGMENT_COUNT_AT_AN_IN_USE_BLOCK);
-				if (getBit(blockIndexValue, blockInternalOrder) == 1) {
-					return SEGMENT_BLOCK_IS_IN_USE;
-				}			
+			byte segmentIndexValue = directMemoryService.getByteVolatile(inUseSegmentAddress + strSegment);
+			if (segmentIndexValue == SEGMENT_IS_IN_USE) {
+				return SEGMENT_BLOCK_IS_NOT_AVAILABLE;
 			}
 			strSegment++;
 		}	
@@ -213,14 +188,8 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 			return;
 		}
 		for (int i = 0; i < segmentCount; i++) {
-			long blockIndex = strSegment / STRING_SEGMENT_COUNT_AT_AN_IN_USE_BLOCK;
-			byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + blockIndex);
-			byte blockInternalOrder = (byte) (strSegment % STRING_SEGMENT_COUNT_AT_AN_IN_USE_BLOCK);
-			byte newBlockIndexValue = 
-					set ? 
-						setBit(blockIndexValue, blockInternalOrder) : 
-						unsetBit(blockIndexValue, blockInternalOrder);
-			directMemoryService.putByte(inUseBlockAddress + blockIndex, newBlockIndexValue);
+			directMemoryService.putByteVolatile(inUseSegmentAddress + strSegment, 
+					set ? SEGMENT_IS_IN_USE : SEGMENT_IS_AVAILABLE);
 			strSegment++;
 		}	
 		if (full && !set) {
@@ -259,63 +228,39 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		}
 		
 		currentSegmentIndex++;
-		if (currentSegmentIndex >= segmentCount) {
+		if (currentSegmentIndex >= totalSegmentCount) {
 			currentSegmentIndex = 0;
 		}
-		currentSegmentBlockIndex = currentSegmentIndex / STRING_SEGMENT_COUNT_AT_AN_IN_USE_BLOCK;
 		
-		byte segmentBlockInUse = getInUseFromStringSegment(currentSegmentIndex, segmentCount);
-		byte blockIndexValue = directMemoryService.getByte(inUseBlockAddress + currentSegmentBlockIndex);
-		
-		// Current segment index is not available
-		if (segmentBlockInUse != SEGMENT_BLOCK_IS_AVAILABLE) {
-			boolean backToHead = false;
-			long lastSegmentBlockIndex = currentSegmentBlockIndex;
-			
-			while (segmentBlockInUse != SEGMENT_BLOCK_IS_AVAILABLE) {
-				// All blocks are checked but there is no available segment block
-				if (backToHead && currentSegmentBlockIndex > lastSegmentBlockIndex) {
-					currentSegmentBlockIndex = INDEX_NOT_AVAILABLE;
-					currentSegmentIndex = INDEX_NOT_AVAILABLE;
-					full = true;
-					return false;
-				}
-				
-				// Move to next segment block
-				if (	segmentBlockInUse == BLOCK_IS_FULL ||
-						(currentSegmentBlockIndex == (inUseBlockCount - 1) && blockIndexValue == fullValueOfLastBlock)) {
-					currentSegmentBlockIndex++;
-					currentSegmentIndex = currentSegmentBlockIndex * STRING_SEGMENT_COUNT_AT_AN_IN_USE_BLOCK;
-				}
-				// Move to next segment index
-				else if (segmentBlockInUse == SEGMENT_BLOCK_IS_IN_USE) {
-					currentSegmentIndex++;
-					currentSegmentBlockIndex = currentSegmentIndex / STRING_SEGMENT_COUNT_AT_AN_IN_USE_BLOCK;
-				}
-				
-				// End of segments, back to head
-				if (currentSegmentBlockIndex >= inUseBlockCount) {
-					currentSegmentBlockIndex = 0;
-					currentSegmentIndex = 0;
-					backToHead = true;
-				}
-				
-				segmentBlockInUse = getInUseFromStringSegment(currentSegmentIndex, segmentCount);
-				blockIndexValue = directMemoryService.getByte(inUseBlockAddress + currentSegmentBlockIndex);
-			}	
+		byte segmentIndexInUse = getInUseFromStringSegment(currentSegmentIndex, segmentCount);
+		int checkedSegmentCount = 0;
+		while (checkedSegmentCount < totalSegmentCount) {
+			if (segmentIndexInUse == SEGMENT_BLOCK_IS_AVAILABLE) {
+				break;
+			}
+			currentSegmentIndex++;
+			if (currentSegmentIndex >= totalSegmentCount) {
+				currentSegmentIndex = 0;
+			}
+			segmentIndexInUse = getInUseFromStringSegment(currentSegmentIndex, segmentCount);
+			checkedSegmentCount++;
 		}
 		
-		currentAddress = stringsStartAddress + (currentSegmentIndex * STRING_SEGMENT_SIZE);
+		if (segmentIndexInUse != SEGMENT_BLOCK_IS_AVAILABLE) {
+			currentSegmentIndex = INDEX_NOT_AVAILABLE;
+			full = true;
+			return false;
+		}	
 		
+		currentAddress = stringsStartAddress + (currentSegmentIndex * STRING_SEGMENT_SIZE);
 		currentSegmentIndex += (segmentCount - 1);
-		currentSegmentBlockIndex = currentSegmentIndex / STRING_SEGMENT_COUNT_AT_AN_IN_USE_BLOCK;
-
+		
 		return true;
 	}
 	
 	protected synchronized String takeString(String str) {
 		long objAddress = directMemoryService.addressOf(str);
-		directMemoryService.putInt(objAddress, sampleHeader);
+		directMemoryService.putIntVolatile(objAddress, sampleHeader);
 		int segmentCount = calculateStringSegmentCount(str);
 		allocateStringFromStringAddress(objAddress, segmentCount);
 		usedSegmentCount += segmentCount;
@@ -324,7 +269,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	
 	protected synchronized String takeString(long strAddress) {
 		String str = (String) directMemoryService.getObject(strAddress);
-		directMemoryService.putInt(strAddress, sampleHeader);
+		directMemoryService.putIntVolatile(strAddress, sampleHeader);
 		int segmentCount = calculateStringSegmentCount(strAddress);
 		allocateStringFromStringAddress(strAddress, segmentCount);
 		usedSegmentCount += segmentCount;
@@ -332,7 +277,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	}
 	
 	protected synchronized long takeStringAsAddress(long strAddress) {
-		directMemoryService.putInt(strAddress, sampleHeader);
+		directMemoryService.putIntVolatile(strAddress, sampleHeader);
 		int segmentCount = calculateStringSegmentCount(strAddress);
 		allocateStringFromStringAddress(strAddress, segmentCount);
 		usedSegmentCount += segmentCount;
@@ -352,16 +297,16 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		}
 		// Reset free object
 		int stringSegmentedSize = calculateSegmentedStringSize(strAddress);
-		int freeStartOffset = valueArrayOffsetInString + JvmUtil.getAddressSize();
-		// Don't clear value array reference
-		directMemoryService.setMemory(strAddress + freeStartOffset, 
-									  stringSegmentedSize - freeStartOffset, 
-									  (byte)0);
-		// Make value array empty (not null)
-		JvmUtil.setArrayLength(
-				JvmUtil.toNativeAddress(directMemoryService.getAddress(strAddress + valueArrayOffsetInString)), 
-				char.class,
-				0);
+//		int freeStartOffset = valueArrayOffsetInString + JvmUtil.getAddressSize();
+//		// Don't clear value array reference
+		directMemoryService.setMemory(strAddress + JvmUtil.getHeaderSize(), 
+									  stringSegmentedSize - JvmUtil.getHeaderSize(), 
+									  (byte) 0x00);
+//		// Make value array empty (not null)
+//		JvmUtil.setArrayLength(
+//				JvmUtil.toNativeAddress(directMemoryService.getAddress(strAddress + valueArrayOffsetInString)), 
+//				char.class,
+//				0);
 		int segmentCount = stringSegmentedSize / STRING_SEGMENT_SIZE;
 		freeStringFromStringAddress(strAddress, segmentCount);
 		usedSegmentCount -= segmentCount;
@@ -370,7 +315,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	
 	protected long allocateStringFromOffHeap(char[] chars, int offset, int length) {
 		int valueArraySize = charArrayIndexStartOffset + (charArrayIndexScale * length);
-		int strSize = stringSize + valueArraySize + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
+		int strSize = stringSize + valueArraySize + 2 * JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
 		
 		long addressMod1 = currentAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
 		if (addressMod1 != 0) {
@@ -382,7 +327,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		}
 		
 		// Copy string object content to allocated area
-		directMemoryService.copyMemory(sampleStr, 0, null, currentAddress, strSize);
+		directMemoryService.copyMemory(sampleStr, 0, null, currentAddress, stringSize);
 		
 		long valueAddress = currentAddress + stringSize;
 		long addressMod2 = valueAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
@@ -417,7 +362,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 			char[] valueArray = (char[]) directMemoryService.getObject(str, valueArrayOffsetInString);
 			// synchronized (valueArray) {
 				int valueArraySize = charArrayIndexStartOffset + (charArrayIndexScale * valueArray.length);
-				int strSize = stringSize + valueArraySize + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
+				int strSize = stringSize + valueArraySize + 2 * JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
 				
 				long addressMod1 = currentAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;
 				if (addressMod1 != 0) {
@@ -429,7 +374,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 				}
 				
 				// Copy string object content to allocated area
-				directMemoryService.copyMemory(str, 0, null, currentAddress, strSize);
+				directMemoryService.copyMemory(str, 0, null, currentAddress, stringSize);
 				// directMemoryService.copyMemory(addressOfStr, currentAddress, strSize);
 				/*
 				for (int i = 0; i < strSize; i++) {
@@ -584,7 +529,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 	@Override
 	public synchronized void free() {
 		checkAvailability();
-		directMemoryService.freeMemory(inUseBlockAddress);
+		directMemoryService.freeMemory(inUseSegmentAddress);
 		directMemoryService.freeMemory(allocationStartAddress);
 		usedSegmentCount = 0;
 		makeUnavaiable();

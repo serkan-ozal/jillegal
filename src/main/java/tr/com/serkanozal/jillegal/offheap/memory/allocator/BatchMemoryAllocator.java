@@ -9,27 +9,28 @@ package tr.com.serkanozal.jillegal.offheap.memory.allocator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 @SuppressWarnings( { "restriction" } )
-public class PooledMemoryAllocator implements MemoryAllocator {
+public class BatchMemoryAllocator implements MemoryAllocator {
 
 	private static final Unsafe UNSAFE = JvmUtil.getUnsafe();
 	
-	private static final AtomicLongFieldUpdater<PooledMemoryAllocator> TOTAL_UPDATER = 
-			AtomicLongFieldUpdater.newUpdater(PooledMemoryAllocator.class, "total");
-	private static final AtomicLongFieldUpdater<PooledMemoryAllocator> USED_UPDATER = 
-			AtomicLongFieldUpdater.newUpdater(PooledMemoryAllocator.class, "used");
+	private static final AtomicLongFieldUpdater<BatchMemoryAllocator> TOTAL_UPDATER = 
+			AtomicLongFieldUpdater.newUpdater(BatchMemoryAllocator.class, "total");
+	private static final AtomicLongFieldUpdater<BatchMemoryAllocator> USED_UPDATER = 
+			AtomicLongFieldUpdater.newUpdater(BatchMemoryAllocator.class, "used");
 
 	private volatile long total;
 	private volatile long used;
 	
 	private final List<Segment> segments = new ArrayList<Segment>();
 	
-	public PooledMemoryAllocator() {
+	public BatchMemoryAllocator() {
 		init();
 	}
 	
@@ -112,7 +113,7 @@ public class PooledMemoryAllocator implements MemoryAllocator {
 		int segmentSize;
 		byte[] chunks;
 		int[] sizes;
-		int used;
+		AtomicInteger used = new AtomicInteger();
 		long allocatedAddress;
 		
 		Segment() {
@@ -141,7 +142,7 @@ public class PooledMemoryAllocator implements MemoryAllocator {
 				sizes[i] = 0;
 			}
 			this.allocatedAddress = UNSAFE.allocateMemory(segmentSize);
-			TOTAL_UPDATER.addAndGet(PooledMemoryAllocator.this, segmentSize);
+			TOTAL_UPDATER.addAndGet(BatchMemoryAllocator.this, segmentSize);
 		}
 		
 		boolean isActive() {
@@ -149,15 +150,15 @@ public class PooledMemoryAllocator implements MemoryAllocator {
 		}
 		
 		boolean isEmpty() {
-			return used == 0;
+			return used.get() == 0;
 		}
 		
 		boolean isFull() {
-			return used == segmentSize;
+			return used.get() == segmentSize;
 		}
 		
 		boolean hasAvailableMemory(int size) {
-			return segmentSize - used >= size; 
+			return segmentSize - used.get() >= size; 
 		}
 		
 		boolean isMine(long address) {
@@ -171,7 +172,7 @@ public class PooledMemoryAllocator implements MemoryAllocator {
 			}
 			
 			int requiredChunkCount = (size / chunkSize);
-			if (size % segmentSize != 0) {
+			if (size % chunkSize != 0) {
 				requiredChunkCount++;
 			}
 
@@ -216,9 +217,9 @@ public class PooledMemoryAllocator implements MemoryAllocator {
 			}
 			
 			// Update used memory count
-			used += allocatedSize;
+			used.addAndGet(allocatedSize);
 			
-			USED_UPDATER.addAndGet(PooledMemoryAllocator.this, allocatedSize);
+			USED_UPDATER.addAndGet(BatchMemoryAllocator.this, allocatedSize);
 			
 			// Return absolute address
 			return allocatedAddress + (firstAllocatedChunk * chunkSize);
@@ -245,14 +246,14 @@ public class PooledMemoryAllocator implements MemoryAllocator {
 			}
 			
 			// Update used memory count
-			used -= allocatedSize;
+			used.addAndGet(-allocatedSize);
 			
-			USED_UPDATER.addAndGet(PooledMemoryAllocator.this, -allocatedSize);
+			USED_UPDATER.addAndGet(BatchMemoryAllocator.this, -allocatedSize);
 		}
 		
 		void destroy() {
 			UNSAFE.freeMemory(allocatedAddress);
-			TOTAL_UPDATER.addAndGet(PooledMemoryAllocator.this, -segmentSize);
+			TOTAL_UPDATER.addAndGet(BatchMemoryAllocator.this, -segmentSize);
 			chunks = null;
 			sizes = null;
 		}

@@ -55,7 +55,11 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     
     @Override
     public long allocateMemory(long size) {
-    	return memoryAllocator.allocateMemory(size);
+    	long address = memoryAllocator.allocateMemory(size);
+    	if (address > 0) {
+    		unsafe.setMemory(address, size, (byte) 0x00);
+    	}
+    	return address;
     }
     
     @Override
@@ -139,8 +143,9 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
 //    	synchronized (obj) {
     		long objAddress = JvmUtil.addressOf(obj);
         	long fieldAddress = objAddress + fieldOffset;
-        	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
-        		return getObject(fieldAddress);
+        	long pointedAddress = JvmUtil.toNativeAddress(unsafe.getAddress(fieldAddress));
+        	if (pointedAddress != JvmUtil.NULL && pointedAddress != JvmUtil.INVALID_ADDRESS) {
+        		return getObject(pointedAddress);
         	}
         	else {
         		return null;
@@ -169,7 +174,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
 	    	else {
 //	    		synchronized (fieldObj) {
 	    			long fieldObjAddress = JvmUtil.toJvmAddress(JvmUtil.addressOf(fieldObj));
-	    	      	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
+	    	      	if (fieldAddress != JvmUtil.NULL && fieldAddress != JvmUtil.INVALID_ADDRESS) {
 	    	    		switch (JvmUtil.getAddressSize()) {
 	    		            case JvmUtil.SIZE_32_BIT:
 	    		            	putAsIntAddress(fieldAddress, fieldObjAddress);
@@ -200,8 +205,9 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     public <O, F> F getObjectField(O obj, String fieldName) {
 //    	synchronized (obj) {
     		long fieldAddress = JvmUtil.addressOfField(obj, fieldName);
-        	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
-        		return getObject(fieldAddress);
+    		long pointedAddress = JvmUtil.toNativeAddress(unsafe.getAddress(fieldAddress));
+        	if (pointedAddress != JvmUtil.NULL && pointedAddress != JvmUtil.INVALID_ADDRESS) {
+        		return getObject(pointedAddress);
         	}
         	else {
         		return null;
@@ -229,7 +235,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
 	    	else {
 //	    		synchronized (fieldObj) {
 	    			long fieldObjAddress = JvmUtil.toJvmAddress(JvmUtil.addressOf(fieldObj));
-			    	if (fieldAddress != 0 && fieldAddress != JvmUtil.INVALID_ADDRESS) {
+			    	if (fieldAddress != JvmUtil.INVALID_ADDRESS) {
 			    		switch (JvmUtil.getAddressSize()) {
 				            case JvmUtil.SIZE_32_BIT:
 				            	putAsIntAddress(fieldAddress, fieldObjAddress);
@@ -260,7 +266,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     public Object getArrayElement(Object array, int elementIndex) {
 //    	synchronized (array) {
     		long arrayElementAddress = JvmUtil.getArrayElementAddress(array, elementIndex);
-        	if (arrayElementAddress != 0 && arrayElementAddress != JvmUtil.INVALID_ADDRESS) {
+        	if (arrayElementAddress != JvmUtil.NULL && arrayElementAddress != JvmUtil.INVALID_ADDRESS) {
         		return getObject(arrayElementAddress);
         	}
         	else {
@@ -297,6 +303,9 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     
     @Override
     public <T> T getObject(long address) {
+    	if (unsafe.getAddress(address) == JvmUtil.NULL) {
+    		return null;
+    	}
     	address = JvmUtil.toJvmAddress(address);
     	Object[] objArray = objArrayBuffers.get();
     	switch (JvmUtil.getAddressSize()) {
@@ -340,9 +349,9 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
         }
         else {
 //        	synchronized (obj) {
-                long objSize = sizeOfClass(obj.getClass());
+                long objSize = sizeOfObject(obj);
                 long objAddress = JvmUtil.addressOf(obj);
-                unsafe.copyMemory(objAddress, address, JvmUtil.getHeaderSize() + objSize);   
+                unsafe.copyMemory(objAddress, address, objSize);   
 //             } 
         }    
     }
@@ -390,6 +399,16 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
             }
             return (T) unsafe.getAndSetObject(objArray, JvmUtil.getBaseOffset(), null); 
 //		} 
+    }
+    
+    @Override
+    public boolean getBoolean(long address) {
+    	return unsafe.getByte(address) == 0x00 ? false : true;
+    }
+
+    @Override
+    public void putBoolean(long address, boolean x) {
+    	unsafe.putByte(address, x == true ? (byte) 0x01 : (byte) 0x00);
     }
     
     @Override
@@ -460,6 +479,86 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     @Override
     public void putDouble(long address, double x) {
     	unsafe.putDouble(address, x);
+    }
+    
+    @Override
+    public boolean getBooleanVolatile(long address) {
+    	return unsafe.getByteVolatile(null, address) == 0x00 ? false : true;
+    }
+
+    @Override
+    public void putBooleanVolatile(long address, boolean x) {
+    	unsafe.putByteVolatile(null, address, x == true ? (byte) 0x01 : (byte) 0x00);
+    }
+    
+    @Override
+    public byte getByteVolatile(long address) {
+    	return unsafe.getByteVolatile(null, address);
+    }
+    
+    @Override
+    public void putByteVolatile(long address, byte x) {
+    	unsafe.putByteVolatile(null, address, x);
+    }
+    
+    @Override
+    public char getCharVolatile(long address) {
+    	return unsafe.getCharVolatile(null, address);
+    }
+
+    @Override
+    public void putCharVolatile(long address, char x) {
+    	unsafe.putCharVolatile(null, address, x);
+    }
+
+    @Override
+    public short getShortVolatile(long address) {
+    	return unsafe.getShortVolatile(null, address);
+    }
+
+    @Override
+    public void putShortVolatile(long address, short x) {
+    	unsafe.putShortVolatile(null, address, x);
+    }
+   
+    @Override
+    public int getIntVolatile(long address) {
+    	return unsafe.getIntVolatile(null, address);
+    }
+
+    @Override
+    public void putIntVolatile(long address, int x) {
+    	unsafe.putIntVolatile(null, address, x);
+    }
+    
+    @Override
+    public float getFloatVolatile(long address) {
+    	return unsafe.getFloatVolatile(null, address);
+    }
+
+    @Override
+    public void putFloatVolatile(long address, float x) {
+    	unsafe.putFloatVolatile(null, address, x);
+    }
+
+    @Override
+    public long getLongVolatile(long address) {
+    	return unsafe.getLongVolatile(null, address);
+    }
+
+    @Override
+    public void putLongVolatile(long address, long x) {
+    	unsafe.putLongVolatile(null, address, x);
+    }
+
+    @Override
+    public double getDoubleVolatile(long address) {
+    	return unsafe.getDoubleVolatile(null, address);
+    }
+
+    @Override
+    public void putDoubleVolatile(long address, double x) {
+    	unsafe.putDoubleVolatile(null, address, x);
     }
 
     @Override
@@ -587,6 +686,96 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     }
     
     @Override
+    public boolean getBooleanVolatile(Object o, long offset) {
+    	return unsafe.getBooleanVolatile(o, offset);
+    }
+    
+    @Override
+    public void putBooleanVolatile(Object o, long offset, boolean x) {
+    	unsafe.putBooleanVolatile(o, offset, x);
+    }
+    
+    @Override
+    public byte getByteVolatile(Object o, long offset) {
+    	return unsafe.getByteVolatile(o, offset);
+    }
+   
+    @Override
+    public void putByteVolatile(Object o, long offset, byte x) {
+    	unsafe.putByteVolatile(o, offset, x);
+    }
+    
+    @Override
+    public char getCharVolatile(Object o, long offset) {
+    	return unsafe.getCharVolatile(o, offset);
+    }
+    
+    @Override
+    public void putCharVolatile(Object o, long offset, char x) {
+    	unsafe.putCharVolatile(o, offset, x);
+    }
+   
+    @Override
+    public short getShortVolatile(Object o, long offset) {
+    	return unsafe.getShortVolatile(o, offset);
+    }
+    
+    @Override
+    public void putShortVolatile(Object o, long offset, short x) {
+    	unsafe.putShortVolatile(o, offset, x);
+    }
+    
+    @Override
+    public int getIntVolatile(Object o, long offset) {
+    	return unsafe.getIntVolatile(o, offset);
+    }
+
+    @Override
+    public void putIntVolatile(Object o, long offset, int x) {
+    	unsafe.putIntVolatile(o, offset, x);
+    }
+
+    @Override
+    public float getFloatVolatile(Object o, long offset) {
+    	return unsafe.getFloatVolatile(o, offset);
+    }
+    
+    @Override
+    public void putFloatVolatile(Object o, long offset, float x) {
+    	unsafe.putFloatVolatile(o, offset, x);
+    }
+    
+    @Override
+    public long getLongVolatile(Object o, long offset) {
+    	return unsafe.getLongVolatile(o, offset);
+    }
+    
+    @Override
+    public void putLongVolatile(Object o, long offset, long x) {
+    	unsafe.putLongVolatile(o, offset, x);
+    }
+   
+    @Override
+    public double getDoubleVolatile(Object o, long offset) {
+    	return unsafe.getDoubleVolatile(o, offset);
+    }
+    
+    @Override
+    public void putDoubleVolatile(Object o, long offset, double x) {
+    	unsafe.putDoubleVolatile(o, offset, x);
+    }
+    
+    @Override
+    public Object getObjectVolatile(Object o, long offset) {
+    	return unsafe.getObjectVolatile(o, offset);
+    }
+
+    @Override
+    public void putObjectVolatile(Object o, long offset, Object x) {
+    	unsafe.putObjectVolatile(o, offset, x);
+    }
+    
+    @Override
     public long getAsIntAddress(long address) {
     	return JvmUtil.normalize(unsafe.getInt(address));
     }
@@ -606,7 +795,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     @Override
     public void putAsIntAddress(Object obj, long offset, long intAddress) {
     	long l = unsafe.getLong(obj, offset + JvmUtil.INT_SIZE);
- 		unsafe.putLong(obj, offset, intAddress);
+ 		unsafe.putLong(offset, intAddress);
  		unsafe.putLong(obj, offset + JvmUtil.INT_SIZE, l);
     }
 

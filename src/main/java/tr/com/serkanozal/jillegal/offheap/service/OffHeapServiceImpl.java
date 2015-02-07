@@ -35,6 +35,7 @@ import tr.com.serkanozal.jillegal.instrument.Instrumenter;
 import tr.com.serkanozal.jillegal.instrument.domain.model.GeneratedClass;
 import tr.com.serkanozal.jillegal.instrument.service.InstrumentService;
 import tr.com.serkanozal.jillegal.instrument.service.InstrumentServiceFactory;
+import tr.com.serkanozal.jillegal.offheap.config.provider.annotation.OffHeapIgnoreInstrumentation;
 import tr.com.serkanozal.jillegal.offheap.domain.model.instance.ArrayInstanceRequest;
 import tr.com.serkanozal.jillegal.offheap.domain.model.instance.InstanceRequest;
 import tr.com.serkanozal.jillegal.offheap.domain.model.instance.ObjectInstanceRequest;
@@ -60,6 +61,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 	
 	protected static final Unsafe UNSAFE = JvmUtil.getUnsafe();
 	
+	protected static final Set<Class<?>> INSTRUMENTATION_IGNORED_CLASSES = new HashSet<Class<?>>();
+	
 	protected static final long BOOLEAN_VALUE_FIELD_OFFSET;
 	protected static final long BYTE_VALUE_FIELD_OFFSET;
 	protected static final long CHARACTER_VALUE_FIELD_OFFSET;
@@ -79,6 +82,16 @@ public class OffHeapServiceImpl implements OffHeapService {
 			FLOAT_VALUE_FIELD_OFFSET = UNSAFE.objectFieldOffset(JvmUtil.getField(Float.class, "value"));
 			LONG_VALUE_FIELD_OFFSET = UNSAFE.objectFieldOffset(JvmUtil.getField(Long.class, "value"));
 			DOUBLE_VALUE_FIELD_OFFSET = UNSAFE.objectFieldOffset(JvmUtil.getField(Double.class, "value"));
+			
+			INSTRUMENTATION_IGNORED_CLASSES.add(Boolean.class);
+			INSTRUMENTATION_IGNORED_CLASSES.add(Byte.class);
+			INSTRUMENTATION_IGNORED_CLASSES.add(Character.class);
+			INSTRUMENTATION_IGNORED_CLASSES.add(Short.class);
+			INSTRUMENTATION_IGNORED_CLASSES.add(Integer.class);
+			INSTRUMENTATION_IGNORED_CLASSES.add(Float.class);
+			INSTRUMENTATION_IGNORED_CLASSES.add(Long.class);
+			INSTRUMENTATION_IGNORED_CLASSES.add(Double.class);
+			INSTRUMENTATION_IGNORED_CLASSES.add(String.class);
 		} 
 		catch (Throwable t) {
 			logger.error("Unable to initialize " + OffHeapServiceImpl.class, t);
@@ -239,8 +252,21 @@ public class OffHeapServiceImpl implements OffHeapService {
 		}
 	}
 	
+	protected boolean isIgnoredForInstrumentation(Class<?> clazz) {
+		if (clazz.isAnnotationPresent(OffHeapIgnoreInstrumentation.class)) {
+			return true;
+		} 
+		else {
+			return INSTRUMENTATION_IGNORED_CLASSES.contains(clazz);
+		}
+	}
+	
 	protected <T> void implementNonPrimitiveFieldSetters(Class<T> elementType) {
 		try {
+			if (isIgnoredForInstrumentation(elementType)) {
+				return;
+			}
+			
 			Jillegal.init();
 			
 			InstrumentService instrumenterService = InstrumentServiceFactory.getInstrumentService();
@@ -291,6 +317,10 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@SuppressWarnings("unchecked")
 	protected <T> void instrumentNonPrimitiveFieldAssignments(final Class<T> elementType) {
 		try {
+			if (isIgnoredForInstrumentation(elementType)) {
+				return;
+			}
+			
 			Jillegal.init();
 
 			final InstrumentService instrumenterService = InstrumentServiceFactory.getInstrumentService();
@@ -581,6 +611,10 @@ public class OffHeapServiceImpl implements OffHeapService {
 				return true;
 			}
 		}
+		
+		logger.warn("Free failed for object typed " +  obj.getClass().getName() + 
+				" at address " + JvmUtil.toHexAddress(directMemoryService.addressOf(obj)));
+		
 		return false;
 	}
 	
@@ -588,7 +622,7 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@Override
 	public boolean freeObjectWithAddress(long address) {
 		checkEnable();
-		
+	
 		for (int i = 0; i < objectOffHeapPoolList.size(); i++) {	
 			ObjectOffHeapPool objectOffHeapPool = objectOffHeapPoolList.get(i);
 			if (objectOffHeapPool.freeFromAddress(address)) {
@@ -598,6 +632,11 @@ public class OffHeapServiceImpl implements OffHeapService {
 				return true;
 			}
 		}
+		
+		logger.warn("Free failed for object typed " +  
+				directMemoryService.getObject(address).getClass().getName() + 
+				" at address " + JvmUtil.toHexAddress(address));
+		
 		return false;
 	}
 	
@@ -653,6 +692,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 			return true;
 		}
 		else {
+			logger.warn("Free failed for array with element type " + array.getClass().getComponentType() +
+					" at address " + JvmUtil.toHexAddress(directMemoryService.addressOf(array)));
 			return false;
 		}	
 	}
@@ -675,6 +716,9 @@ public class OffHeapServiceImpl implements OffHeapService {
 			return true;
 		}
 		else {
+			logger.warn("Free failed for array with element type " + 
+					directMemoryService.getObject(address).getClass().getComponentType() +
+					" at address " + JvmUtil.toHexAddress(address));
 			return false;
 		}	
 	}
@@ -730,24 +774,33 @@ public class OffHeapServiceImpl implements OffHeapService {
 	public boolean freeString(String str) {
 		checkEnable();
 		
+		boolean result = false;
 		if (stringOffHeapPool != null) {
-			return stringOffHeapPool.free(str);
+			result = stringOffHeapPool.free(str);
 		}
-		else {
-			return false;
+		
+		if (!result) {
+			logger.warn("Free failed for string at address " + 
+					JvmUtil.toHexAddress(directMemoryService.addressOf(str)));
 		}
+		
+		return result;
 	}
 	
 	@Override
 	public boolean freeStringWithAddress(long address) {
 		checkEnable();
 		
+		boolean result = false;
 		if (stringOffHeapPool != null) {
-			return stringOffHeapPool.freeFromAddress(address);
+			result = stringOffHeapPool.freeFromAddress(address);
 		}
-		else {
-			return false;
+		
+		if (!result) {
+			logger.warn("Free failed for string at address " + JvmUtil.toHexAddress(address));
 		}
+		
+		return result;
 	}
 	
 	@Override

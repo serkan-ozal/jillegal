@@ -16,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import junit.framework.Assert;
 
+import org.HeapFragger.Idle;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -342,30 +343,29 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 	/**
 	 * This test is ignored by default since it is load test.
 	 */
-	@Test
 	@Ignore
-	// -XX:-UseCompressedOops -XX:+UseSerialGC        -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\Asus\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
-	// -XX:-UseCompressedOops -XX:+UseSerialGC        -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:/Users/serkanozal/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
+	@Test
+	// -XX:-UseCompressedOops -XX:+UseSerialGC        -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\%USERPROFILE%\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
+	// -XX:-UseCompressedOops -XX:+UseSerialGC        -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:~/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
 	
-	// -XX:-UseCompressedOops -XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\Asus\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
-	// -XX:-UseCompressedOops -XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:/Users/serkanozal/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
+	// -XX:-UseCompressedOops -XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\%USERPROFILE%\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
+	// -XX:-UseCompressedOops -XX:+UseConcMarkSweepGC -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:~/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
 	
-	// -XX:-UseCompressedOops -XX:+UseG1GC            -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\Asus\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
-	// -XX:-UseCompressedOops -XX:+UseG1GC            -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:/Users/serkanozal/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
+	// -XX:-UseCompressedOops -XX:+UseG1GC            -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\%USERPROFILE%\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
+	// -XX:-UseCompressedOops -XX:+UseG1GC            -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:~/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
 		
 	// Note that: Crashes with "-XX:+UseParallelGC"
-	// -XX:-UseCompressedOops -XX:+UseParallelGC      -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\Asus\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
-	// -XX:-UseCompressedOops -XX:+UseParallelGC      -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:/Users/serkanozal/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
+	// -XX:-UseCompressedOops -XX:+UseParallelGC      -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\%USERPROFILE%\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
+	// -XX:-UseCompressedOops -XX:+UseParallelGC      -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:~/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
 	public void stressTest() {
-		/*
 		Thread t = new Thread() {
 			public void run() {
 				Idle.main(new String[] {"-t", "1000000000"});
 			};
 		};
 		t.start();
-		*/
-		final int ENTRY_COUNT = 1000000;
+		
+		final int ENTRY_COUNT = 20000000;
 		final int ITERATION_COUNT = 100;
 
 		OffHeapJudyHashMap<Integer, Person> judyMap = 
@@ -440,6 +440,96 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 		}
 		
 		JvmUtil.runGC();
+	}
+	
+	@Ignore
+	@Test
+	public void multiThreadStressTest() throws InterruptedException {
+		final int PUT_COUNT_IN_A_ITERATION = 1000;
+		final int REMOVE_COUNT_IN_A_ITERATION = 10;
+		final int GET_COUNT_IN_A_ITERATION = 1000;
+		final int ENTRY_COUNT = 1000000;
+		final int ITERATION_COUNT = 100;
+		
+		final Random random = new Random();
+		List<Person> list = new ArrayList<Person>();
+
+		OffHeapJudyHashMap<Long, Person> judyMap = 
+				new OffHeapJudyHashMap<Long, Person>(Long.class, Person.class);
+
+		for (int i = 0; i < ENTRY_COUNT; i++) {
+			Person p = randomizePerson(i, judyMap.newElement());
+			judyMap.put(offHeapService.getOffHeapLong(i), p); // They will be added
+			list.add(p);
+			Assert.assertEquals("Username-" + i, p.getUsername());
+			Assert.assertEquals("Firstname-" + i, p.getFirstName());
+			Assert.assertEquals("Lastname-" + i, p.getLastName());
+		}
+		
+		JvmUtil.runGC();
+		
+		Thread[] threads = new Thread[10];
+		for (int k = 0; k < threads.length; k++) {
+			Thread t = new Thread() {
+				public void run() {
+					for (int i = 0; i < ITERATION_COUNT; i++) {
+						long start = System.currentTimeMillis();
+						System.out.println("Iteration-" + i + " started at thread " +
+								Thread.currentThread().getName() + " ...");
+						
+						for (int j = 0; j < PUT_COUNT_IN_A_ITERATION; j++) {
+							int id = random.nextInt(ENTRY_COUNT);
+							Person replacedPerson = 
+									judyMap.put(offHeapService.getOffHeapLong(id), 
+												randomizePerson(id, judyMap.newElement()));
+							if (replacedPerson != null) {
+								offHeapService.freeObject(replacedPerson);
+								// Since Person object itself is "OffHeapAwareObject", 
+								// its itself frees its username, first name and last name
+							}
+						}	
+						
+						JvmUtil.runGC();
+
+						for (int j = 0; j < REMOVE_COUNT_IN_A_ITERATION; j++) {
+							int id = random.nextInt(ENTRY_COUNT);
+							Person removedPerson = judyMap.remove(id);
+							if (removedPerson != null) {
+								offHeapService.freeObject(removedPerson);
+								// Since Person object itself is "OffHeapAwareObject", 
+								// its itself frees its username, first name and last name
+							}
+						}
+						
+						JvmUtil.runGC();
+
+						for (int j = 0; j < GET_COUNT_IN_A_ITERATION; j++) {
+							int id = random.nextInt(ENTRY_COUNT);
+							Person p = judyMap.get(id);
+							if (p != null) {
+								Assert.assertEquals(id, p.getId());
+								Assert.assertEquals("Username-" + id, p.getUsername());
+								Assert.assertEquals("Firstname-" + id, p.getFirstName());
+								Assert.assertEquals("Lastname-" + id, p.getLastName());
+							}	
+						}
+						
+						JvmUtil.runGC();
+						
+						long finish = System.currentTimeMillis();
+						System.out.println("Iteration-" + i + " finished at thread " + 
+								Thread.currentThread().getName() + " in " + (finish - start) + " milliseconds");
+						
+					}
+				};
+			};
+			threads[k] = t;
+			t.start();
+		}	
+		
+		for (Thread t : threads) {
+			t.join();
+		}
 	}
 
 }

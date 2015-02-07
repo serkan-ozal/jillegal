@@ -10,6 +10,6 @@ package tr.com.serkanozal.jillegal.offheap.memory.allocator;
 public enum MemoryAllocatorType {
 
 	STANDARD,
-	POOLED;
+	BATCH;
 	
 }

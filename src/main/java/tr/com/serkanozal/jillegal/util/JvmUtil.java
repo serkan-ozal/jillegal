@@ -561,7 +561,7 @@ public class JvmUtil {
     	@Override
     	public int getArrayLength(long arrayStartAddress, Class<?> elementType) {
     		long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
-    		return (int)unsafe.getInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize());
+    		return unsafe.getInt(arrayIndexStartAddress - JvmUtil.arrayLengthSize());
     	}
     	
     	@Override
@@ -616,14 +616,16 @@ public class JvmUtil {
 	    		return addressOfClass;
 	    	}
 	    	else {
-	    		return JvmUtil.toNativeAddress(normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass)));
+	    		return JvmUtil.toNativeAddress(
+	    				normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass)));
 	    	}
 		}
 
 		@Override
 		public long addressOfClassInternal(Class<?> clazz) {
 			long addressOfClass = addressOf(clazz);
-			return JvmUtil.toNativeAddress(normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass)));
+			return JvmUtil.toNativeAddress(
+					normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass)));
 		}
 
     }
@@ -653,7 +655,7 @@ public class JvmUtil {
     	@Override
     	public int getArrayLength(long arrayStartAddress, Class<?> elementType) {
     		long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
-    		return (int)unsafe.getInt(arrayIndexStartAddress - 2 * JvmUtil.arrayLengthSize());
+    		return unsafe.getInt(arrayIndexStartAddress - 2 * JvmUtil.arrayLengthSize());
     	}
     	
     	@Override
@@ -676,10 +678,9 @@ public class JvmUtil {
 	        return unsafe.getAndSetLong(objArray, baseOffset, 0L);
 		}
 
-		@SuppressWarnings("deprecation")
 		@Override
 		public long addressOfClass(Object o) {
-			return unsafe.getLong(o, classDefPointerOffsetInObject); 
+			return unsafe.getLong(classDefPointerOffsetInObject); 
 		}
 		
 		@Override
@@ -737,7 +738,7 @@ public class JvmUtil {
     	@Override
     	public int getArrayLength(long arrayStartAddress, Class<?> elementType) {
     		long arrayIndexStartAddress = arrayStartAddress + JvmUtil.arrayBaseOffset(elementType);
-    		return (int)unsafe.getInt(arrayIndexStartAddress - 2 * JvmUtil.arrayLengthSize());
+    		return unsafe.getInt(arrayIndexStartAddress - 2 * JvmUtil.arrayLengthSize());
     	}
     	
     	@Override
@@ -765,8 +766,13 @@ public class JvmUtil {
     public static Field getField(Class<?> clazz, String fieldName) {
     	Map<String, Field> fieldMap = classFieldCache.get(clazz);
     	if (fieldMap == null) {
-    		fieldMap = new HashMap<String, Field>();
-    		classFieldCache.put(clazz, fieldMap);
+    		synchronized (classFieldCache) {
+    			fieldMap = classFieldCache.get(clazz);
+    			if (fieldMap == null) {
+    				fieldMap = new HashMap<String, Field>();
+    	    		classFieldCache.put(clazz, fieldMap);
+    			}
+			}
     	}
     	Field field = fieldMap.get(fieldName);
     	if (field == null) {
@@ -799,8 +805,13 @@ public class JvmUtil {
 	private static long findInstanceFieldOffset(Class<?> clazz, Field field) {
     	Map<Field, Long> fieldOffsetMap = classFieldOffsetCache.get(field);
     	if (fieldOffsetMap == null) {
-    		fieldOffsetMap = new HashMap<Field, Long>();
-    		classFieldOffsetCache.put(clazz, fieldOffsetMap);
+    		synchronized (classFieldOffsetCache) {
+    			fieldOffsetMap = classFieldOffsetCache.get(field);
+    			if (fieldOffsetMap == null) {
+    				fieldOffsetMap = new HashMap<Field, Long>();
+    	    		classFieldOffsetCache.put(clazz, fieldOffsetMap);
+    			}
+			}
     	}
     	Long fieldOffset = fieldOffsetMap.get(field);
     	if (fieldOffset == null) {
@@ -1419,8 +1430,13 @@ public class JvmUtil {
 	private static ClassInfo getClassInfo(final Class<?> clazz) {
 		ClassInfo cacheEntry = classCache.get(clazz);
 		if (cacheEntry == null) {
-			cacheEntry = createClassInfo(clazz);
-			classCache.put(clazz, cacheEntry);
+			synchronized (classCache) {
+				cacheEntry = classCache.get(clazz);
+				if (cacheEntry == null) {
+					cacheEntry = createClassInfo(clazz);
+					classCache.put(clazz, cacheEntry);
+				}
+			}
 		}
 	    return cacheEntry;
 	}
