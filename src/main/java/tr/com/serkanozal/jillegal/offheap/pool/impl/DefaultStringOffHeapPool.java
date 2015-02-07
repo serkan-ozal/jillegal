@@ -251,6 +251,11 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 			return false;
 		}	
 		
+		if (currentSegmentIndex < 0 || currentSegmentIndex >= totalSegmentCount) {
+			logger.error("Invalid index for available string: " + currentSegmentIndex);
+			return false;
+		}
+		
 		currentAddress = stringsStartAddress + (currentSegmentIndex * STRING_SEGMENT_SIZE);
 		currentSegmentIndex += (segmentCount - 1);
 		
@@ -291,9 +296,9 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		if (!isIn(strAddress)) {
 			return false;
 		}
-		if (getInUseFromStringAddress(strAddress, 1) == SEGMENT_BLOCK_IS_AVAILABLE) {
-			return false;
-		}
+//		if (getInUseFromStringAddress(strAddress, 1) == SEGMENT_BLOCK_IS_AVAILABLE) {
+//			return false;
+//		}
 		// Reset free object
 		int stringSegmentedSize = calculateSegmentedStringSize(strAddress);
 //		int freeStartOffset = valueArrayOffsetInString + JvmUtil.getAddressSize();

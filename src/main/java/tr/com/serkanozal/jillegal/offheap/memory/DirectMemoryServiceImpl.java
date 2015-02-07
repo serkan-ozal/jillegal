@@ -266,8 +266,9 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     public Object getArrayElement(Object array, int elementIndex) {
 //    	synchronized (array) {
     		long arrayElementAddress = JvmUtil.getArrayElementAddress(array, elementIndex);
-        	if (arrayElementAddress != JvmUtil.NULL && arrayElementAddress != JvmUtil.INVALID_ADDRESS) {
-        		return getObject(arrayElementAddress);
+    		long arrayElementPointedAddress = JvmUtil.toNativeAddress(unsafe.getAddress(arrayElementAddress));
+        	if (arrayElementPointedAddress != JvmUtil.NULL && arrayElementPointedAddress != JvmUtil.INVALID_ADDRESS) {
+        		return getObject(arrayElementPointedAddress);
         	}
         	else {
         		return null;

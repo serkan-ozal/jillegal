@@ -186,6 +186,11 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 			full = true;
 			return false;
 		}	
+		
+		if (currentIndex < 0 || currentIndex >= objectCount) {
+			logger.error("Invalid index for available element type " + elementType.getName() + ": " + currentIndex);
+			return false;
+		}
 
 		currentAddress = objectsStartAddress + (currentIndex * objectSize);
 
@@ -263,9 +268,9 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		if (!isIn(objAddress)) {
 			return false;
 		}
-		if (getInUseFromObjectAddress(objAddress) != OBJECT_IS_IN_USE) {
-			return false;
-		}
+//		if (getInUseFromObjectAddress(objAddress) != OBJECT_IS_IN_USE) {
+//			return false;
+//		}
 		if (obj instanceof OffHeapAwareObject) {
 			((OffHeapAwareObject) obj).onFree(offHeapService, directMemoryService);
 		}

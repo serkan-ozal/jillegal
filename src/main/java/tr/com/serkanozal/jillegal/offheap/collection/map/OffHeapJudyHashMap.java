@@ -454,6 +454,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			}
 		}
 
+		@SuppressWarnings("unchecked")
 		@Override
 		V get(int hash, byte level) {
 			if (children == null) {
@@ -462,7 +463,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
-			JudyNode<K, V> child = children[index];
+			JudyNode<K, V> child = (JudyNode<K, V>) directMemoryService.getArrayElement(children, index); // children[index];
 			if (child != null) {
 				return child.get(hash, nextLevel);
 			}
@@ -476,7 +477,8 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
-			JudyNode<K, V> child = children[index];
+			JudyNode<K, V> child = null;
+			child = (JudyNode<K, V>) directMemoryService.getArrayElement(children, index); // children[index];
 			if (child == null) {
 				if (nextLevel < MAX_LEVEL) {
 					child = offHeapService.newObject(JudyIntermediateNode.class);
@@ -490,6 +492,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			return child.put(root, hash, key, value, nextLevel);
 		}
 		
+		@SuppressWarnings("unchecked")
 		@Override
 		V remove(JudyTree<K, V> root, int hash, byte level) {
 			if (children == null) {
@@ -498,13 +501,14 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
-			JudyNode<K, V> child = children[index];
+			JudyNode<K, V> child = (JudyNode<K, V>) directMemoryService.getArrayElement(children, index); // children[index];
 			if (child != null) {
 				return child.remove(root, hash, nextLevel);
 			}
 			return null;
 		}
 		
+		@SuppressWarnings("unchecked")
 		@Override
 		boolean containsKey(int hash, byte level) {
 			if (children == null) {
@@ -513,7 +517,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
-			JudyNode<K, V> child = children[index];
+			JudyNode<K, V> child = (JudyNode<K, V>) directMemoryService.getArrayElement(children, index); // children[index];
 			if (child != null) {
 				return child.containsKey(hash, nextLevel);
 			}
