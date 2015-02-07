@@ -77,23 +77,24 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			(int) JvmUtil.getUnsafe().objectFieldOffset(
 					JvmUtil.getField(JudyTree.class, "lastEntry"));
 	
-	private JudyTree<K, V> root;
+//	private JudyTree<K, V> root;
+	private long rootAddress;
 	private Class<K> keyType;
 	private Class<V> elementType;
 	
 	public OffHeapJudyHashMap() {
-		this.root = createJudyTree();
+		createJudyTree();
 	}
 	
 	public OffHeapJudyHashMap(Class<V> elementType) {
 		this.elementType = elementType;
-		this.root = createJudyTree();
+		createJudyTree();
 	}
 	
 	public OffHeapJudyHashMap(Class<K> keyType, Class<V> elementType) {
 		this.keyType = keyType;
 		this.elementType = elementType;
-		this.root = createJudyTree();
+		createJudyTree();
 	}
 	
 	@SuppressWarnings({ "rawtypes", "unchecked" })
@@ -106,8 +107,13 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 								referenceType(ObjectPoolReferenceType.LAZY_REFERENCED).
 							build());
 		JudyTree<K, V> judyTree = objectPool.get();
+		this.rootAddress = directMemoryService.addressOf(judyTree);
 		judyTree.init();
 		return judyTree;
+	}
+	
+	public JudyTree<K, V> getRoot() {
+		return directMemoryService.getObject(rootAddress);
 	}
 	
 	@Override
@@ -137,12 +143,12 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	
 	@Override
 	public int size() {
-		return root.size;
+		return getRoot().size;
 	}
 	
 	@Override
 	public boolean isEmpty() {
-		return root.size == 0;
+		return getRoot().size == 0;
 	}
     
 	@Override
@@ -168,43 +174,43 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	@Override
 	public synchronized V put(K key, V value) {
 		synchronized (this) {
-			return (V) root.put(key, value);
+			return (V) getRoot().put(key, value);
 		} 
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
 	public synchronized V get(Object key) {
-		return (V) root.get((K) key);
+		return (V) getRoot().get((K) key);
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
 	public synchronized V remove(Object key) {
-		return (V) root.remove((K) key);	
+		return (V) getRoot().remove((K) key);	
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
 	public synchronized boolean containsKey(Object key) {
-		return root.containsKey((K) key);
+		return getRoot().containsKey((K) key);
 	}
 	
 	@Override
 	public synchronized void clear() {
-		root.clear();	
+		getRoot().clear();	
 	}
 	
 	class JudyEntrySet extends AbstractSet<Map.Entry<K, V>> {
 
 		@Override
 		public Iterator<Map.Entry<K, V>> iterator() {
-			return new JudyEntryIterator(root.firstEntry);
+			return new JudyEntryIterator(getRoot().firstEntry);
 		}
 
 		@Override
 		public int size() {
-			return root.size;
+			return getRoot().size;
 		}
 		
 	}
@@ -247,12 +253,12 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 
 		@Override
 		public Iterator<K> iterator() {
-			return new JudyKeyIterator(new JudyEntryIterator(root.firstEntry));
+			return new JudyKeyIterator(new JudyEntryIterator(getRoot().firstEntry));
 		}
 
 		@Override
 		public int size() {
-			return root.size;
+			return getRoot().size;
 		}
 		
 	}
@@ -292,12 +298,12 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 
 		@Override
 		public Iterator<V> iterator() {
-			return new JudyValueIterator(new JudyEntryIterator(root.firstEntry));
+			return new JudyValueIterator(new JudyEntryIterator(getRoot().firstEntry));
 		}
 
 		@Override
 		public int size() {
-			return root.size;
+			return getRoot().size;
 		}
 		
 	}
