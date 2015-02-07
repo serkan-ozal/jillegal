@@ -138,7 +138,7 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 			allocationSize = 
 					objectSize * objectCount + JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
 			allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
-			allocationEndAddress = allocationStartAddress + (objectCount * objectSize) - objectSize;
+			allocationEndAddress = allocationStartAddress + allocationSize;
 			objectsStartAddress = allocationStartAddress;
 			// Allocated objects must start aligned as address size from start address of allocated address
 			long addressMod = objectsStartAddress % JvmUtil.OBJECT_ADDRESS_SENSIVITY;

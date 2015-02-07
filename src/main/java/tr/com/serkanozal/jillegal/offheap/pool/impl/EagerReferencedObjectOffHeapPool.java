@@ -186,7 +186,7 @@ public class EagerReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T
 					arraySize + (objectCount * objectSize) + 
 					2 * JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning;
 			allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
-			allocationEndAddress = allocationStartAddress + (objectCount * objectSize) - objectSize;
+			allocationEndAddress = allocationStartAddress + allocationSize;
 			sampleArray = (T[]) Array.newInstance(elementType, 0);
 			
 			long addressMod;
