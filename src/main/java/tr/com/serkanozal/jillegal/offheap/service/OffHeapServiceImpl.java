@@ -614,6 +614,9 @@ public class OffHeapServiceImpl implements OffHeapService {
 		
 		logger.warn("Free failed for object typed " +  obj.getClass().getName() + 
 				" at address " + JvmUtil.toHexAddress(directMemoryService.addressOf(obj)));
+		if (isInOffHeap(obj)) {
+			logger.warn("Also this object is in off-heap");
+		}
 		
 		return false;
 	}
@@ -633,9 +636,13 @@ public class OffHeapServiceImpl implements OffHeapService {
 			}
 		}
 		
-		logger.warn("Free failed for object typed " +  
-				directMemoryService.getObject(address).getClass().getName() + 
+		Object obj = directMemoryService.getObject(address);
+		
+		logger.warn("Free failed for object typed " + obj.getClass().getName() + 
 				" at address " + JvmUtil.toHexAddress(address));
+		if (isInOffHeap(obj)) {
+			logger.warn("Also this object is in off-heap");
+		}
 		
 		return false;
 	}
@@ -782,6 +789,9 @@ public class OffHeapServiceImpl implements OffHeapService {
 		if (!result) {
 			logger.warn("Free failed for string at address " + 
 					JvmUtil.toHexAddress(directMemoryService.addressOf(str)));
+			if (isInOffHeap(str)) {
+				logger.warn("Also this string is in off-heap");
+			}
 		}
 		
 		return result;
@@ -798,6 +808,10 @@ public class OffHeapServiceImpl implements OffHeapService {
 		
 		if (!result) {
 			logger.warn("Free failed for string at address " + JvmUtil.toHexAddress(address));
+			String str = directMemoryService.getObject(address);
+			if (isInOffHeap(str)) {
+				logger.warn("Also this string is in off-heap");
+			}
 		}
 		
 		return result;
