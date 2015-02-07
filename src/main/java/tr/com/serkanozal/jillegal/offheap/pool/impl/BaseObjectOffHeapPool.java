@@ -83,7 +83,9 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		if (sampleObject == null) {
 			throw new IllegalStateException("Unable to create a sample object for class " + elementType.getName());
 		}
-		sampleHeader = directMemoryService.getLong(sampleObject, 0L);
+		synchronized (sampleObject) {
+			sampleHeader = directMemoryService.getLong(sampleObject, 0L);
+		}
 		objectSize = directMemoryService.sizeOfObject(sampleObject);
 		offHeapSampleObjectAddress = directMemoryService.allocateMemory(objectSize);
 		directMemoryService.copyMemory(sampleObject, 0L, null, offHeapSampleObjectAddress, objectSize);
