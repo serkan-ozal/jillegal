@@ -552,7 +552,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		}
 		
 		JudyEntry<K, V>[] getEntries() {
-			return entries;
+			return directMemoryService.getObjectField(this, ENTRIES_FIELD_OFFSET);
 		}
 		
 		void setEntries(JudyEntry<K, V>[] entries) {
@@ -565,6 +565,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			}
 		}
 
+		@SuppressWarnings("unchecked")
 		@Override
 		V get(int hash, byte level) {
 			if (entries == null) {
@@ -573,7 +574,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
-			JudyEntry<K, V> entry = entries[index];
+			JudyEntry<K, V> entry = (JudyEntry<K, V>) directMemoryService.getArrayElement(entries, index); // entries[index];
 			if (entry != null) {
 				return entry.getValue();
 			}
@@ -587,7 +588,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
-			JudyEntry<K, V> entry = entries[index];
+			JudyEntry<K, V> entry = (JudyEntry<K, V>) directMemoryService.getArrayElement(entries, index); // entries[index];
 			if (entry == null) {
 				entry = offHeapService.newObject(JudyEntry.class); 
 				directMemoryService.setArrayElement(entries, index, entry);	
@@ -608,6 +609,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			return oldValue;
 		}
 		
+		@SuppressWarnings("unchecked")
 		@Override
 		V remove(JudyTree<K, V> root, int hash, byte level) {
 			if (entries == null) {
@@ -616,7 +618,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
-			JudyEntry<K, V> entryToRemove = entries[index];
+			JudyEntry<K, V> entryToRemove = (JudyEntry<K, V>) directMemoryService.getArrayElement(entries, index); // entries[index];
 			if (entryToRemove != null) {
 				directMemoryService.setArrayElement(entries, index, null); 
 				V value = entryToRemove.getValue();
@@ -646,6 +648,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			return null;
 		}
 		
+		@SuppressWarnings("unchecked")
 		@Override
 		boolean containsKey(int hash, byte level) {
 			if (entries == null) {
@@ -654,14 +657,15 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
-			JudyEntry<K, V> entry = entries[index];
+			JudyEntry<K, V> entry = (JudyEntry<K, V>) directMemoryService.getArrayElement(entries, index); // entries[index];
 			return entry != null;
 		}
 		
+		@SuppressWarnings("unchecked")
 		@Override
 		void clear(byte level) {
 			for (int i = 0; i < entries.length; i++) {
-				JudyEntry<K, V> entry = entries[i];
+				JudyEntry<K, V> entry = (JudyEntry<K, V>) directMemoryService.getArrayElement(entries, i); // entries[i];
 				if (entry == null) {
 					continue;
 				}
