@@ -602,12 +602,18 @@ public class OffHeapServiceImpl implements OffHeapService {
 	public <T> boolean freeObject(T obj) {
 		checkEnable();
 		
+		if (obj == null) {
+			return false;
+		}
+		
 		for (int i = 0; i < objectOffHeapPoolList.size(); i++) {	
 			ObjectOffHeapPool objectOffHeapPool = objectOffHeapPoolList.get(i);
 			if (objectOffHeapPool.free(obj)) {
-				if (objectOffHeapPool.isEmpty()) {
-					objectOffHeapPoolList.remove(objectOffHeapPool);
-				}
+//				if (objectOffHeapPool.isEmpty()) {
+//					objectOffHeapPoolMap.remove(objectOffHeapPool.getElementType());
+//					objectOffHeapPoolList.remove(objectOffHeapPool);
+//					objectOffHeapPool.free();
+//				}
 				return true;
 			}
 		}
@@ -626,12 +632,18 @@ public class OffHeapServiceImpl implements OffHeapService {
 	public boolean freeObjectWithAddress(long address) {
 		checkEnable();
 	
+		if (address == JvmUtil.NULL) {
+			return false;
+		}
+		
 		for (int i = 0; i < objectOffHeapPoolList.size(); i++) {	
 			ObjectOffHeapPool objectOffHeapPool = objectOffHeapPoolList.get(i);
 			if (objectOffHeapPool.freeFromAddress(address)) {
-				if (objectOffHeapPool.isEmpty()) {
-					objectOffHeapPoolList.remove(objectOffHeapPool);
-				}
+//				if (objectOffHeapPool.isEmpty()) {
+//					objectOffHeapPoolMap.remove(objectOffHeapPool.getElementType());
+//					objectOffHeapPoolList.remove(objectOffHeapPool);
+//					objectOffHeapPool.free();
+//				}
 				return true;
 			}
 		}
@@ -686,6 +698,10 @@ public class OffHeapServiceImpl implements OffHeapService {
 	public synchronized <A> boolean freeArray(A array) {
 		checkEnable();
 		
+		if (array == null) {
+			return false;
+		}
+		
 		ArrayOffHeapPool arrayOffHeapPoolToRemove = null;
 		for (ArrayOffHeapPool arrayOffHeapPool : arrayOffHeapPoolSet) {
 			if (arrayOffHeapPool.isMe(array)) {
@@ -694,8 +710,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 			}
 		}
 		if (arrayOffHeapPoolToRemove != null) {
-			arrayOffHeapPoolToRemove.free();
 			arrayOffHeapPoolSet.remove(arrayOffHeapPoolToRemove);
+			arrayOffHeapPoolToRemove.free();
 			return true;
 		}
 		else {
@@ -710,6 +726,10 @@ public class OffHeapServiceImpl implements OffHeapService {
 	public boolean freeArrayWithAddress(long address) {
 		checkEnable();
 		
+		if (address == JvmUtil.NULL) {
+			return false;
+		}
+		
 		ArrayOffHeapPool arrayOffHeapPoolToRemove = null;
 		for (ArrayOffHeapPool arrayOffHeapPool : arrayOffHeapPoolSet) {
 			if (arrayOffHeapPool.isMeAsAddress(address)) {
@@ -718,8 +738,8 @@ public class OffHeapServiceImpl implements OffHeapService {
 			}
 		}
 		if (arrayOffHeapPoolToRemove != null) {
-			arrayOffHeapPoolToRemove.free();
 			arrayOffHeapPoolSet.remove(arrayOffHeapPoolToRemove);
+			arrayOffHeapPoolToRemove.free();
 			return true;
 		}
 		else {
@@ -781,6 +801,10 @@ public class OffHeapServiceImpl implements OffHeapService {
 	public boolean freeString(String str) {
 		checkEnable();
 		
+		if (str == null) {
+			return false;
+		}
+		
 		boolean result = false;
 		if (stringOffHeapPool != null) {
 			result = stringOffHeapPool.free(str);
@@ -800,6 +824,10 @@ public class OffHeapServiceImpl implements OffHeapService {
 	@Override
 	public boolean freeStringWithAddress(long address) {
 		checkEnable();
+		
+		if (address == JvmUtil.NULL) {
+			return false;
+		}
 		
 		boolean result = false;
 		if (stringOffHeapPool != null) {

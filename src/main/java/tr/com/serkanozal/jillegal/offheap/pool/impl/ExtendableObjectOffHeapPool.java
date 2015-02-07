@@ -159,24 +159,24 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 			return false;
 		}
 		if (currentForkableOffHeapPool.free(obj)) {
-			if (currentForkableOffHeapPool.isEmpty() && 
-					currentForkableOffHeapPool != rootForkableOffHeapPool) {
-				currentForkableOffHeapPool.free();
-				forkableOffHeapPoolList.remove(currentForkableOffHeapPool);
-				currentForkableOffHeapPool = rootForkableOffHeapPool;
-			}
+//			if (currentForkableOffHeapPool.isEmpty() && 
+//					currentForkableOffHeapPool != rootForkableOffHeapPool) {
+//				currentForkableOffHeapPool.free();
+//				forkableOffHeapPoolList.remove(currentForkableOffHeapPool);
+//				currentForkableOffHeapPool = rootForkableOffHeapPool;
+//			}
 			lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
 			return true;
 		}
 		if (lastUsedForkableOffHeapPoolToFree != null) {
 			if (lastUsedForkableOffHeapPoolToFree.free(obj)) {
-				if (lastUsedForkableOffHeapPoolToFree.isEmpty() && 
-						lastUsedForkableOffHeapPoolToFree != rootForkableOffHeapPool) {
-					lastUsedForkableOffHeapPoolToFree.free();
-					forkableOffHeapPoolList.remove(lastUsedForkableOffHeapPoolToFree);
-					currentForkableOffHeapPool = rootForkableOffHeapPool;
-					lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
-				}
+//				if (lastUsedForkableOffHeapPoolToFree.isEmpty() && 
+//						lastUsedForkableOffHeapPoolToFree != rootForkableOffHeapPool) {
+//					lastUsedForkableOffHeapPoolToFree.free();
+//					forkableOffHeapPoolList.remove(lastUsedForkableOffHeapPoolToFree);
+//					currentForkableOffHeapPool = rootForkableOffHeapPool;
+//					lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+//				}
 				return true;
 			}
 		}
@@ -185,15 +185,15 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 					forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != currentForkableOffHeapPool) {
 				if (forkableOffHeapPool.free(obj)) {
-					if (forkableOffHeapPool.isEmpty() && forkableOffHeapPool != rootForkableOffHeapPool) {
-						forkableOffHeapPool.free();
-						forkableOffHeapPoolList.remove(forkableOffHeapPool);
-						currentForkableOffHeapPool = rootForkableOffHeapPool;
-						lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
-					} 
-					else {
+//					if (forkableOffHeapPool.isEmpty() && forkableOffHeapPool != rootForkableOffHeapPool) {
+//						forkableOffHeapPool.free();
+//						forkableOffHeapPoolList.remove(forkableOffHeapPool);
+//						currentForkableOffHeapPool = rootForkableOffHeapPool;
+//						lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+//					} 
+//					else {
 						lastUsedForkableOffHeapPoolToFree = forkableOffHeapPool;
-					}	
+//					}	
 					return true;
 				}
 			}
@@ -205,24 +205,24 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 	public synchronized boolean freeFromAddress(long objAddress) {
 		checkAvailability();
 		if (currentForkableOffHeapPool.freeFromAddress(objAddress)) {
-			if (currentForkableOffHeapPool.isEmpty() && 
-					currentForkableOffHeapPool != rootForkableOffHeapPool) {
-				currentForkableOffHeapPool.free();
-				forkableOffHeapPoolList.remove(currentForkableOffHeapPool);
-				currentForkableOffHeapPool = rootForkableOffHeapPool;
-			}
+//			if (currentForkableOffHeapPool.isEmpty() && 
+//					currentForkableOffHeapPool != rootForkableOffHeapPool) {
+//				currentForkableOffHeapPool.free();
+//				forkableOffHeapPoolList.remove(currentForkableOffHeapPool);
+//				currentForkableOffHeapPool = rootForkableOffHeapPool;
+//			}
 			lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
 			return true;
 		}
 		if (lastUsedForkableOffHeapPoolToFree != null) {
 			if (lastUsedForkableOffHeapPoolToFree.freeFromAddress(objAddress)) {
-				if (lastUsedForkableOffHeapPoolToFree.isEmpty() && 
-						lastUsedForkableOffHeapPoolToFree != rootForkableOffHeapPool) {
-					lastUsedForkableOffHeapPoolToFree.free();
-					forkableOffHeapPoolList.remove(lastUsedForkableOffHeapPoolToFree);
-					currentForkableOffHeapPool = rootForkableOffHeapPool;
-					lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
-				}
+//				if (lastUsedForkableOffHeapPoolToFree.isEmpty() && 
+//						lastUsedForkableOffHeapPoolToFree != rootForkableOffHeapPool) {
+//					lastUsedForkableOffHeapPoolToFree.free();
+//					forkableOffHeapPoolList.remove(lastUsedForkableOffHeapPoolToFree);
+//					currentForkableOffHeapPool = rootForkableOffHeapPool;
+//					lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+//				}
 				return true;
 			}
 		}
@@ -231,15 +231,15 @@ public class ExtendableObjectOffHeapPool<T> extends BaseOffHeapPool<T, Extendabl
 					forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != currentForkableOffHeapPool) {
 				if (forkableOffHeapPool.freeFromAddress(objAddress)) {
-					if (forkableOffHeapPool.isEmpty() && forkableOffHeapPool != rootForkableOffHeapPool) {
-						forkableOffHeapPool.free();
-						forkableOffHeapPoolList.remove(forkableOffHeapPool);
-						currentForkableOffHeapPool = rootForkableOffHeapPool;
-						lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
-					} 
-					else {
+//					if (forkableOffHeapPool.isEmpty() && forkableOffHeapPool != rootForkableOffHeapPool) {
+//						forkableOffHeapPool.free();
+//						forkableOffHeapPoolList.remove(forkableOffHeapPool);
+//						currentForkableOffHeapPool = rootForkableOffHeapPool;
+//						lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+//					} 
+//					else {
 						lastUsedForkableOffHeapPoolToFree = forkableOffHeapPool;
-					}	
+//					}	
 					return true;
 				}
 			}

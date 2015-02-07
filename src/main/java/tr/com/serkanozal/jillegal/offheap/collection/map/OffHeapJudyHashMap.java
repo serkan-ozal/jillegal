@@ -344,7 +344,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		
 		@Override
 		public K getKey() {
-			if (keyAddress == 0) {
+			if (keyAddress == JvmUtil.NULL) {
 				return null;
 			} else {
 				return directMemoryService.getObject(keyAddress);
@@ -354,11 +354,11 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		}
 		
 		void setKey(K key) {
-			if (keyAddress != 0) {
+			if (keyAddress != JvmUtil.NULL) {
 				offHeapService.freeObjectWithAddress(keyAddress);
 			}
 			if (key == null) {
-				keyAddress = 0;
+				keyAddress = JvmUtil.NULL;
 			} else {
 				keyAddress = directMemoryService.addressOf(key);
 			}
@@ -372,7 +372,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 
 		@Override
 		public V getValue() {
-			if (valueAddress == 0) {
+			if (valueAddress == JvmUtil.NULL) {
 				return null;
 			} else {
 				return directMemoryService.getObject(valueAddress);
@@ -384,11 +384,11 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		@Override
 		public V setValue(V value) {
 			V oldValue = null;
-			if (valueAddress != 0) {
+			if (valueAddress != JvmUtil.NULL) {
 				oldValue = directMemoryService.getObject(valueAddress);
 			}
 			if (value == null) {
-				valueAddress = 0;
+				valueAddress = JvmUtil.NULL;
 			} else {
 				valueAddress = directMemoryService.addressOf(value);
 			}
