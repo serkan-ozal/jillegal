@@ -96,16 +96,15 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		this.root = createJudyTree();
 	}
 	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	JudyTree<K, V> createJudyTree() {
-		LazyReferencedObjectOffHeapPool<JudyTree> objectPool = 
-				offHeapService.createOffHeapPool(
-						new ObjectOffHeapPoolCreateParameterBuilder<JudyTree>().
-								type(JudyTree.class).
-								objectCount(1).
-								referenceType(ObjectPoolReferenceType.LAZY_REFERENCED).
-							build());
-		JudyTree<K, V> judyTree = objectPool.get();
+//		LazyReferencedObjectOffHeapPool<JudyTree> objectPool = 
+//				offHeapService.createOffHeapPool(
+//						new ObjectOffHeapPoolCreateParameterBuilder<JudyTree>().
+//								type(JudyTree.class).
+//								objectCount(1).
+//								referenceType(ObjectPoolReferenceType.LAZY_REFERENCED).
+//							build());
+		JudyTree<K, V> judyTree = new JudyTree<K, V>(); // objectPool.get();
 		judyTree.init();
 		return judyTree;
 	}
@@ -681,9 +680,9 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	static class JudyTree<K, V> {
 
 		JudyIntermediateNode<K, V>[] nodes;
-		JudyEntry<K, V> firstEntry;
-		JudyEntry<K, V> lastEntry;
-		int size;
+		volatile JudyEntry<K, V> firstEntry;
+		volatile JudyEntry<K, V> lastEntry;
+		volatile int size;
 
 		@SuppressWarnings("unchecked")
 		void init() {
@@ -696,7 +695,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		}
 		
 		void setNodes(JudyIntermediateNode<K, V>[] nodes) {
-			directMemoryService.setObjectField(this, NODES_FIELD_OFFSET, nodes);
+			this.nodes = nodes;
 		}
 		
 		JudyEntry<K, V> getFirstEntry() {
@@ -704,7 +703,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		}
 		
 		void setFirstEntry(JudyEntry<K, V> firstEntry) {
-			directMemoryService.setObjectField(this, FIRST_ENTRY_FIELD_OFFSET, firstEntry);
+			this.firstEntry = firstEntry;
 		}
 		
 		JudyEntry<K, V> getLastEntry() {
@@ -712,7 +711,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		}
 		
 		void setLastEntry(JudyEntry<K, V> lastEntry) {
-			directMemoryService.setObjectField(this, LAST_ENTRY_FIELD_OFFSET, lastEntry);
+			this.lastEntry = lastEntry;
 		}
 		
 		V get(K key) {
