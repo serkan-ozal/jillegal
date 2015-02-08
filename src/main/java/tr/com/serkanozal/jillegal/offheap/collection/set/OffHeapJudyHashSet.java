@@ -11,11 +11,9 @@ import java.util.AbstractCollection;
 import java.util.AbstractSet;
 import java.util.Iterator;
 
-import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.ObjectOffHeapPoolCreateParameterBuilder;
-import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectPoolReferenceType;
+import tr.com.serkanozal.jillegal.offheap.config.provider.annotation.OffHeapIgnoreInstrumentation;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
-import tr.com.serkanozal.jillegal.offheap.pool.impl.LazyReferencedObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
@@ -46,12 +44,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 	private static final int NEXT_FIELD_OFFSET = 
 			(int) JvmUtil.getUnsafe().objectFieldOffset(
 					JvmUtil.getField(JudyEntry.class, "next"));
-	
-	@SuppressWarnings("restriction")
-	private static final int ROOT_FIELD_OFFSET = 
-			(int) JvmUtil.getUnsafe().objectFieldOffset(
-					JvmUtil.getField(JudyNode.class, "root"));
-	
+
 	@SuppressWarnings("restriction")
 	private static final int CHILDREN_FIELD_OFFSET = 
 			(int) JvmUtil.getUnsafe().objectFieldOffset(
@@ -61,19 +54,6 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 	private static final int ENTRIES_FIELD_OFFSET = 
 			(int) JvmUtil.getUnsafe().objectFieldOffset(
 					JvmUtil.getField(JudyLeafNode.class, "entries"));
-	
-	@SuppressWarnings("restriction")
-	private static final int NODES_FIELD_OFFSET = 
-			(int) JvmUtil.getUnsafe().objectFieldOffset(
-					JvmUtil.getField(JudyTree.class, "nodes"));
-	@SuppressWarnings("restriction")
-	private static final int FIRST_ENTRY_FIELD_OFFSET = 
-			(int) JvmUtil.getUnsafe().objectFieldOffset(
-					JvmUtil.getField(JudyTree.class, "firstEntry"));
-	@SuppressWarnings("restriction")
-	private static final int LAST_ENTRY_FIELD_OFFSET = 
-			(int) JvmUtil.getUnsafe().objectFieldOffset(
-					JvmUtil.getField(JudyTree.class, "lastEntry"));
 	
 	private JudyTree<E> root;
 	private Class<E> elementType;
@@ -87,16 +67,8 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		this.root = createJudyTree();
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	JudyTree<E> createJudyTree() {
-		LazyReferencedObjectOffHeapPool<JudyTree> objectPool = 
-				offHeapService.createOffHeapPool(
-						new ObjectOffHeapPoolCreateParameterBuilder<JudyTree>().
-								type(JudyTree.class).
-								objectCount(1).
-								referenceType(ObjectPoolReferenceType.LAZY_REFERENCED).
-							build());
-		JudyTree<E> judyTree = objectPool.get();
+		JudyTree<E> judyTree = new JudyTree<E>();
 		judyTree.init();
 		return judyTree;
 	}
@@ -239,7 +211,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 	
 	static class JudyEntry<E> {
 
-		volatile long elementAddress = 0;
+		volatile long elementAddress;
 		JudyEntry<E> prev;
 		JudyEntry<E> next;
 		
@@ -248,7 +220,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		}
 		
 		public E getElement() {
-			if (elementAddress != 0) {
+			if (elementAddress != JvmUtil.NULL) {
 				return directMemoryService.getObject(elementAddress);
 			} else {
 				return null;
@@ -257,14 +229,14 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 
 		public E setElement(E element) {
 			E oldElement = null;
-			if (elementAddress != 0) {
+			if (elementAddress != JvmUtil.NULL) {
 				oldElement = directMemoryService.getObject(elementAddress);
 			}
 			if (element != null) {
 				elementAddress = directMemoryService.addressOf(element);
 			} 
 			else {
-				elementAddress = 0;
+				elementAddress = JvmUtil.NULL;
 			}
 			return oldElement;
 		}
@@ -287,34 +259,24 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		
 	}
 	
+	@OffHeapIgnoreInstrumentation
 	static abstract class JudyNode<E> {
 		
-		JudyTree<E> root;
-		
-		JudyTree<E> getRoot() {
-			return root;
-		}
-		
-		void setRoot(JudyTree<E> root) {
-			directMemoryService.setObjectField(this, ROOT_FIELD_OFFSET, root);
-		}
-		
-		abstract E add(int hash, E element, byte level);
-		abstract E remove(int hash, byte level);
+		abstract void init();
+		abstract E add(JudyTree<E> root, int hash, E element, byte level);
+		abstract E remove(JudyTree<E> root, int hash, byte level);
 		abstract boolean contains(int hash, byte level);
 		abstract void clear(byte level);
 		
 	}
 	
+	@OffHeapIgnoreInstrumentation
 	static class JudyIntermediateNode<E> extends JudyNode<E> {
 		
 		JudyNode<E>[] children;
 		
-		JudyIntermediateNode() {
-			init();
-		}
-		
 		@SuppressWarnings("unchecked")
+		@Override
 		void init() {
 			setChildren(offHeapService.newArray(JudyNode[].class, NODE_SIZE, false));
 		}
@@ -335,7 +297,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 
 		@SuppressWarnings("unchecked")
 		@Override
-		E add(int hash, E element, byte level) {
+		E add(JudyTree<E> root, int hash, E element, byte level) {
 			initIfNeeded();
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
@@ -344,19 +306,18 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 			if (child == null) {
 				if (nextLevel < MAX_LEVEL) {
 					child = offHeapService.newObject(JudyIntermediateNode.class);
-					child.setRoot(root);
 				}
 				else {
 					child = offHeapService.newObject(JudyLeafNode.class);
-					child.setRoot(root); 
 				}
+				child.init();
 				directMemoryService.setArrayElement(children, index, child);
 			}
-			return child.add(hash, element, nextLevel);
+			return child.add(root, hash, element, nextLevel);
 		}
 		
 		@Override
-		E remove(int hash, byte level) {
+		E remove(JudyTree<E> root, int hash, byte level) {
 			if (children == null) {
 				return null;
 			}
@@ -365,7 +326,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
 			JudyNode<E> child = children[index];
 			if (child != null) {
-				return child.remove(hash, nextLevel);
+				return child.remove(root, hash, nextLevel);
 			}
 			return null;
 		}
@@ -402,15 +363,13 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		
 	}
 	
+	@OffHeapIgnoreInstrumentation
 	static class JudyLeafNode<E> extends JudyNode<E> {
 		
 		JudyEntry<E>[] entries;
-		
-		JudyLeafNode() {
-			init();
-		}
-		
+
 		@SuppressWarnings("unchecked")
+		@Override
 		void init() {
 			setEntries(offHeapService.newArray(JudyEntry[].class, NODE_SIZE, false));
 		}
@@ -431,7 +390,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		
 		@SuppressWarnings("unchecked")
 		@Override
-		E add(int hash, E element, byte level) {
+		E add(JudyTree<E> root, int hash, E element, byte level) {
 			initIfNeeded();
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
@@ -441,19 +400,24 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 				entry = offHeapService.newObject(JudyEntry.class); 
 				directMemoryService.setArrayElement(entries, index, entry);
 			}
-			if (root.firstEntry == null) {
+			
+			E oldElement = entry.setElement(element);
+			
+			if (root.getFirstEntry() == null) {
 				root.setFirstEntry(entry);
 			}
-			if (root.lastEntry != null) {
-				entry.setPrev(root.lastEntry);
-				root.lastEntry.setNext(entry);
+			JudyEntry<E> lastEntry = root.getLastEntry();
+			if (lastEntry != null) {
+				entry.setPrev(lastEntry);
+				lastEntry.setNext(entry);
 			}
 			root.setLastEntry(entry);
-			return entry.setElement(element);
+			
+			return oldElement;
 		}
 		
 		@Override
-		E remove(int hash, byte level) {
+		E remove(JudyTree<E> root, int hash, byte level) {
 			if (entries == null) {
 				return null;
 			}
@@ -463,21 +427,28 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 			JudyEntry<E> entryToRemove = entries[index];
 			if (entryToRemove != null) {
 				directMemoryService.setArrayElement(entries, index, null); 
-				if (entryToRemove == root.firstEntry) {
-					root.setFirstEntry(entryToRemove.next);
+				E removedElement = entryToRemove.getElement();
+				entryToRemove.setElement(null);
+				
+				JudyEntry<E> prevEntry = entryToRemove.getPrev();
+				JudyEntry<E> nextEntry = entryToRemove.getNext();
+				entryToRemove.setPrev(null);
+				entryToRemove.setNext(null);
+				if (entryToRemove == root.getFirstEntry()) {
+					root.setFirstEntry(nextEntry);
 				}
 				if (entryToRemove == root.lastEntry) {
-					root.setLastEntry(entryToRemove.prev);
+					root.setLastEntry(prevEntry);
 				}
-				if (entryToRemove.prev != null) {
-					entryToRemove.prev.setNext(entryToRemove.next);
+				if (prevEntry != null) {
+					prevEntry.setNext(nextEntry);
 				}
-				if (entryToRemove.next != null) {
-					entryToRemove.next.setPrev(entryToRemove.prev);	
+				if (nextEntry != null) {
+					nextEntry.setPrev(prevEntry);	
 				}
-				E element = entryToRemove.getElement();
+
 				offHeapService.freeObject(entryToRemove);
-				return element;
+				return removedElement;
 			}
 			return null;
 		}
@@ -501,6 +472,8 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 					continue;
 				}
 				entry.setElement(null);
+				entry.setPrev(null);
+				entry.setNext(null);
 				offHeapService.freeObject(entry);
 			}
 			offHeapService.freeArray(entries);
@@ -512,24 +485,18 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 	/**
 	 * Root node for Judy tree based indexing nodes
 	 */
+	@OffHeapIgnoreInstrumentation
 	static class JudyTree<E> {
 
 		JudyIntermediateNode<E>[] nodes;
-		JudyEntry<E> firstEntry;
-		JudyEntry<E> lastEntry;
+		volatile JudyEntry<E> firstEntry;
+		volatile JudyEntry<E> lastEntry;
 		volatile int size;
-		
-		JudyTree() {
-			init();
-		}
-		
+
 		@SuppressWarnings("unchecked")
 		void init() {
 			// Create and initialize first level nodes
 			setNodes(offHeapService.newArray(JudyIntermediateNode[].class, NODE_SIZE, true));
-			for (int i = 0 ; i < nodes.length; i++) {
-				nodes[i].setRoot(this);
-			}
 		}
 		
 		JudyIntermediateNode<E>[] getNodes() {
@@ -537,7 +504,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		}
 		
 		void setNodes(JudyIntermediateNode<E>[] nodes) {
-			directMemoryService.setObjectField(this, NODES_FIELD_OFFSET, nodes);
+			this.nodes = nodes;
 		}
 		
 		JudyEntry<E> getFirstEntry() {
@@ -545,7 +512,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		}
 		
 		void setFirstEntry(JudyEntry<E> firstEntry) {
-			directMemoryService.setObjectField(this, FIRST_ENTRY_FIELD_OFFSET, firstEntry);
+			this.firstEntry = firstEntry;
 		}
 		
 		JudyEntry<E> getLastEntry() {
@@ -553,13 +520,13 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		}
 		
 		void setLastEntry(JudyEntry<E> lastEntry) {
-			directMemoryService.setObjectField(this, LAST_ENTRY_FIELD_OFFSET, lastEntry);
+			this.lastEntry = lastEntry;
 		}
 
 		E add(E element) {
 			// Use most significant byte as first level index
 			short index = (short)((element.hashCode() >> 24) & 0x000000FF);
-			E obj = nodes[index].add(element.hashCode(), element, (byte) 1);
+			E obj = nodes[index].add(this, element.hashCode(), element, (byte) 1);
 			if (obj == null) {
 				size++;
 			}
@@ -569,7 +536,7 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 		E remove(E element) {
 			// Use most significant byte as first level index
 			short index = (short)((element.hashCode() >> 24) & 0x000000FF);
-			E obj = nodes[index].remove(element.hashCode(), (byte) 1);
+			E obj = nodes[index].remove(this, element.hashCode(), (byte) 1);
 			if (obj != null) {
 				size--;
 			}

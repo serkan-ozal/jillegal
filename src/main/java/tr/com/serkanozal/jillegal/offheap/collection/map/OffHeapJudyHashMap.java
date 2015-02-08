@@ -589,7 +589,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			JudyEntry<K, V> entryToRemove = entries[index];
 			if (entryToRemove != null) {
 				directMemoryService.setArrayElement(entries, index, null); 
-				V value = entryToRemove.getValue();
+				V removedValue = entryToRemove.getValue();
 				entryToRemove.setKey(null); // key area will be free automatically in entry instance
 				entryToRemove.setValue(null);
 
@@ -611,7 +611,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 				}
 				
 				offHeapService.freeObject(entryToRemove);
-				return value;
+				return removedValue;
 			}
 			return null;
 		}
