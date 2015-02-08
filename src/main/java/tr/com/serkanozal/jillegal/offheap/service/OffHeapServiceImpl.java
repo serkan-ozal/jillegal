@@ -31,11 +31,13 @@ import org.objectweb.asm.Opcodes;
 
 import sun.misc.Unsafe;
 import tr.com.serkanozal.jillegal.Jillegal;
+import tr.com.serkanozal.jillegal.config.ConfigManager;
 import tr.com.serkanozal.jillegal.instrument.Instrumenter;
 import tr.com.serkanozal.jillegal.instrument.domain.model.GeneratedClass;
 import tr.com.serkanozal.jillegal.instrument.service.InstrumentService;
 import tr.com.serkanozal.jillegal.instrument.service.InstrumentServiceFactory;
-import tr.com.serkanozal.jillegal.offheap.config.provider.annotation.OffHeapIgnoreInstrumentation;
+import tr.com.serkanozal.jillegal.offheap.config.OffHeapConfigService;
+import tr.com.serkanozal.jillegal.offheap.domain.model.config.OffHeapClassConfig;
 import tr.com.serkanozal.jillegal.offheap.domain.model.instance.ArrayInstanceRequest;
 import tr.com.serkanozal.jillegal.offheap.domain.model.instance.InstanceRequest;
 import tr.com.serkanozal.jillegal.offheap.domain.model.instance.ObjectInstanceRequest;
@@ -101,6 +103,7 @@ public class OffHeapServiceImpl implements OffHeapService {
 	
 	protected DirectMemoryService directMemoryService = 
 			DirectMemoryServiceFactory.getDirectMemoryService();
+	protected OffHeapConfigService offHeapConfigService = ConfigManager.getOffHeapConfigService();
 	
 	protected OffHeapPoolFactory defaultOffHeapPoolFactory = 
 			new DefaultOffHeapPoolFactory();
@@ -253,9 +256,10 @@ public class OffHeapServiceImpl implements OffHeapService {
 	}
 	
 	protected boolean isIgnoredForInstrumentation(Class<?> clazz) {
-		if (clazz.isAnnotationPresent(OffHeapIgnoreInstrumentation.class)) {
-			return true;
-		} 
+		OffHeapClassConfig offHeapClassConfig = offHeapConfigService.getOffHeapClassConfig(clazz);
+		if (offHeapClassConfig != null) {
+			return offHeapClassConfig.isIgnoreInstrumentation();
+		}
 		else {
 			return INSTRUMENTATION_IGNORED_CLASSES.contains(clazz);
 		}
@@ -609,11 +613,11 @@ public class OffHeapServiceImpl implements OffHeapService {
 		for (int i = 0; i < objectOffHeapPoolList.size(); i++) {	
 			ObjectOffHeapPool objectOffHeapPool = objectOffHeapPoolList.get(i);
 			if (objectOffHeapPool.free(obj)) {
-//				if (objectOffHeapPool.isEmpty()) {
-//					objectOffHeapPoolMap.remove(objectOffHeapPool.getElementType());
-//					objectOffHeapPoolList.remove(objectOffHeapPool);
-//					objectOffHeapPool.free();
-//				}
+				if (objectOffHeapPool.isEmpty()) {
+					objectOffHeapPoolMap.remove(objectOffHeapPool.getElementType());
+					objectOffHeapPoolList.remove(objectOffHeapPool);
+					objectOffHeapPool.free();
+				}
 				return true;
 			}
 		}
@@ -639,11 +643,11 @@ public class OffHeapServiceImpl implements OffHeapService {
 		for (int i = 0; i < objectOffHeapPoolList.size(); i++) {	
 			ObjectOffHeapPool objectOffHeapPool = objectOffHeapPoolList.get(i);
 			if (objectOffHeapPool.freeFromAddress(address)) {
-//				if (objectOffHeapPool.isEmpty()) {
-//					objectOffHeapPoolMap.remove(objectOffHeapPool.getElementType());
-//					objectOffHeapPoolList.remove(objectOffHeapPool);
-//					objectOffHeapPool.free();
-//				}
+				if (objectOffHeapPool.isEmpty()) {
+					objectOffHeapPoolMap.remove(objectOffHeapPool.getElementType());
+					objectOffHeapPoolList.remove(objectOffHeapPool);
+					objectOffHeapPool.free();
+				}
 				return true;
 			}
 		}

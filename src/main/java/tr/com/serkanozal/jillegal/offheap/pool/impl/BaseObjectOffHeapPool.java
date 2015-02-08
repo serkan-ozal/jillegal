@@ -87,33 +87,7 @@ public abstract class BaseObjectOffHeapPool<T, P extends OffHeapPoolCreateParame
 		objectSize = directMemoryService.sizeOfObject(sampleObject);
 		offHeapSampleObjectAddress = directMemoryService.allocateMemory(objectSize);
 		directMemoryService.copyMemory(sampleObject, 0L, null, offHeapSampleObjectAddress, objectSize);
-		/*
-		for (int i = 0; i < objectSize; i += JvmUtil.LONG_SIZE) {
-			directMemoryService.putLong(offHeapSampleObjectAddress + i, directMemoryService.getLong(sampleObject, i));
-		}
-		*/
-		/*
-		for (int i = 0; i < objectSize; i++) {
-			directMemoryService.putByte(offHeapSampleObjectAddress + i, directMemoryService.getByte(sampleObject, i));
-		}
-		*/
-		// directMemoryService.copyMemory(directMemoryService.addressOf(sampleObject), offHeapSampleObjectAddress, objectSize);
 	}
-	
-	/*
-	 * 1. Get object index from its address like "(objAddress - allocationStartAddress) / objectSize"
-	 * 
-	 * 2. Get block order from object index like "objectIndex / OBJECT_COUNT_AT_IN_USE_BLOCK"
-	 * 
-	 * 3. Since every byte contains 8 block information (each one is represented by a bit),
-	 *    block index can be calculated like "blockIndex = blockOrder / 8"
-	 *    
-	 * 4. Read block index value like "directMemoryService.getByte(inUseBlockAddress + blockIndex)"
-	 * 
-	 * 5. Calculate block internal order like "blockOrder % 8"
-	 * 
-	 * 6. Get block in-use bit like "getBit(blockIndexValue, blockInternalOrder)"
-	 */
 	
 	protected byte getInUseFromObjectIndex(long objIndex) {
 		return directMemoryService.getByteVolatile(inUseBlockAddress + objIndex);	

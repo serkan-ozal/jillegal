@@ -188,24 +188,24 @@ public class ExtendableStringOffHeapPool
 			return false;
 		}
 		if (currentForkableOffHeapPool.free(str)) {
-//			if (currentForkableOffHeapPool.isEmpty() && 
-//					currentForkableOffHeapPool != rootForkableOffHeapPool) {
-//				currentForkableOffHeapPool.free();
-//				forkableOffHeapPoolList.remove(currentForkableOffHeapPool);
-//				currentForkableOffHeapPool = rootForkableOffHeapPool;
-//			}
+			if (currentForkableOffHeapPool.isEmpty() && 
+					currentForkableOffHeapPool != rootForkableOffHeapPool) {
+				currentForkableOffHeapPool.free();
+				forkableOffHeapPoolList.remove(currentForkableOffHeapPool);
+				currentForkableOffHeapPool = rootForkableOffHeapPool;
+			}
 			lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
 			return true;
 		}
 		if (lastUsedForkableOffHeapPoolToFree != null) {
 			if (lastUsedForkableOffHeapPoolToFree.free(str)) {
-//				if (lastUsedForkableOffHeapPoolToFree.isEmpty() && 
-//						lastUsedForkableOffHeapPoolToFree != rootForkableOffHeapPool) {
-//					lastUsedForkableOffHeapPoolToFree.free();
-//					forkableOffHeapPoolList.remove(lastUsedForkableOffHeapPoolToFree);
-//					currentForkableOffHeapPool = rootForkableOffHeapPool;
-//					lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
-//				}
+				if (lastUsedForkableOffHeapPoolToFree.isEmpty() && 
+						lastUsedForkableOffHeapPoolToFree != rootForkableOffHeapPool) {
+					lastUsedForkableOffHeapPoolToFree.free();
+					forkableOffHeapPoolList.remove(lastUsedForkableOffHeapPoolToFree);
+					currentForkableOffHeapPool = rootForkableOffHeapPool;
+					lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+				}
 				return true;
 			}
 		}
@@ -213,15 +213,15 @@ public class ExtendableStringOffHeapPool
 			DeeplyForkableStringOffHeapPool forkableOffHeapPool = forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != currentForkableOffHeapPool) {
 				if (forkableOffHeapPool.free(str)) {
-//					if (forkableOffHeapPool.isEmpty() && forkableOffHeapPool != rootForkableOffHeapPool) {
-//						forkableOffHeapPool.free();
-//						forkableOffHeapPoolList.remove(forkableOffHeapPool);
-//						currentForkableOffHeapPool = rootForkableOffHeapPool;
-//						lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
-//					} 
-//					else {
+					if (forkableOffHeapPool.isEmpty() && forkableOffHeapPool != rootForkableOffHeapPool) {
+						forkableOffHeapPool.free();
+						forkableOffHeapPoolList.remove(forkableOffHeapPool);
+						currentForkableOffHeapPool = rootForkableOffHeapPool;
+						lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+					} 
+					else {
 						lastUsedForkableOffHeapPoolToFree = forkableOffHeapPool;
-//					}	
+					}	
 					return true;
 				}
 			}
@@ -233,24 +233,24 @@ public class ExtendableStringOffHeapPool
 	public synchronized boolean freeFromAddress(long strAddress) {
 		checkAvailability();
 		if (currentForkableOffHeapPool.freeFromAddress(strAddress)) {
-//			if (currentForkableOffHeapPool.isEmpty() && 
-//					currentForkableOffHeapPool != rootForkableOffHeapPool) {
-//				currentForkableOffHeapPool.free();
-//				forkableOffHeapPoolList.remove(currentForkableOffHeapPool);
-//				currentForkableOffHeapPool = rootForkableOffHeapPool;
-//			}
+			if (currentForkableOffHeapPool.isEmpty() && 
+					currentForkableOffHeapPool != rootForkableOffHeapPool) {
+				currentForkableOffHeapPool.free();
+				forkableOffHeapPoolList.remove(currentForkableOffHeapPool);
+				currentForkableOffHeapPool = rootForkableOffHeapPool;
+			}
 			lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
 			return true;
 		}
 		if (lastUsedForkableOffHeapPoolToFree != null) {
 			if (lastUsedForkableOffHeapPoolToFree.freeFromAddress(strAddress)) {
-//				if (lastUsedForkableOffHeapPoolToFree.isEmpty() && 
-//						lastUsedForkableOffHeapPoolToFree != rootForkableOffHeapPool) {
-//					lastUsedForkableOffHeapPoolToFree.free();
-//					forkableOffHeapPoolList.remove(lastUsedForkableOffHeapPoolToFree);
-//					currentForkableOffHeapPool = rootForkableOffHeapPool;
-//					lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
-//				}
+				if (lastUsedForkableOffHeapPoolToFree.isEmpty() && 
+						lastUsedForkableOffHeapPoolToFree != rootForkableOffHeapPool) {
+					lastUsedForkableOffHeapPoolToFree.free();
+					forkableOffHeapPoolList.remove(lastUsedForkableOffHeapPoolToFree);
+					currentForkableOffHeapPool = rootForkableOffHeapPool;
+					lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+				}
 				return true;
 			}
 		}
@@ -258,15 +258,15 @@ public class ExtendableStringOffHeapPool
 			DeeplyForkableStringOffHeapPool forkableOffHeapPool = forkableOffHeapPoolList.get(i);
 			if (forkableOffHeapPool != currentForkableOffHeapPool) {
 				if (forkableOffHeapPool.freeFromAddress(strAddress)) {
-//					if (forkableOffHeapPool.isEmpty() && forkableOffHeapPool != rootForkableOffHeapPool) {
-//						forkableOffHeapPool.free();
-//						forkableOffHeapPoolList.remove(forkableOffHeapPool);
-//						currentForkableOffHeapPool = rootForkableOffHeapPool;
-//						lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
-//					} 
-//					else {
+					if (forkableOffHeapPool.isEmpty() && forkableOffHeapPool != rootForkableOffHeapPool) {
+						forkableOffHeapPool.free();
+						forkableOffHeapPoolList.remove(forkableOffHeapPool);
+						currentForkableOffHeapPool = rootForkableOffHeapPool;
+						lastUsedForkableOffHeapPoolToFree = currentForkableOffHeapPool;
+					} 
+					else {
 						lastUsedForkableOffHeapPoolToFree = forkableOffHeapPool;
-//					}	
+					}	
 					return true;
 				}
 			}

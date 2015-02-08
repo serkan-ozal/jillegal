@@ -22,6 +22,7 @@ public class OffHeapClassConfigBuilder implements Builder<OffHeapClassConfig> {
 	private NonPrimitiveFieldAllocationConfigType nonPrimitiveFieldAllocationConfigType;
 	private List<OffHeapObjectFieldConfig> objectFieldConfigs;
 	private List<OffHeapArrayFieldConfig> arrayFieldConfigs;
+	protected boolean ignoreInstrumentation;
 	
 	public OffHeapClassConfigBuilder clazz(Class<?> clazz) {
 		this.clazz = clazz;
@@ -60,6 +61,11 @@ public class OffHeapClassConfigBuilder implements Builder<OffHeapClassConfig> {
 		return this;
 	}
 	
+	public OffHeapClassConfigBuilder ignoreInstrumentation(boolean ignoreInstrumentation) {
+		this.ignoreInstrumentation = ignoreInstrumentation;
+		return this;
+	}
+	
 	@Override
 	public OffHeapClassConfig build() {
 		OffHeapClassConfig config = new OffHeapClassConfig();
@@ -67,6 +73,7 @@ public class OffHeapClassConfigBuilder implements Builder<OffHeapClassConfig> {
 		config.setNonPrimitiveFieldAllocationConfigType(nonPrimitiveFieldAllocationConfigType);
 		config.setObjectFieldConfigs(objectFieldConfigs);
 		config.setArrayFieldConfigs(arrayFieldConfigs);
+		config.setIgnoreInstrumentation(ignoreInstrumentation);
 		return config;
 	}
 	

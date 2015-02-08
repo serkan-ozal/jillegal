@@ -49,6 +49,9 @@ public class AnnotationBasedOffHeapConfigProvider implements OffHeapConfigProvid
 								offHeapAware != null ? 
 										offHeapAware.nonPrimitiveFieldAllocationConfigType() : 
 										NonPrimitiveFieldAllocationConfigType.getDefault());
+		if (clazz.isAnnotationPresent(OffHeapIgnoreInstrumentation.class)) {
+			classConfigBuilder = classConfigBuilder.ignoreInstrumentation(true);
+		}
 		for (Field f : fields) {
 			boolean processed = false;
 			OffHeapObject offHeapObject = f.getAnnotation(OffHeapObject.class);

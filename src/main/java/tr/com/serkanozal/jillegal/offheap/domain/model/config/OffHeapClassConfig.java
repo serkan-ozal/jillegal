@@ -18,6 +18,7 @@ public class OffHeapClassConfig implements OffHeapConfig, Mergeable<OffHeapClass
 	protected NonPrimitiveFieldAllocationConfigType nonPrimitiveFieldAllocationConfigType;
 	protected List<OffHeapObjectFieldConfig> objectFieldConfigs;
 	protected List<OffHeapArrayFieldConfig> arrayFieldConfigs;
+	protected boolean ignoreInstrumentation;
 	
 	public Class<?> getClazz() {
 		return clazz;
@@ -52,6 +53,14 @@ public class OffHeapClassConfig implements OffHeapConfig, Mergeable<OffHeapClass
 		this.arrayFieldConfigs = arrayFieldConfigs;
 	}
 	
+	public boolean isIgnoreInstrumentation() {
+		return ignoreInstrumentation;
+	}
+	
+	public void setIgnoreInstrumentation(boolean ignoreInstrumentation) {
+		this.ignoreInstrumentation = ignoreInstrumentation;
+	}
+	
 	@Override
 	public OffHeapClassConfig merge(OffHeapClassConfig config) {
 		if (clazz == null) {
@@ -80,7 +89,8 @@ public class OffHeapClassConfig implements OffHeapConfig, Mergeable<OffHeapClass
 					}
 				}
 			}
-		}	
+		}
+		this.ignoreInstrumentation = ignoreInstrumentation || config.ignoreInstrumentation;
 		return this;
 	}
 	

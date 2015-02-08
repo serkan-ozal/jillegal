@@ -302,16 +302,9 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 //		}
 		// Reset free object
 		int stringSegmentedSize = calculateSegmentedStringSize(strAddress);
-//		int freeStartOffset = valueArrayOffsetInString + JvmUtil.getAddressSize();
-//		// Don't clear value array reference
 		directMemoryService.setMemory(strAddress + JvmUtil.getHeaderSize(), 
 									  stringSegmentedSize - JvmUtil.getHeaderSize(), 
 									  (byte) 0x00);
-//		// Make value array empty (not null)
-//		JvmUtil.setArrayLength(
-//				JvmUtil.toNativeAddress(directMemoryService.getAddress(strAddress + valueArrayOffsetInString)), 
-//				char.class,
-//				0);
 		int segmentCount = stringSegmentedSize / STRING_SEGMENT_SIZE;
 		freeStringFromStringAddress(strAddress, segmentCount);
 		usedSegmentCount -= segmentCount;

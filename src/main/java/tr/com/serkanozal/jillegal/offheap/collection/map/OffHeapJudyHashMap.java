@@ -16,11 +16,8 @@ import java.util.Map;
 import java.util.Set;
 
 import tr.com.serkanozal.jillegal.offheap.config.provider.annotation.OffHeapIgnoreInstrumentation;
-import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.ObjectOffHeapPoolCreateParameterBuilder;
-import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectPoolReferenceType;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
-import tr.com.serkanozal.jillegal.offheap.pool.impl.LazyReferencedObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
@@ -67,16 +64,6 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			(int) JvmUtil.getUnsafe().objectFieldOffset(
 					JvmUtil.getField(JudyLeafNode.class, "entries"));
 	
-	private static final int NODES_FIELD_OFFSET = 
-			(int) JvmUtil.getUnsafe().objectFieldOffset(
-					JvmUtil.getField(JudyTree.class, "nodes"));
-	private static final int FIRST_ENTRY_FIELD_OFFSET = 
-			(int) JvmUtil.getUnsafe().objectFieldOffset(
-					JvmUtil.getField(JudyTree.class, "firstEntry"));
-	private static final int LAST_ENTRY_FIELD_OFFSET = 
-			(int) JvmUtil.getUnsafe().objectFieldOffset(
-					JvmUtil.getField(JudyTree.class, "lastEntry"));
-	
 	private JudyTree<K, V> root;
 	private Class<K> keyType;
 	private Class<V> elementType;
@@ -97,14 +84,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	}
 	
 	JudyTree<K, V> createJudyTree() {
-//		LazyReferencedObjectOffHeapPool<JudyTree> objectPool = 
-//				offHeapService.createOffHeapPool(
-//						new ObjectOffHeapPoolCreateParameterBuilder<JudyTree>().
-//								type(JudyTree.class).
-//								objectCount(1).
-//								referenceType(ObjectPoolReferenceType.LAZY_REFERENCED).
-//							build());
-		JudyTree<K, V> judyTree = new JudyTree<K, V>(); // objectPool.get();
+		JudyTree<K, V> judyTree = new JudyTree<K, V>();
 		judyTree.init();
 		return judyTree;
 	}
@@ -347,7 +327,6 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			} else {
 				return directMemoryService.getObject(keyAddress);
 			}
-//			return directMemoryService.getObjectField(this, KEY_FIELD_OFFSET);
 //			return key;
 		}
 		
@@ -375,7 +354,6 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			} else {
 				return directMemoryService.getObject(valueAddress);
 			}
-//			return directMemoryService.getObjectField(this, VALUE_FIELD_OFFSET);
 //			return value;
 		}
 
@@ -391,7 +369,6 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 				valueAddress = directMemoryService.addressOf(value);
 			}
 //			V oldValue = getValue();
-//			directMemoryService.setObjectField(this, VALUE_FIELD_OFFSET, value);
 			return oldValue;
 		}
 		
