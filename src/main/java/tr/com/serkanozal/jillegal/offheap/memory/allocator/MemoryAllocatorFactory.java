@@ -25,12 +25,7 @@ public class MemoryAllocatorFactory {
 			DEFAULT_MEMORY_ALLOCATOR = MEMORY_ALLOCATOR_MAP.get(MemoryAllocatorType.STANDARD);
 		} 
 		else {
-			if (Boolean.getBoolean("jillegal.offheap.memory.useBatchMemoryAllocatorOn64BitJVM")) {
-				DEFAULT_MEMORY_ALLOCATOR = MEMORY_ALLOCATOR_MAP.get(MemoryAllocatorType.BATCH);
-			}
-			else {
-				DEFAULT_MEMORY_ALLOCATOR = MEMORY_ALLOCATOR_MAP.get(MemoryAllocatorType.STANDARD);
-			}	
+			DEFAULT_MEMORY_ALLOCATOR = MEMORY_ALLOCATOR_MAP.get(MemoryAllocatorType.BATCH);	
 		}
 	}
 
