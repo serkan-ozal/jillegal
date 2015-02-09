@@ -365,7 +365,7 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 		};
 		t.start();
 		
-		final int ENTRY_COUNT = 20000000;
+		final int ENTRY_COUNT = 1000000;
 		final int ITERATION_COUNT = 100;
 
 		OffHeapJudyHashMap<Integer, Person> judyMap = 
@@ -467,6 +467,8 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 		}
 		
 		JvmUtil.runGC();
+		
+		list.clear();
 		
 		Thread[] threads = new Thread[10];
 		for (int k = 0; k < threads.length; k++) {
