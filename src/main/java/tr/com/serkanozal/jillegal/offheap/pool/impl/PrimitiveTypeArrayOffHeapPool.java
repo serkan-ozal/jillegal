@@ -40,7 +40,6 @@ public class PrimitiveTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Arra
 		init(elementType, length, directMemoryService);
 	}
 	
-	@SuppressWarnings("unchecked")
 	@Override
 	protected void init() {
 		super.init();
@@ -48,7 +47,8 @@ public class PrimitiveTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, Arra
 		// Clear array content
 		directMemoryService.setMemory(arrayIndexStartAddress, arrayIndexScale * length, (byte) 0);
 		
-		primitiveArray = (A) directMemoryService.getObject(arrayStartAddress);
+		// primitiveArray = (A) directMemoryService.getObject(arrayStartAddress);
+		directMemoryService.setObjectField(this, "primitiveArray", directMemoryService.getObject(arrayStartAddress));
 	}
 	
 	@Override

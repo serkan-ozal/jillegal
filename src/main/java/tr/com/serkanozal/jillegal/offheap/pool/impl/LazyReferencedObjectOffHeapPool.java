@@ -71,8 +71,6 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		if (!nextAvailable()) {
 			return JvmUtil.NULL;
 		}
-		// Address of class could be changed by GC at "Compact" phase.
-		//return directMemoryService.getObject(updateClassPointerOfObject(currentAddress));
 		return takeObjectAsAddress(currentAddress);
 	}
 	
@@ -86,8 +84,6 @@ public class LazyReferencedObjectOffHeapPool<T> extends BaseObjectOffHeapPool<T,
 		if (getInUseFromObjectAddress(address) != OBJECT_IS_AVAILABLE) {
 			throw new ObjectInUseException(index);
 		}
-		// Address of class could be changed by GC at "Compact" phase.
-		//return directMemoryService.getObject(updateClassPointerOfObject(address));
 		return takeObject(address);
 	}
 	
