@@ -343,7 +343,7 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 	/**
 	 * This test is ignored by default since it is load test.
 	 */
-	@Ignore
+	//@Ignore
 	@Test
 	// -XX:-UseCompressedOops -XX:+UseSerialGC        -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\%USERPROFILE%\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
 	// -XX:-UseCompressedOops -XX:+UseSerialGC        -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:~/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
@@ -384,9 +384,9 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 
 		for (int i = 0; i < ENTRY_COUNT; i++) {
 			Person p = judyMap.get(i);
-			if (i % 1000 == 0) {
-				System.out.println(p);
-			}	
+//			if (i % 1000 == 0) {
+//				System.out.println(p);
+//			}	
 		}
 		
 		JvmUtil.runGC();
@@ -409,7 +409,7 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 				if (replaced != null) {
 					offHeapService.freeObject(replaced);
 				}
-				list.add(person);
+				//list.add(person);
 			}
 			
 			JvmUtil.runGC();
@@ -442,13 +442,13 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 		JvmUtil.runGC();
 	}
 	
-	@Ignore
+	//@Ignore
 	@Test
 	public void multiThreadStressTest() throws InterruptedException {
 		final int PUT_COUNT_IN_A_ITERATION = 1000;
 		final int REMOVE_COUNT_IN_A_ITERATION = 10;
 		final int GET_COUNT_IN_A_ITERATION = 1000;
-		final int ENTRY_COUNT = 1000000;
+		final int ENTRY_COUNT = 5000000;
 		final int ITERATION_COUNT = 100;
 		
 		final Random random = new Random();
@@ -460,10 +460,10 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 		for (int i = 0; i < ENTRY_COUNT; i++) {
 			Person p = randomizePerson(i, judyMap.newElement());
 			judyMap.put(offHeapService.getOffHeapLong(i), p); // They will be added
-			list.add(p);
-			Assert.assertEquals("Username-" + i, p.getUsername());
-			Assert.assertEquals("Firstname-" + i, p.getFirstName());
-			Assert.assertEquals("Lastname-" + i, p.getLastName());
+			//list.add(p);
+//			Assert.assertEquals("Username-" + i, p.getUsername());
+//			Assert.assertEquals("Firstname-" + i, p.getFirstName());
+//			Assert.assertEquals("Lastname-" + i, p.getLastName());
 		}
 		
 		JvmUtil.runGC();
@@ -510,9 +510,9 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 							Person p = judyMap.get(id);
 							if (p != null) {
 								Assert.assertEquals(id, p.getId());
-								Assert.assertEquals("Username-" + id, p.getUsername());
-								Assert.assertEquals("Firstname-" + id, p.getFirstName());
-								Assert.assertEquals("Lastname-" + id, p.getLastName());
+//								Assert.assertEquals("Username-" + id, p.getUsername());
+//								Assert.assertEquals("Firstname-" + id, p.getFirstName());
+//								Assert.assertEquals("Lastname-" + id, p.getLastName());
 							}	
 						}
 						

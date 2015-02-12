@@ -181,6 +181,7 @@ public class BaseOffHeapCollectionTest {
 		//person.setFirstName(offHeapService.newString("Firstname-" + key));
 		CharArray lastNameCharArray = LASTNAME_CHAR_ARRAY_BUFFER.getFor(key);
 		person.setLastName(offHeapService.newString(lastNameCharArray.chars, 0, lastNameCharArray.actualLength));
+		//person.setLastName(offHeapService.newString("Lastname-" + key));
 		person.setBirthDate(
 				(Person.MILLI_SECONDS_IN_A_YEAR * RANDOM.nextInt(30)) + 	// Any year between 1970 and 2000
 				(Person.MILLI_SECONDS_IN_A_MONTH * (RANDOM.nextInt(12))) +	// Any month between 0 and 11 (Jan and Dec)
