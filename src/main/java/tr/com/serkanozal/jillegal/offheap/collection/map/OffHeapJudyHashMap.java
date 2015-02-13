@@ -46,12 +46,12 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	private static final OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
 	private static final DirectMemoryService directMemoryService = DirectMemoryServiceFactory.getDirectMemoryService();
 	
-//	private static final int KEY_FIELD_OFFSET = 
-//			(int) JvmUtil.getUnsafe().objectFieldOffset(
-//					JvmUtil.getField(JudyEntry.class, "key"));
-//	private static final int VALUE_FIELD_OFFSET = 
-//			(int) JvmUtil.getUnsafe().objectFieldOffset(
-//					JvmUtil.getField(JudyEntry.class, "value"));
+	private static final int KEY_FIELD_OFFSET = 
+			(int) JvmUtil.getUnsafe().objectFieldOffset(
+					JvmUtil.getField(JudyEntry.class, "key"));
+	private static final int VALUE_FIELD_OFFSET = 
+			(int) JvmUtil.getUnsafe().objectFieldOffset(
+					JvmUtil.getField(JudyEntry.class, "value"));
 	private static final int PREV_FIELD_OFFSET = 
 			(int) JvmUtil.getUnsafe().objectFieldOffset(
 					JvmUtil.getField(JudyEntry.class, "prev"));
@@ -337,62 +337,63 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	@OffHeapIgnoreInstrumentation
 	static class JudyEntry<K, V> implements Map.Entry<K, V> {
 
-		volatile long keyAddress;
-		volatile long valueAddress;
-//		K key;
-//		V value;
+//		volatile long keyAddress;
+//		volatile long valueAddress;
+		K key;
+		V value;
 		JudyEntry<K, V> prev;
 		JudyEntry<K, V> next;
 		
 		@Override
 		public K getKey() {
-			if (keyAddress == JvmUtil.NULL) {
-				return null;
-			} else {
-				return directMemoryService.getObject(keyAddress);
-			}
-//			return key;
+//			if (keyAddress == JvmUtil.NULL) {
+//				return null;
+//			} else {
+//				return directMemoryService.getObject(keyAddress);
+//			}
+			return key;
 		}
 		
 		void setKey(K key) {
-			if (keyAddress != JvmUtil.NULL) {
-				offHeapService.freeObjectWithAddress(keyAddress);
-			}
-			if (key == null) {
-				keyAddress = JvmUtil.NULL;
-			} else {
-				keyAddress = directMemoryService.addressOf(key);
-			}
-//			K oldKey = getKey();
-//			if (oldKey != null) {
-//				directMemoryService.setObjectField(this, KEY_FIELD_OFFSET, null);
-//				offHeapService.freeObject(oldKey);
+//			if (keyAddress != JvmUtil.NULL) {
+//				offHeapService.freeObjectWithAddress(keyAddress);
 //			}
-//			directMemoryService.setObjectField(this, KEY_FIELD_OFFSET, key);
+//			if (key == null) {
+//				keyAddress = JvmUtil.NULL;
+//			} else {
+//				keyAddress = directMemoryService.addressOf(key);
+//			}
+			K oldKey = getKey();
+			if (oldKey != null) {
+				directMemoryService.setObjectField(this, KEY_FIELD_OFFSET, null);
+				offHeapService.freeObject(oldKey);
+			}
+			directMemoryService.setObjectField(this, KEY_FIELD_OFFSET, key);
 		}
 
 		@Override
 		public V getValue() {
-			if (valueAddress == JvmUtil.NULL) {
-				return null;
-			} else {
-				return directMemoryService.getObject(valueAddress);
-			}
-//			return value;
+//			if (valueAddress == JvmUtil.NULL) {
+//				return null;
+//			} else {
+//				return directMemoryService.getObject(valueAddress);
+//			}
+			return value;
 		}
 
 		@Override
 		public V setValue(V value) {
-			V oldValue = null;
-			if (valueAddress != JvmUtil.NULL) {
-				oldValue = directMemoryService.getObject(valueAddress);
-			}
-			if (value == null) {
-				valueAddress = JvmUtil.NULL;
-			} else {
-				valueAddress = directMemoryService.addressOf(value);
-			}
-//			V oldValue = getValue();
+//			V oldValue = null;
+//			if (valueAddress != JvmUtil.NULL) {
+//				oldValue = directMemoryService.getObject(valueAddress);
+//			}
+//			if (value == null) {
+//				valueAddress = JvmUtil.NULL;
+//			} else {
+//				valueAddress = directMemoryService.addressOf(value);
+//			}
+			V oldValue = getValue();
+			directMemoryService.setObjectField(this, VALUE_FIELD_OFFSET, value);
 			return oldValue;
 		}
 		
@@ -473,8 +474,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			// Find related byte for using as index in current level
 			byte nextLevel = (byte) (level + 1);
 			short index = (short)(((hash >> (32 - (nextLevel << 3))) & 0x000000FF));
-			JudyNode<K, V> child = null;
-			child = children[index];
+			JudyNode<K, V> child = children[index];
 			if (child == null) {
 				if (nextLevel < MAX_LEVEL) {
 					child = offHeapService.newObject(JudyIntermediateNode.class);
@@ -598,7 +598,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 				lastEntry.setNext(entry);
 			}
 			root.setLastEntry(entry);
-			
+		
 			return oldValue;
 		}
 		
@@ -685,10 +685,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		@SuppressWarnings("unchecked")
 		void init() {
 			// Create and initialize first level nodes
-			setNodes(offHeapService.newArray(JudyIntermediateNode[].class, NODE_SIZE, false));
-			for (int i = 0; i < nodes.length; i++) {
-				directMemoryService.setArrayElement(nodes, i, offHeapService.newObject(JudyIntermediateNode.class));
-			}
+			setNodes(offHeapService.newArray(JudyIntermediateNode[].class, NODE_SIZE, true));
 		}
 		
 		JudyIntermediateNode<K, V>[] getNodes() {

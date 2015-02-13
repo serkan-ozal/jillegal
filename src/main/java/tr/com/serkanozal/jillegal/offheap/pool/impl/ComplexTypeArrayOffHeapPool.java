@@ -84,7 +84,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 		else {
 			// All indexes in object pool array point to empty (null) object
 			for (long l = 0; l < length; l++) {
-				directMemoryService.putLong(arrayIndexStartAddress + (l * arrayIndexScale), 0L);
+				directMemoryService.putLong(arrayIndexStartAddress + (l * arrayIndexScale), JvmUtil.NULL);
 			}
 		}
 		
@@ -211,7 +211,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 			else {
 				allocationSize = 
 						arraySize + 
-						2 * JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
+						1 * JvmUtil.OBJECT_ADDRESS_SENSIVITY; // Extra memory for possible aligning
 			}
 			allocationStartAddress = directMemoryService.allocateMemory(allocationSize); 
 			allocationEndAddress = allocationStartAddress + allocationSize;

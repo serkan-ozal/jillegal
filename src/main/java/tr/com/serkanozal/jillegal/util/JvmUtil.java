@@ -801,7 +801,15 @@ public class JvmUtil {
         return baseAddress + fieldOffset; 
     }
     
-    @SuppressWarnings("unused")
+    public static long offsetOfField(Object obj, String fieldName) {
+    	Class<?> clazz = obj.getClass();
+    	Field field = getField(clazz, fieldName);
+    	if (field == null) {
+    		throw new IllegalArgumentException("Field " + fieldName + " couldn't be found at class " + clazz.getName());
+    	}
+    	return findInstanceFieldOffset(clazz, field);
+    }
+    
 	private static long findInstanceFieldOffset(Class<?> clazz, Field field) {
     	Map<Field, Long> fieldOffsetMap = classFieldOffsetCache.get(field);
     	if (fieldOffsetMap == null) {
