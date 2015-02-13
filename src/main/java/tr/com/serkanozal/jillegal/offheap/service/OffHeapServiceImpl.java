@@ -256,12 +256,15 @@ public class OffHeapServiceImpl implements OffHeapService {
 	}
 	
 	protected boolean isIgnoredForInstrumentation(Class<?> clazz) {
+		if (INSTRUMENTATION_IGNORED_CLASSES.contains(clazz)) {
+			return true;
+		}
 		OffHeapClassConfig offHeapClassConfig = offHeapConfigService.getOffHeapClassConfig(clazz);
 		if (offHeapClassConfig != null) {
 			return offHeapClassConfig.isIgnoreInstrumentation();
 		}
 		else {
-			return INSTRUMENTATION_IGNORED_CLASSES.contains(clazz);
+			return false;
 		}
 	}
 	
