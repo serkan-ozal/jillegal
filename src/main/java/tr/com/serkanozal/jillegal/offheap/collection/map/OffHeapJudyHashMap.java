@@ -339,10 +339,10 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 
 //		volatile long keyAddress;
 //		volatile long valueAddress;
-		K key;
-		V value;
-		JudyEntry<K, V> prev;
-		JudyEntry<K, V> next;
+		volatile K key;
+		volatile V value;
+		volatile JudyEntry<K, V> prev;
+		volatile JudyEntry<K, V> next;
 		
 		@Override
 		public K getKey() {
