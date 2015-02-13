@@ -142,6 +142,7 @@ public class BatchMemoryAllocator implements MemoryAllocator {
 				sizes[i] = 0;
 			}
 			this.allocatedAddress = UNSAFE.allocateMemory(segmentSize);
+			UNSAFE.setMemory(allocatedAddress, segmentSize, (byte) 0x00);
 			TOTAL_UPDATER.addAndGet(BatchMemoryAllocator.this, segmentSize);
 		}
 		
