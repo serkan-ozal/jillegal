@@ -169,19 +169,19 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
     }
 
 	@Override
-	public V put(K key, V value) {
+	public synchronized V put(K key, V value) {
 		return (V) root.put(key, value);
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public V get(Object key) {
+	public synchronized V get(Object key) {
 		return (V) root.get((K) key);
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public V remove(Object key) {
+	public synchronized V remove(Object key) {
 		return (V) root.remove((K) key);	
 	}
 	
