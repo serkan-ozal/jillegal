@@ -339,10 +339,10 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 
 //		volatile long keyAddress;
 //		volatile long valueAddress;
-		K key;
-		V value;
-		JudyEntry<K, V> prev;
-		JudyEntry<K, V> next;
+		volatile K key;
+		volatile V value;
+		volatile JudyEntry<K, V> prev;
+		volatile JudyEntry<K, V> next;
 		
 		@Override
 		public K getKey() {
@@ -430,7 +430,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	@OffHeapIgnoreInstrumentation
 	static class JudyIntermediateNode<K, V> extends JudyNode<K, V> {
 
-		JudyNode<K, V>[] children;
+		volatile JudyNode<K, V>[] children;
 
 		@SuppressWarnings("unchecked")
 		@Override
@@ -538,7 +538,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	@OffHeapIgnoreInstrumentation
 	static class JudyLeafNode<K, V> extends JudyNode<K, V> {
 
-		JudyEntry<K, V>[] entries;
+		volatile JudyEntry<K, V>[] entries;
 
 		@SuppressWarnings("unchecked")
 		void init() {
