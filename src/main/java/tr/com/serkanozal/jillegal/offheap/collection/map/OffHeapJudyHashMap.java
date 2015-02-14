@@ -339,10 +339,10 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 
 //		volatile long keyAddress;
 //		volatile long valueAddress;
-		volatile K key;
-		volatile V value;
-		volatile JudyEntry<K, V> prev;
-		volatile JudyEntry<K, V> next;
+		K key;
+		V value;
+		JudyEntry<K, V> prev;
+		JudyEntry<K, V> next;
 		
 		@Override
 		public K getKey() {
@@ -589,15 +589,15 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			entry.setKey(key); 
 			V oldValue = entry.setValue(value);
 			
-			if (root.getFirstEntry() == null) {
-				root.setFirstEntry(entry);
-			}
-			JudyEntry<K, V> lastEntry = root.getLastEntry();
-			if (lastEntry != null) {
-				entry.setPrev(lastEntry);
-				lastEntry.setNext(entry);
-			}
-			root.setLastEntry(entry);
+//			if (root.getFirstEntry() == null) {
+//				root.setFirstEntry(entry);
+//			}
+//			JudyEntry<K, V> lastEntry = root.getLastEntry();
+//			if (lastEntry != null) {
+//				entry.setPrev(lastEntry);
+//				lastEntry.setNext(entry);
+//			}
+//			root.setLastEntry(entry);
 		
 			return oldValue;
 		}
@@ -617,22 +617,22 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 				entryToRemove.setKey(null); // key area will be free automatically in entry instance
 				entryToRemove.setValue(null);
 
-				JudyEntry<K, V> prevEntry = entryToRemove.getPrev();
-				JudyEntry<K, V> nextEntry = entryToRemove.getNext();
-				entryToRemove.setPrev(null);
-				entryToRemove.setNext(null);
-				if (entryToRemove == root.getFirstEntry()) {
-					root.setFirstEntry(nextEntry);
-				}
-				if (entryToRemove == root.getLastEntry()) {
-					root.setLastEntry(prevEntry);
-				}
-				if (prevEntry != null) {
-					prevEntry.setNext(nextEntry);
-				}
-				if (nextEntry != null) {
-					nextEntry.setPrev(prevEntry);	
-				}
+//				JudyEntry<K, V> prevEntry = entryToRemove.getPrev();
+//				JudyEntry<K, V> nextEntry = entryToRemove.getNext();
+//				entryToRemove.setPrev(null);
+//				entryToRemove.setNext(null);
+//				if (entryToRemove == root.getFirstEntry()) {
+//					root.setFirstEntry(nextEntry);
+//				}
+//				if (entryToRemove == root.getLastEntry()) {
+//					root.setLastEntry(prevEntry);
+//				}
+//				if (prevEntry != null) {
+//					prevEntry.setNext(nextEntry);
+//				}
+//				if (nextEntry != null) {
+//					nextEntry.setPrev(prevEntry);	
+//				}
 				
 				offHeapService.freeObject(entryToRemove);
 				return removedValue;
