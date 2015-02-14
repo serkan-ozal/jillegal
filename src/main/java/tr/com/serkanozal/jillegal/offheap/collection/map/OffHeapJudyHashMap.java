@@ -86,18 +86,18 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	private Class<V> elementType;
 	
 	public OffHeapJudyHashMap() {
-		directMemoryService.setObjectField(this, ROOT_FIELD_OFFSET, createJudyTree());
+		this.root = createJudyTree();
 	}
 	
 	public OffHeapJudyHashMap(Class<V> elementType) {
 		this.elementType = elementType;
-		directMemoryService.setObjectField(this, ROOT_FIELD_OFFSET, createJudyTree());
+		this.root = createJudyTree();
 	}
 	
 	public OffHeapJudyHashMap(Class<K> keyType, Class<V> elementType) {
 		this.keyType = keyType;
 		this.elementType = elementType;
-		directMemoryService.setObjectField(this, ROOT_FIELD_OFFSET, createJudyTree());
+		this.root = createJudyTree();
 	}
 	
 	JudyTree<K, V> createJudyTree() {
@@ -169,19 +169,19 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
     }
 
 	@Override
-	public V put(K key, V value) {
+	public synchronized V put(K key, V value) {
 		return (V) root.put(key, value);
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public V get(Object key) {
+	public synchronized V get(Object key) {
 		return (V) root.get((K) key);
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
-	public V remove(Object key) {
+	public synchronized V remove(Object key) {
 		return (V) root.remove((K) key);	
 	}
 	
@@ -680,7 +680,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		JudyIntermediateNode<K, V>[] nodes;
 		JudyEntry<K, V> firstEntry;
 		JudyEntry<K, V> lastEntry;
-		int size;
+		volatile int size;
 
 		@SuppressWarnings("unchecked")
 		void init() {
