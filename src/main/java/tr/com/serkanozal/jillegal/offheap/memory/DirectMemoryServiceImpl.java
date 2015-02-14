@@ -98,7 +98,10 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     
     @Override
     public void setMemory(long sourceAddress, long bytes, byte val) {
-    	unsafe.setMemory(sourceAddress, bytes, val);
+    	for (long l = 0; l < bytes; l++) {
+    		unsafe.putByte(sourceAddress + l, val);
+    	}
+//    	unsafe.setMemory(sourceAddress, bytes, val);
     }
 
     public long sizeOfWithAgent(Object obj) {
