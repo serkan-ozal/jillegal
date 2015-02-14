@@ -64,7 +64,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 		currentAddress = stringsStartAddress;
 		full = false;
 		currentSegmentIndex = INDEX_NOT_YET_USED;
-		//directMemoryService.setMemory(inUseSegmentAddress, totalSegmentCount, (byte) 0x00);
+		directMemoryService.setMemory(inUseSegmentAddress, totalSegmentCount, (byte) 0x00);
 	}
 	
 	@SuppressWarnings({ "deprecation" })
