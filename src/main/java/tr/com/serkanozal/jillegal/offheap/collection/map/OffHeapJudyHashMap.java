@@ -16,11 +16,8 @@ import java.util.Map;
 import java.util.Set;
 
 import tr.com.serkanozal.jillegal.offheap.config.provider.annotation.OffHeapIgnoreInstrumentation;
-import tr.com.serkanozal.jillegal.offheap.domain.builder.pool.ObjectOffHeapPoolCreateParameterBuilder;
-import tr.com.serkanozal.jillegal.offheap.domain.model.pool.ObjectPoolReferenceType;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryService;
 import tr.com.serkanozal.jillegal.offheap.memory.DirectMemoryServiceFactory;
-import tr.com.serkanozal.jillegal.offheap.pool.impl.LazyReferencedObjectOffHeapPool;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 import tr.com.serkanozal.jillegal.util.JvmUtil;
@@ -100,16 +97,15 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		directMemoryService.setObjectField(this, ROOT_FIELD_OFFSET, createJudyTree());
 	}
 	
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	JudyTree<K, V> createJudyTree() {
-		LazyReferencedObjectOffHeapPool<JudyTree> objectPool = 
-		offHeapService.createOffHeapPool(
-				new ObjectOffHeapPoolCreateParameterBuilder<JudyTree>().
-						type(JudyTree.class).
-						objectCount(1).
-						referenceType(ObjectPoolReferenceType.LAZY_REFERENCED).
-					build());
-		JudyTree<K, V> judyTree = objectPool.get(); // new JudyTree<K, V>();
+//		LazyReferencedObjectOffHeapPool<JudyTree> objectPool = 
+//		offHeapService.createOffHeapPool(
+//				new ObjectOffHeapPoolCreateParameterBuilder<JudyTree>().
+//						type(JudyTree.class).
+//						objectCount(1).
+//						referenceType(ObjectPoolReferenceType.LAZY_REFERENCED).
+//					build());
+		JudyTree<K, V> judyTree = new JudyTree<K, V>();
 		judyTree.init();
 		return judyTree;
 	}

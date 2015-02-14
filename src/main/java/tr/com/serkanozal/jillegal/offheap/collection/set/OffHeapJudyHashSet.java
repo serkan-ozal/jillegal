@@ -27,6 +27,7 @@ import tr.com.serkanozal.jillegal.util.JvmUtil;
  * In Judy tree based indexing structure, there are 4 levels for 4 byte of hash code as integer.
  * Last level (level 4 or leaf node) is hold as values.
  */
+@SuppressWarnings("restriction")
 public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<E> {
 
 	private final static int BITS_IN_BYTE = 8;
@@ -36,21 +37,20 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 	private static final OffHeapService offHeapService = OffHeapServiceFactory.getOffHeapService();
 	private static final DirectMemoryService directMemoryService = DirectMemoryServiceFactory.getDirectMemoryService();
 	
-	@SuppressWarnings("restriction")
+	private static final int ELEMENT_FIELD_OFFSET = 
+			(int) JvmUtil.getUnsafe().objectFieldOffset(
+					JvmUtil.getField(JudyEntry.class, "element"));
 	private static final int PREV_FIELD_OFFSET = 
 			(int) JvmUtil.getUnsafe().objectFieldOffset(
 					JvmUtil.getField(JudyEntry.class, "prev"));
-	@SuppressWarnings("restriction")
 	private static final int NEXT_FIELD_OFFSET = 
 			(int) JvmUtil.getUnsafe().objectFieldOffset(
 					JvmUtil.getField(JudyEntry.class, "next"));
 
-	@SuppressWarnings("restriction")
 	private static final int CHILDREN_FIELD_OFFSET = 
 			(int) JvmUtil.getUnsafe().objectFieldOffset(
 					JvmUtil.getField(JudyIntermediateNode.class, "children"));
 	
-	@SuppressWarnings("restriction")
 	private static final int ENTRIES_FIELD_OFFSET = 
 			(int) JvmUtil.getUnsafe().objectFieldOffset(
 					JvmUtil.getField(JudyLeafNode.class, "entries"));
@@ -211,33 +211,17 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 	
 	static class JudyEntry<E> {
 
-		volatile long elementAddress;
+		E element;
 		JudyEntry<E> prev;
 		JudyEntry<E> next;
-		
-		JudyEntry(E element) {
-			this.elementAddress = directMemoryService.addressOf(element);
-		}
-		
-		public E getElement() {
-			if (elementAddress != JvmUtil.NULL) {
-				return directMemoryService.getObject(elementAddress);
-			} else {
-				return null;
-			}
+
+		E getElement() {
+			return element;		
 		} 
 
-		public E setElement(E element) {
-			E oldElement = null;
-			if (elementAddress != JvmUtil.NULL) {
-				oldElement = directMemoryService.getObject(elementAddress);
-			}
-			if (element != null) {
-				elementAddress = directMemoryService.addressOf(element);
-			} 
-			else {
-				elementAddress = JvmUtil.NULL;
-			}
+		E setElement(E element) {
+			E oldElement = getElement();
+			directMemoryService.setObjectField(this, ELEMENT_FIELD_OFFSET, element);
 			return oldElement;
 		}
 		
@@ -489,8 +473,8 @@ public class OffHeapJudyHashSet<E> extends AbstractSet<E> implements OffHeapSet<
 	static class JudyTree<E> {
 
 		JudyIntermediateNode<E>[] nodes;
-		volatile JudyEntry<E> firstEntry;
-		volatile JudyEntry<E> lastEntry;
+		JudyEntry<E> firstEntry;
+		JudyEntry<E> lastEntry;
 		volatile int size;
 
 		@SuppressWarnings("unchecked")
