@@ -77,30 +77,35 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 			(int) JvmUtil.getUnsafe().objectFieldOffset(
 					JvmUtil.getField(JudyTree.class, "lastEntry"));
 	
-	private static final int ROOT_FIELD_OFFSET = 
-			(int) JvmUtil.getUnsafe().objectFieldOffset(
-					JvmUtil.getField(OffHeapJudyHashMap.class, "root"));
+//	private static final int ROOT_FIELD_OFFSET = 
+//			(int) JvmUtil.getUnsafe().objectFieldOffset(
+//					JvmUtil.getField(OffHeapJudyHashMap.class, "root"));
 	
-	private JudyTree<K, V> root;
+//	private JudyTree<K, V> root;
+	private long rootAddress;
 	private Class<K> keyType;
 	private Class<V> elementType;
 	
 	public OffHeapJudyHashMap() {
-		this.root = createJudyTree();
+		this.rootAddress = createJudyTree();
+//		directMemoryService.setObjectField(this, ROOT_FIELD_OFFSET, createJudyTree());
 	}
 	
 	public OffHeapJudyHashMap(Class<V> elementType) {
 		this.elementType = elementType;
-		this.root = createJudyTree();
+		this.rootAddress = createJudyTree();
+//		directMemoryService.setObjectField(this, ROOT_FIELD_OFFSET, createJudyTree());
 	}
 	
 	public OffHeapJudyHashMap(Class<K> keyType, Class<V> elementType) {
 		this.keyType = keyType;
 		this.elementType = elementType;
-		this.root = createJudyTree();
+		this.rootAddress = createJudyTree();
+//		directMemoryService.setObjectField(this, ROOT_FIELD_OFFSET, createJudyTree());
 	}
 	
-	JudyTree<K, V> createJudyTree() {
+//	JudyTree<K, V> createJudyTree() {
+	long createJudyTree() {
 		LazyReferencedObjectOffHeapPool<JudyTree> objectPool = 
 		offHeapService.createOffHeapPool(
 				new ObjectOffHeapPoolCreateParameterBuilder<JudyTree>().
@@ -110,7 +115,12 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 					build());
 		JudyTree<K, V> judyTree = objectPool.get(); // new JudyTree<K, V>();
 		judyTree.init();
-		return judyTree;
+		return directMemoryService.addressOf(judyTree);
+//		return judyTree;
+	}
+	
+	JudyTree<K, V> getRoot() {
+		return directMemoryService.getObject(rootAddress);
 	}
 
 	@Override
@@ -140,12 +150,12 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	
 	@Override
 	public int size() {
-		return root.size;
+		return getRoot().size;
 	}
 	
 	@Override
 	public boolean isEmpty() {
-		return this.root.size == 0;
+		return getRoot().size == 0;
 	}
     
 	@Override
@@ -170,42 +180,42 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 
 	@Override
 	public synchronized V put(K key, V value) {
-		return (V) root.put(key, value);
+		return (V) getRoot().put(key, value);
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
 	public synchronized V get(Object key) {
-		return (V) root.get((K) key);
+		return (V) getRoot().get((K) key);
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
 	public synchronized V remove(Object key) {
-		return (V) root.remove((K) key);	
+		return (V) getRoot().remove((K) key);	
 	}
 	
 	@SuppressWarnings("unchecked")
 	@Override
 	public synchronized boolean containsKey(Object key) {
-		return root.containsKey((K) key);
+		return getRoot().containsKey((K) key);
 	}
 	
 	@Override
 	public synchronized void clear() {
-		root.clear();	
+		getRoot().clear();	
 	}
 	
 	class JudyEntrySet extends AbstractSet<Map.Entry<K, V>> {
 
 		@Override
 		public Iterator<Map.Entry<K, V>> iterator() {
-			return new JudyEntryIterator(root.firstEntry);
+			return new JudyEntryIterator(getRoot().firstEntry);
 		}
 
 		@Override
 		public int size() {
-			return root.size;
+			return getRoot().size;
 		}
 		
 	}
@@ -248,12 +258,12 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 
 		@Override
 		public Iterator<K> iterator() {
-			return new JudyKeyIterator(new JudyEntryIterator(root.firstEntry));
+			return new JudyKeyIterator(new JudyEntryIterator(getRoot().firstEntry));
 		}
 
 		@Override
 		public int size() {
-			return root.size;
+			return getRoot().size;
 		}
 		
 	}
@@ -293,12 +303,12 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 
 		@Override
 		public Iterator<V> iterator() {
-			return new JudyValueIterator(new JudyEntryIterator(root.firstEntry));
+			return new JudyValueIterator(new JudyEntryIterator(getRoot().firstEntry));
 		}
 
 		@Override
 		public int size() {
-			return root.size;
+			return getRoot().size;
 		}
 		
 	}
