@@ -677,9 +677,9 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 	@OffHeapIgnoreInstrumentation
 	static class JudyTree<K, V> {
 
-		JudyIntermediateNode<K, V>[] nodes;
-		JudyEntry<K, V> firstEntry;
-		JudyEntry<K, V> lastEntry;
+		volatile JudyIntermediateNode<K, V>[] nodes;
+		volatile JudyEntry<K, V> firstEntry;
+		volatile JudyEntry<K, V> lastEntry;
 		volatile int size;
 
 		@SuppressWarnings("unchecked")
