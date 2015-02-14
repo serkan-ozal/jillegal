@@ -134,7 +134,7 @@ public class OffHeapServiceImpl implements OffHeapService {
 	protected void findEnable() {
 		boolean jvmOk = false;
 		if (JvmUtil.isHotspotJvm()) {
-			jvmOk = JvmUtil.isJava_8();
+			jvmOk = JvmUtil.isJava_8() || JvmUtil.isJava_9();
 		} 
 		else if (JvmUtil.isJRockitJvm() || JvmUtil.isIBMJvm()) {
 			jvmOk = true;
@@ -146,7 +146,7 @@ public class OffHeapServiceImpl implements OffHeapService {
 	protected void checkEnable() {
 		if (!enable) {
 			throw new IllegalStateException(
-					"OffHeap module is noly available on Hotspot JDK/JRE 8, JRockit JVM and IBM JVM. " +
+					"OffHeap module is noly available on Hotspot JDK/JRE 8/9, JRockit JVM and IBM JVM. " +
 					"In addition \"compressedRef\" must be disabled on 64 bit JVM. " + 
 					"You can use \"-XX:-UseCompressedOops\" as VM argument to disable compressed references on 64 bit JVM.");
 		}
