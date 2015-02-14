@@ -56,9 +56,9 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     @Override
     public long allocateMemory(long size) {
     	long address = memoryAllocator.allocateMemory(size);
-//    	if (address > 0) {
-//    		unsafe.setMemory(address, size, (byte) 0x00);
-//    	}
+    	if (address > 0) {
+    		unsafe.setMemory(address, size, (byte) 0x00);
+    	}
     	return address;
     }
     
@@ -98,10 +98,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     
     @Override
     public void setMemory(long sourceAddress, long bytes, byte val) {
-    	for (long l = 0; l < bytes; l++) {
-    		unsafe.putByte(sourceAddress + l, val);
-    	}
-//    	unsafe.setMemory(sourceAddress, bytes, val);
+    	unsafe.setMemory(sourceAddress, bytes, val);
     }
 
     public long sizeOfWithAgent(Object obj) {
