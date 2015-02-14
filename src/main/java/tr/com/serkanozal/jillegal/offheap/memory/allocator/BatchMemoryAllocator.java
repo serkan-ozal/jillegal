@@ -103,33 +103,37 @@ public class BatchMemoryAllocator implements MemoryAllocator {
 	
 	class Segment {
 		
-		static final int MAX_SEGMENT_SIZE = Integer.MAX_VALUE;
+		static final long MAX_SEGMENT_SIZE = 4 * (long) Integer.MAX_VALUE;
+		static final long DEFAULT_SEGMENT_SIZE = 2 * (long) Integer.MAX_VALUE;
 		static final int DEFAULT_CHUNK_SIZE = 1024;
-		static final int DEFAULT_SEGMENT_SIZE = Integer.MAX_VALUE;
 		static final byte CHUNK_IS_FREE = 0x00;
 		static final byte CHUNK_IS_FULL = (byte) 0xFF;
 		
+		long segmentSize;
 		int chunkSize;
-		int segmentSize;
 		byte[] chunks;
 		int[] sizes;
 		AtomicInteger used = new AtomicInteger();
 		long allocatedAddress;
 		
 		Segment() {
-			this.chunkSize = DEFAULT_CHUNK_SIZE;
 			this.segmentSize = DEFAULT_SEGMENT_SIZE;
+			this.chunkSize = DEFAULT_CHUNK_SIZE;
 			init();
 		}
 		
-		Segment(int chunkSize, int segmentSize) {
-			this.chunkSize = chunkSize;
+		Segment(long segmentSize, int chunkSize) {
 			this.segmentSize = segmentSize;
+			this.chunkSize = chunkSize;
 			init();
 		}
 		
 		void init() {
-			int chunkCount = segmentSize / chunkSize;
+			if (segmentSize / (long) chunkSize >= Integer.MAX_VALUE) {
+				throw new IllegalStateException(
+						"\"<segment_size> / <chunk_size>\" must be smaller than \"Integer.MAX_VALUE\"");
+			}
+			int chunkCount = (int) (segmentSize / chunkSize);
 			if (segmentSize % chunkSize != 0) {
 				chunkCount++;
 			}
