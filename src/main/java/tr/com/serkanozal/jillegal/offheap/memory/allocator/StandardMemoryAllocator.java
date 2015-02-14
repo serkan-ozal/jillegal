@@ -27,7 +27,7 @@ public class StandardMemoryAllocator implements MemoryAllocator {
 		long address = UNSAFE.allocateMemory(size);
 		if (address > 0) {
 			memoryMappings.put(address, size);
-			allocatedMemory.addAndGet(size);
+//			allocatedMemory.addAndGet(size);
 		}
 		return address;
 	}
@@ -36,7 +36,7 @@ public class StandardMemoryAllocator implements MemoryAllocator {
 	public void freeMemory(long address) {
 		Long size = memoryMappings.remove(address);
 		if (size != null) {
-			allocatedMemory.addAndGet(-size);
+//			allocatedMemory.addAndGet(-size);
 		}
 		UNSAFE.freeMemory(address);
 	}
