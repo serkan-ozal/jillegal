@@ -104,7 +104,7 @@ public class BatchMemoryAllocator implements MemoryAllocator {
 	class Segment {
 		
 		static final long MAX_SEGMENT_SIZE = 4 * (long) Integer.MAX_VALUE;
-		static final long DEFAULT_SEGMENT_SIZE = (long) (1.5f * (long) Integer.MAX_VALUE);
+		static final long DEFAULT_SEGMENT_SIZE = (long) Integer.MAX_VALUE + 1024;
 		static final int DEFAULT_CHUNK_SIZE = 1024;
 		static final byte CHUNK_IS_FREE = 0x00;
 		static final byte CHUNK_IS_FULL = (byte) 0xFF;
