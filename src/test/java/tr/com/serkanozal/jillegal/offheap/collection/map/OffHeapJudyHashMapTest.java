@@ -364,7 +364,6 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 			};
 		};
 		t.start();
-		
 		final int ENTRY_COUNT = 1000000;
 		final int ITERATION_COUNT = 100;
 
@@ -381,12 +380,12 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 		System.out.println("********************************");
 		
 		JvmUtil.runGC();
-
+		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
 			Person p = judyMap.get(i);
-//			if (i % 1000 == 0) {
-//				System.out.println(p);
-//			}	
+			if (i % 1000 == 0) {
+				System.out.println(p);
+			}	
 		}
 		
 		JvmUtil.runGC();
@@ -409,7 +408,7 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 				if (replaced != null) {
 					offHeapService.freeObject(replaced);
 				}
-				//list.add(person);
+				list.add(person);
 			}
 			
 			JvmUtil.runGC();

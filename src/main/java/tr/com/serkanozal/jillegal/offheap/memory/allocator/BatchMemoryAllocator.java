@@ -105,7 +105,7 @@ public class BatchMemoryAllocator implements MemoryAllocator {
 		
 		static final int MAX_SEGMENT_SIZE = Integer.MAX_VALUE;
 		static final int DEFAULT_CHUNK_SIZE = 1024;
-		static final int DEFAULT_SEGMENT_SIZE = 10 * 1024 * 1024;
+		static final int DEFAULT_SEGMENT_SIZE = Integer.MAX_VALUE;
 		static final byte CHUNK_IS_FREE = 0x00;
 		static final byte CHUNK_IS_FULL = (byte) 0xFF;
 		
