@@ -681,7 +681,6 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 
 		@SuppressWarnings("unchecked")
 		void init() {
-			directMemoryService.putLong(this, 0L, 0x79L);
 			// Create and initialize first level nodes
 			setNodes(offHeapService.newArray(JudyIntermediateNode[].class, NODE_SIZE, true));
 		}
