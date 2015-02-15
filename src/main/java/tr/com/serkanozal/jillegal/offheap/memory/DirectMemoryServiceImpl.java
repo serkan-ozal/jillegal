@@ -346,6 +346,29 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     @Override
     public void setArrayElement(Object array, int elementIndex, Object element) {
 //    	synchronized (array) {
+	    	long arrayElementAddress = JvmUtil.getArrayElementAddress(array, elementIndex);
+	    	long elementAddress = JvmUtil.toJvmAddress(JvmUtil.addressOf(element));
+	    	if (elementAddress != JvmUtil.INVALID_ADDRESS) {
+	    		switch (JvmUtil.getAddressSize()) {
+		            case JvmUtil.SIZE_32_BIT:
+		            	putAsIntAddress(arrayElementAddress, elementAddress);
+		                break;
+		            case JvmUtil.SIZE_64_BIT:
+		            	int referenceSize = JvmUtil.getReferenceSize();
+		            	switch (referenceSize) {
+		                 	case JvmUtil.ADDRESSING_4_BYTE:   
+		                 		putAsIntAddress(arrayElementAddress, elementAddress);
+		                 		break;
+		                 	case JvmUtil.ADDRESSING_8_BYTE:
+		                 		unsafe.putLong(arrayElementAddress, elementAddress);
+		                 		break;
+		            	}
+		            	break; 
+	    		}      
+	    	}
+//    	}	
+    	/*
+//    	synchronized (array) {
     		Class<?> elementType = array.getClass().getComponentType();
     		long elementOffset = JvmUtil.arrayBaseOffset(elementType) + 
     				(elementIndex * JvmUtil.arrayIndexScale(elementType));
@@ -369,6 +392,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
 	    		}      
 	    	}
 //    	}	
+    	*/
     }
     
     @Override
