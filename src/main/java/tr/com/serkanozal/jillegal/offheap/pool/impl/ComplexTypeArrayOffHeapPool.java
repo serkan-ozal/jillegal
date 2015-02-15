@@ -68,9 +68,9 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 						sampleObjectAddress, 
 						objStartAddress + (l * objectSize), 
 						objectSize);
-				directMemoryService.putLong(
-						objStartAddress + (l * objectSize), 
-						0x00000003);
+//				directMemoryService.putLong(
+//						objStartAddress + (l * objectSize), 
+//						0x00000003);
 			}
 			
 			/*
@@ -91,7 +91,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 			}
 		}
 		
-		directMemoryService.putLong(arrayStartAddress, 0x00000003);
+//		directMemoryService.putLong(arrayStartAddress, 0x00000003);
 		// this.objectArray = (A) directMemoryService.getObject(arrayStartAddress);
 		directMemoryService.setObjectField(this, "objectArray", directMemoryService.getObject(arrayStartAddress));
 	}
