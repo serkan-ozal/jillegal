@@ -164,6 +164,11 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     	if (rootObj == null) {
     		return;
     	}
+    	System.out.print("set object field >>> ");
+    	System.out.println(
+    			"rootObj: " + JvmUtil.toHexAddress(addressOf(rootObj)) + ", " +
+    			"fieldOffset: " + JvmUtil.toHexAddress(fieldOffset) + ", " + 
+    			"fieldObj: " + JvmUtil.toHexAddress(addressOf(fieldObj)));
 //    	synchronized (rootObj) {
 	    	if (fieldObj == null) {
 	    		int referenceSize = JvmUtil.getReferenceSize();
