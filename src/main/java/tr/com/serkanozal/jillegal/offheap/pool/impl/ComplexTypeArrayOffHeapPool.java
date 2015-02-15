@@ -94,7 +94,7 @@ public class ComplexTypeArrayOffHeapPool<T, A> extends BaseOffHeapPool<T, ArrayO
 
 		// this.objectArray = (A) directMemoryService.getObject(arrayStartAddress);
 		directMemoryService.setObjectField(this, "objectArray", directMemoryService.getObject(arrayStartAddress));
-		//directMemoryService.putLong(arrayStartAddress, 0x00000003);
+		directMemoryService.putLong(arrayStartAddress, 0x00000003);
 	}
 	
 	public boolean isInitializeElements() {

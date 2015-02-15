@@ -96,7 +96,7 @@ public class DefaultStringOffHeapPool extends BaseOffHeapPool<String, StringOffH
 			usedSegmentCount = 0;
 			inUseSegmentAddress = directMemoryService.allocateMemory(totalSegmentCount);
 			sampleStr = "";
-			sampleHeader = 0x00000003; // | directMemoryService.getLong(sampleStr, 0L);
+			sampleHeader = directMemoryService.getLong(sampleStr, 0L);
 			init();
 			makeAvaiable();
 		}
