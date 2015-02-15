@@ -141,6 +141,9 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     @SuppressWarnings("deprecation")
 	@Override
     public <O, F> F getObjectField(O obj, int fieldOffset) {
+    	if (obj == null) {
+    		return null;
+    	}
 //    	synchronized (obj) {
 //    		long objAddress = JvmUtil.addressOf(obj);
 //        	long fieldAddress = objAddress + fieldOffset;
@@ -158,6 +161,9 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     @SuppressWarnings("deprecation")
 	@Override
     public <O, F> void setObjectField(O rootObj, int fieldOffset, F fieldObj) {
+    	if (rootObj == null) {
+    		return;
+    	}
 //    	synchronized (rootObj) {
 	    	if (fieldObj == null) {
 	    		int referenceSize = JvmUtil.getReferenceSize();
@@ -202,6 +208,9 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     
     @Override
     public <O, F> F getObjectField(O obj, String fieldName) {
+    	if (obj == null) {
+    		return null;
+    	}
 //    	synchronized (obj) {
 //    		long fieldAddress = JvmUtil.addressOfField(obj, fieldName);
 //    		long pointedAddress = JvmUtil.toNativeAddress(unsafe.getAddress(fieldAddress));
@@ -217,6 +226,9 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     
     @Override
     public <O, F> void setObjectField(O rootObj, String fieldName, F fieldObj) {
+    	if (rootObj == null) {
+    		return;
+    	}
 //    	synchronized (rootObj) {
     		long fieldOffset = JvmUtil.offsetOfField(rootObj, fieldName);
 	    	if (fieldObj == null) {
