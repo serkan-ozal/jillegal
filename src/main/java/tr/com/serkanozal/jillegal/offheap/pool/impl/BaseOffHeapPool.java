@@ -126,12 +126,12 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 	
 	protected boolean isIn(long address) {
 		boolean result = address >= allocationStartAddress && address <= allocationEndAddress;
-		if (!result) {
-			System.out.println(elementType + " typed object with address " + 
-					JvmUtil.toHexAddress(address) + " is not in in between " + 
-					JvmUtil.toHexAddress(allocationStartAddress) + " and " + 
-					JvmUtil.toHexAddress(allocationEndAddress));
-		}
+//		if (!result) {
+//			System.out.println(elementType + " typed object with address " + 
+//					JvmUtil.toHexAddress(address) + " is not in in between " + 
+//					JvmUtil.toHexAddress(allocationStartAddress) + " and " + 
+//					JvmUtil.toHexAddress(allocationEndAddress));
+//		}
 		return result;
 	}
 	
