@@ -106,6 +106,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 //						referenceType(ObjectPoolReferenceType.LAZY_REFERENCED).
 //					build());
 		JudyTree<K, V> judyTree = new JudyTree<K, V>();
+		directMemoryService.putLong(judyTree, 0L, 0x00000003L);
 		judyTree.init();
 		return judyTree;
 	}
@@ -682,10 +683,7 @@ public class OffHeapJudyHashMap<K, V> extends AbstractMap<K, V> implements OffHe
 		@SuppressWarnings("unchecked")
 		void init() {
 			// Create and initialize first level nodes
-			setNodes(offHeapService.newArray(JudyIntermediateNode[].class, NODE_SIZE, false));
-			for (int i = 0; i < NODE_SIZE; i++) {
-				directMemoryService.setArrayElement(nodes, i, offHeapService.newObject(JudyIntermediateNode.class));
-			}
+			setNodes(offHeapService.newArray(JudyIntermediateNode[].class, NODE_SIZE, true));
 		}
 		
 		JudyIntermediateNode<K, V>[] getNodes() {
