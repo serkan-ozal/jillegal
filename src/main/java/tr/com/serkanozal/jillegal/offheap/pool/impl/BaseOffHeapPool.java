@@ -23,6 +23,7 @@ import tr.com.serkanozal.jillegal.offheap.service.OffHeapService;
 import tr.com.serkanozal.jillegal.offheap.service.OffHeapServiceFactory;
 import tr.com.serkanozal.jillegal.offheap.util.OffHeapUtil;
 import tr.com.serkanozal.jillegal.offheap.util.OffHeapUtil.NonPrimitiveFieldInitializer;
+import tr.com.serkanozal.jillegal.util.JvmUtil;
 
 public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>> implements OffHeapPool<T, P> {
 
@@ -124,7 +125,14 @@ public abstract class BaseOffHeapPool<T, P extends OffHeapPoolCreateParameter<T>
 	}
 	
 	protected boolean isIn(long address) {
-		return address >= allocationStartAddress && address <= allocationEndAddress;
+		boolean result = address >= allocationStartAddress && address <= allocationEndAddress;
+		if (!result) {
+			System.out.println(elementType + " typed object with address " + 
+					JvmUtil.toHexAddress(address) + " is not in in between " + 
+					JvmUtil.toHexAddress(allocationStartAddress) + " and " + 
+					JvmUtil.toHexAddress(allocationEndAddress));
+		}
+		return result;
 	}
 	
 	protected synchronized T processObject(T obj) {
