@@ -166,6 +166,7 @@ public class DirectMemoryServiceImpl implements DirectMemoryService {
     	}
     	System.out.print("set object field >>> ");
     	System.out.println(
+    			"root header: " + unsafe.getLong(rootObj, fieldOffset) + ", " +
     			"rootObj: " + JvmUtil.toHexAddress(addressOf(rootObj)) + ", " +
     			"fieldOffset: " + JvmUtil.toHexAddress(fieldOffset) + ", " + 
     			"fieldObj: " + JvmUtil.toHexAddress(addressOf(fieldObj)));
