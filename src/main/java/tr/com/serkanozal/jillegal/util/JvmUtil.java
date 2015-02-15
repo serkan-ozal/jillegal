@@ -66,7 +66,6 @@ public class JvmUtil {
 	public static final String JAVA_6 = "1.6";
 	public static final String JAVA_7 = "1.7";
 	public static final String JAVA_8 = "1.8";
-	public static final String JAVA_9 = "1.9";
 	
 	public static final String JAVA_VERSION = System.getProperty("java.version");
 	public static final String JAVA_SPEC_VERSION = System.getProperty("java.specification.version");
@@ -121,11 +120,6 @@ public class JvmUtil {
     public static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT_FOR_JAVA_8 = 64; 
     public static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITH_COMPRESSED_REF_FOR_JAVA_8 = 64;
     public static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITHOUT_COMPRESSED_REF_FOR_JAVA_8 = 120;
-    
-    // TODO Not sure
-    public static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT_FOR_JAVA_9 = 64; 
-    public static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITH_COMPRESSED_REF_FOR_JAVA_9 = 64;
-    public static final int CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITHOUT_COMPRESSED_REF_FOR_JAVA_9 = 120;
     
     public static final int SIZE_FIELD_OFFSET_IN_CLASS_32_BIT = 12;
     public static final int SIZE_FIELD_OFFSET_IN_CLASS_64_BIT = 24;
@@ -226,9 +220,6 @@ public class JvmUtil {
                 	else if (isJava_8()) {
                 		JvmUtil.classDefPointerOffsetInClass = CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT_FOR_JAVA_8;
                 	}
-                	else if (isJava_9()) {
-                		JvmUtil.classDefPointerOffsetInClass = CLASS_DEF_POINTER_OFFSET_IN_CLASS_32_BIT_FOR_JAVA_9;
-                	}
                 	else {
 	            		throw new AssertionError("Java version is not supported: " + JAVA_SPEC_VERSION); 
 	            	}
@@ -278,18 +269,6 @@ public class JvmUtil {
 	            			jvmAwareUtil = new Address64BitWithoutCompressedOopsJvmUtil();
 	            		}
 	            	}
-	            	else if (isJava_9()) {
-	            		if (options.compressedRef) {
-	            			JvmUtil.classDefPointerOffsetInClass = 
-	            					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITH_COMPRESSED_REF_FOR_JAVA_9;
-	            			jvmAwareUtil = new Address64BitWithCompressedOopsJvmUtil();
-	            		}
-	            		else {
-	            			JvmUtil.classDefPointerOffsetInClass = 
-	            					CLASS_DEF_POINTER_OFFSET_IN_CLASS_64_BIT_WITHOUT_COMPRESSED_REF_FOR_JAVA_9;
-	            			jvmAwareUtil = new Address64BitWithoutCompressedOopsJvmUtil();
-	            		}
-	            	}
 	            	else {
 	            		throw new AssertionError("Java version is not supported: " + JAVA_SPEC_VERSION); 
 	            	}
@@ -322,9 +301,6 @@ public class JvmUtil {
 		}
 		else if (JAVA_SPEC_VERSION.equals(JAVA_8)) {
 			return JavaVersionInfo.JAVA_VERSION_8;
-		}
-		else if (JAVA_SPEC_VERSION.equals(JAVA_9)) {
-			return JavaVersionInfo.JAVA_VERSION_9;
 		}
 		else {
 			throw new AssertionError("Java version is not supported: " + JAVA_SPEC_VERSION); 
@@ -359,10 +335,6 @@ public class JvmUtil {
 		return JAVA_VERSION_INFO == JavaVersionInfo.JAVA_VERSION_8;
 	}
 	
-	public static boolean isJava_9() {
-		return JAVA_VERSION_INFO == JavaVersionInfo.JAVA_VERSION_9;
-	}
-	
 	public static boolean isJvmSupported() {
 		return isHotspotJvmSupported() || isJrockitJvmSupported();
 	}
@@ -376,7 +348,7 @@ public class JvmUtil {
 	}
 	
 	public static boolean isJavaVersionSupported() {
-		return isJava_6() || isJava_7() || isJava_8() || isJava_9();
+		return isJava_6() || isJava_7() || isJava_8();
 	}
 	
 	public static VMOptions getOptions() {
@@ -525,9 +497,6 @@ public class JvmUtil {
 	    	else if (isJava_8()) {
 	    		return addressOfClass;
 	    	}
-	    	else if (isJava_9()) {
-	    		return addressOfClass;
-	    	}
 	    	return normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass));
 		}
 
@@ -646,9 +615,6 @@ public class JvmUtil {
 	    	else if (isJava_8()) {
 	    		return addressOfClass;
 	    	}
-	    	else if (isJava_9()) {
-	    		return addressOfClass;
-	    	}
 	    	else {
 	    		return JvmUtil.toNativeAddress(
 	    				normalize(unsafe.getInt(addressOfClass + classDefPointerOffsetInClass)));
@@ -734,9 +700,6 @@ public class JvmUtil {
 	    		return addressOfClass;
 	    	}
 	    	else if (isJava_8()) {
-	    		return addressOfClass;
-	    	}
-	    	else if (isJava_9()) {
 	    		return addressOfClass;
 	    	}
 	    	return unsafe.getLong(addressOfClass + classDefPointerOffsetInClass); 
@@ -2223,8 +2186,7 @@ public class JvmUtil {
 		
 		JAVA_VERSION_6(JAVA_6),
 		JAVA_VERSION_7(JAVA_7),
-		JAVA_VERSION_8(JAVA_8),
-		JAVA_VERSION_9(JAVA_9);
+		JAVA_VERSION_8(JAVA_8);
 		
 		String name;
 		

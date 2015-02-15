@@ -16,7 +16,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import junit.framework.Assert;
 
-import org.HeapFragger.Idle;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -343,7 +342,7 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 	/**
 	 * This test is ignored by default since it is load test.
 	 */
-	//@Ignore
+	@Ignore
 	@Test
 	// -XX:-UseCompressedOops -XX:+UseSerialGC        -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\%USERPROFILE%\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
 	// -XX:-UseCompressedOops -XX:+UseSerialGC        -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:~/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
@@ -358,12 +357,12 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 	// -XX:-UseCompressedOops -XX:+UseParallelGC      -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:C:\Users\%USERPROFILE%\.m2\repository\org\giltene\HeapFragger\1.0\HeapFragger-1.0.jar="-a 400 -s 512"
 	// -XX:-UseCompressedOops -XX:+UseParallelGC      -verbose:gc -XX:+PrintGCDetails -XX:+PrintPromotionFailure -javaagent:~/.m2/repository/org/giltene/HeapFragger/1.0/HeapFragger-1.0.jar="-a 400 -s 512"
 	public void stressTest() {
-		Thread t = new Thread() {
-			public void run() {
-				Idle.main(new String[] {"-t", "1000000000"});
-			};
-		};
-		t.start();
+//		Thread t = new Thread() {
+//			public void run() {
+//				Idle.main(new String[] {"-t", "1000000000"});
+//			};
+//		};
+//		t.start();
 		final int ENTRY_COUNT = 1000000;
 		final int ITERATION_COUNT = 100;
 
@@ -374,7 +373,7 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 		System.out.println("********************************");
 		
 		for (int i = 0; i < ENTRY_COUNT; i++) {
-			judyMap.put(getOffHeapIntegerKey(i), randomizePerson(i, judyMap.newElement())); // They will be added
+			judyMap.put(getOffHeapIntegerKey(i), randomizePerson(i, judyMap.newElement())); 
 		}
 		
 		System.out.println("********************************");
@@ -402,7 +401,7 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 			for (int j = 0; j < ENTRY_COUNT; j++) {
 				Person person = randomizePerson(j, judyMap.newElement());
 				Person replaced = 
-					judyMap.put(getOffHeapIntegerKey(j), person); // They will be replaced
+					judyMap.put(getOffHeapIntegerKey(j), person);
 				// OffHeap map only disposes only keys, not values.
 				// So disposing elements is developer's responsibility.
 				if (replaced != null) {
@@ -441,34 +440,30 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 		JvmUtil.runGC();
 	}
 	
-	//@Ignore
+	@Ignore
 	@Test
 	public void multiThreadStressTest() throws InterruptedException {
 		final int PUT_COUNT_IN_A_ITERATION = 1000;
 		final int REMOVE_COUNT_IN_A_ITERATION = 10;
 		final int GET_COUNT_IN_A_ITERATION = 1000;
-		final int ENTRY_COUNT = 5000000;
+		final int ENTRY_COUNT = 1000000;
 		final int ITERATION_COUNT = 100;
 		
 		final Random random = new Random();
-		List<Person> list = new ArrayList<Person>();
 
 		OffHeapJudyHashMap<Long, Person> judyMap = 
 				new OffHeapJudyHashMap<Long, Person>(Long.class, Person.class);
 
 		for (int i = 0; i < ENTRY_COUNT; i++) {
 			Person p = randomizePerson(i, judyMap.newElement());
-			judyMap.put(offHeapService.getOffHeapLong(i), p); // They will be added
-			//list.add(p);
-//			Assert.assertEquals("Username-" + i, p.getUsername());
-//			Assert.assertEquals("Firstname-" + i, p.getFirstName());
-//			Assert.assertEquals("Lastname-" + i, p.getLastName());
+			judyMap.put(offHeapService.getOffHeapLong(i), p);
+			Assert.assertEquals("Username-" + i, p.getUsername());
+			Assert.assertEquals("Firstname-" + i, p.getFirstName());
+			Assert.assertEquals("Lastname-" + i, p.getLastName());
 		}
 		
 		JvmUtil.runGC();
-		
-		list.clear();
-		
+
 		Thread[] threads = new Thread[10];
 		for (int k = 0; k < threads.length; k++) {
 			Thread t = new Thread() {
@@ -509,9 +504,9 @@ public class OffHeapJudyHashMapTest extends BaseOffHeapCollectionTest {
 							Person p = judyMap.get(id);
 							if (p != null) {
 								Assert.assertEquals(id, p.getId());
-//								Assert.assertEquals("Username-" + id, p.getUsername());
-//								Assert.assertEquals("Firstname-" + id, p.getFirstName());
-//								Assert.assertEquals("Lastname-" + id, p.getLastName());
+								Assert.assertEquals("Username-" + id, p.getUsername());
+								Assert.assertEquals("Firstname-" + id, p.getFirstName());
+								Assert.assertEquals("Lastname-" + id, p.getLastName());
 							}	
 						}
 						

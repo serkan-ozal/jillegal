@@ -134,7 +134,7 @@ public class OffHeapServiceImpl implements OffHeapService {
 	protected void findEnable() {
 		boolean jvmOk = false;
 		if (JvmUtil.isHotspotJvm()) {
-			jvmOk = JvmUtil.isJava_8() || JvmUtil.isJava_9();
+			jvmOk = JvmUtil.isJava_8();
 		} 
 		else if (JvmUtil.isJRockitJvm() || JvmUtil.isIBMJvm()) {
 			jvmOk = true;
