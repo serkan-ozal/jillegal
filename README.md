@@ -1,7 +1,9 @@
 1. What is Jillegal?
 ==============
 
-**Jillegal** is a library including unknown tricks of Java. It abstracts developer from low-level details to implement those tricks. Its design and logic are based on **Java 8** and **JRockit** so it can be used at only **_Java 8 and JRockit platforms_**. Java 6 and Java 7 supports are in progress and as soon as possible they will be released. Demo applications are avaiable at [https://github.com/serkan-ozal/jillegal-demo](https://github.com/serkan-ozal/jillegal-demo) and [https://github.com/serkan-ozal/jillegal-demo-web](https://github.com/serkan-ozal/jillegal-demo-web). 
+**Jillegal** is a library including unknown tricks of Java. It abstracts developer from low-level details to implement those tricks. Its design and logic are based on **Java 8** and **JRockit** so it can be used at only **_Java 8 and JRockit platforms_**. Java 6 and Java 7 supports are in progress and as soon as possible they will be released. Demo applications are avaiable at [https://github.com/serkan-ozal/jillegal-demo](https://github.com/serkan-ozal/jillegal-demo) and [https://github.com/serkan-ozal/jillegal-demo-web](https://github.com/serkan-ozal/jillegal-demo-web).
+
+**NOTE**: This is an experimental project. So, please notify me for all kind of suggestions, feedbacks and issues (with crash log files and test cases if possible :)) 
 
 Currently it has three main modules: **OffHeap**, **Instrumentation** and **In Memory Compiler**. 
 
