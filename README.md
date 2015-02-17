@@ -1,7 +1,7 @@
 1. What is Jillegal?
 ==============
 
-**Jillegal** is a library including unknown tricks of Java. It abstracts developer from low-level details to implement those tricks. Its design and logic are based on **Java 8** and **JRockit** so it can be used at only **_Java 8 and JRockit platforms_**. Java 6 and Java 7 supports are in progress and as soon as possible they will be released. Demo application is avaiable at [https://github.com/serkan-ozal/jillegal-demo](https://github.com/serkan-ozal/jillegal-demo). 
+**Jillegal** is a library including unknown tricks of Java. It abstracts developer from low-level details to implement those tricks. Its design and logic are based on **Java 8** and **JRockit** so it can be used at only **_Java 8 and JRockit platforms_**. Java 6 and Java 7 supports are in progress and as soon as possible they will be released. Demo applications are avaiable at [https://github.com/serkan-ozal/jillegal-demo](https://github.com/serkan-ozal/jillegal-demo) and [https://github.com/serkan-ozal/jillegal-demo-web](https://github.com/serkan-ozal/jillegal-demo-web). 
 
 Currently it has three main modules: **OffHeap**, **Instrumentation** and **In Memory Compiler**. 
 
@@ -9,9 +9,15 @@ Currently it has three main modules: **OffHeap**, **Instrumentation** and **In M
 -------
 Design and logic of Jillegal OffHeap module different from all of the other offheap frameworks. It doesn't serilalize/deserialize objects to/from allocated offheap memory region. Because objects already lives on offheap and GC doesn't track them :). With this feature, all objects in pool are exist as sequential at memory, so sequential accessing to them is faster. Because, they will be fetched to CPU cache together as limited size of CPU cache.
 
-<a name="NOTE"></a>
-[NOTE: ](#NOTE)
-Try with **CMS** collector (`-XX:+UseConcMarkSweepGC`), **G1** collector (`-XX:+UseG1GC`) and **Serial** collector (`-XX:+UseSerialGC`) for Hotspot JVM. Don't try with other collectors such as **Default** or **Parallel** collector (`-XX:+UseParallelGC` or `-XX:+UseParallelOldGC`) since there is a crash with that collectors and still I don't know its real reason and workaround to handle it :). In addition, offheap module needs to disabled compressed-oops (`-XX:-UseCompressedOops`) since there is no quarantee that allocated native memory space can be represented with compressed-oops with huge memory sizes.
+<a name="LIMITATIONS"></a>
+[LIMITATIONS: ](#LIMITATIONS)
+* Only **Hotspot Java 8 JVM**, **Oracle JRockit JVM** and **Azul's Zulu Java 8 JVM** are supported. **Java 6** and **Java 7** based JVMs are not supported yet.
+
+* Only **CMS** collector (`-XX:+UseConcMarkSweepGC`), **G1** collector (`-XX:+UseG1GC`) and **Serial** collector (`-XX:+UseSerialGC`) are supported for Hotspot JVM. Don't try with other collectors such as **Default** or **Parallel** collector (`-XX:+UseParallelGC` or `-XX:+UseParallelOldGC`) since there is an issue associated with these collectors's Young GC collections :). 
+
+* Offheap module needs to disabled compressed-oops (`-XX:-UseCompressedOops`) since there is no quarantee that allocated native memory space can be represented with compressed-oops with huge memory sizes.
+
+* **Off-Heap** objects **must not** reference to **On-Heap** objects since they can be moved while GC and **Off-Heap** objects are not aware of this movement since they are not under GC control. However, **On-Heap** objects can reference to **Off-Heap** objects and also **Off-Heap** objects can references to **Off-Heap** objects as well.
 
 1.2. Instrumentation Module
 -------
