@@ -680,12 +680,12 @@ public class DefaultInstrumenter<T> extends AbstractInstrumenter<T> {
     
     @Override
     public DefaultInstrumenter<T> insertBeforeMethod(String methodName, String code, Class<?> ... paramTypes) throws CannotCompileException, NotFoundException {
-        return insertToMethod(methodName, code, true);
+        return insertToMethod(methodName, code, true, paramTypes);
     }
     
     @Override
     public DefaultInstrumenter<T> insertAfterMethod(String methodName, String code, Class<?> ... paramTypes) throws CannotCompileException, NotFoundException {
-        return insertToMethod(methodName, code, false);
+        return insertToMethod(methodName, code, false, paramTypes);
     }
     
     protected DefaultInstrumenter<T> insertToMethod(String methodName, String code, boolean isBefore, Class<?> ... paramTypes) 
